@@ -366,6 +366,7 @@ class PerfettoExtension(TestSuite):
         return DiffTestBlueprint(
             sql="SELECT x.c FROM (FROM t |> DROP a) AS x",
             out="""\
+            expanding "FROM t |> DROP a" in "SELECT x.c FROM (FROM t |> DROP a) AS x"
             SelectStmt
               flags: (none)
               columns:
@@ -416,6 +417,7 @@ class PerfettoExtension(TestSuite):
         return DiffTestBlueprint(
             sql="WITH p AS (FROM t |> DROP a) SELECT * FROM p",
             out="""\
+            expanding "FROM t |> DROP a" in "WITH p AS (FROM t |> DROP a) SELECT * FROM p"
             WithClause
               recursive: FALSE
               ctes:
@@ -476,6 +478,8 @@ class PerfettoExtension(TestSuite):
         return DiffTestBlueprint(
             sql="SELECT * FROM (FROM (FROM t |> DROP a) |> DROP b)",
             out="""\
+            expanding "FROM t |> DROP a" in "SELECT * FROM (FROM (FROM t |> DROP a) |> DROP b)"
+            expanding "FROM (FROM t |> DROP a) |> DROP b" in "SELECT * FROM (FROM (FROM t |> DROP a) |> DROP b)"
             SelectStmt
               flags: (none)
               columns:
@@ -536,6 +540,8 @@ class PerfettoExtension(TestSuite):
         return DiffTestBlueprint(
             sql="SELECT * FROM t JOIN (FROM u) AS a USING (id) JOIN (FROM v) AS b USING (id)",
             out="""\
+            expanding "FROM u" in "SELECT * FROM t JOIN (FROM u) AS a USING (id) JOIN (FROM v) AS b USING (id)"
+            expanding "FROM v" in "SELECT * FROM t JOIN (FROM u) AS a USING (id) JOIN (FROM v) AS b USING (id)"
             SelectStmt
               flags: (none)
               columns:
@@ -625,7 +631,80 @@ class PerfettoExtension(TestSuite):
         return DiffTestBlueprint(
             sql="SELECT * FROM (FROM (FROM unexpandable) |> DROP a)",
             out="""\
+            expanding "FROM unexpandable" in "SELECT * FROM (FROM (FROM unexpandable) |> DROP a)"
             parse error: expanding pipeline failed
+""",
+        )
+
+    def test_pipeline_expansion_sees_the_whole_statement(self):
+        """Nodes are expanded once their statement is parsed, so the expander
+        sees all of it, such as the query after a CTE."""
+        return DiffTestBlueprint(
+            sql="WITH p AS (FROM t |> DROP a) SELECT * FROM p WHERE x > 1",
+            out="""\
+            expanding "FROM t |> DROP a" in "WITH p AS (FROM t |> DROP a) SELECT * FROM p WHERE x > 1"
+            WithClause
+              recursive: FALSE
+              ctes:
+                CteList [1 items]
+                  CteDefinition
+                    cte_name: "p"
+                    materialized: DEFAULT
+                    columns: (none)
+                    select:
+                      PerfettoPipeline
+                        from:
+                          PerfettoPipeSource
+                            table_name: "t"
+                            schema: (none)
+                            select: (none)
+                            alias: (none)
+                            alias_as: FALSE
+                        stages:
+                          PerfettoPipeStageList [1 items]
+                            PerfettoPipeDrop
+                              columns:
+                                PerfettoPipeNameList [1 items]
+                                  PerfettoPipeName
+                                    name: "a"
+              select:
+                SelectStmt
+                  flags: (none)
+                  columns:
+                    ResultColumnList [1 items]
+                      ResultColumn
+                        flags: STAR
+                        alias: (none)
+                        alias_as: FALSE
+                        expr: (none)
+                  from_clause:
+                    TableRef
+                      table_name: "p"
+                      schema: (none)
+                      has_parens: FALSE
+                      alias: (none)
+                      alias_as: FALSE
+                      args: (none)
+                      index_hint: DEFAULT
+                      index_name: (none)
+                  where_clause:
+                    BinaryExpr
+                      op: GT
+                      left:
+                        ColumnRef
+                          column: "x"
+                          table: (none)
+                          schema: (none)
+                      right:
+                        Literal
+                          literal_type: INTEGER
+                          source: "1"
+                  groupby: (none)
+                  having: (none)
+                  orderby: (none)
+                  limit_clause: (none)
+                  window_clause: (none)
+            expanded pipeline in source: "FROM t |> DROP a" -> "SELECT * FROM expanded_1"
 """,
         )
 

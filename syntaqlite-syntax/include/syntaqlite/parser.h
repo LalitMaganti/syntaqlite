@@ -340,9 +340,10 @@ typedef enum SyntaqliteRewriteKind {
 // to reconstruct a source-to-expanded rewrite tree (e.g. to drive Perfetto's
 // SqlSource::Rewriter or an equivalent).
 //
-// Entries are reported in insertion order: outer rewrites appear before
-// the nested rewrites they contain, and rewrites at the same nesting level
-// appear in source order.
+// Entries are reported in insertion order. Macro calls come first: outer
+// calls before the calls nested in them, and calls at the same nesting level
+// in source order. Expanded nodes come after, innermost first, so a node's
+// rewrite comes after the rewrites of the macro calls written inside it.
 //
 // `parent_idx` is either SYNTAQLITE_REWRITE_PARENT_SOURCE (the rewrite
 // replaces a range in the authored source) or the index of another entry

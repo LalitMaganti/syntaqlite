@@ -23,13 +23,19 @@
 
 #ifndef SYNTAQLITE_OMIT_MACROS
 // Replaces each node with a query reading `expanded_<n>`, numbering nodes in
-// the order they finish parsing. Fails on a node whose text starts with
-// "FROM unexpandable", to exercise errors.
+// the order they finish parsing, and says what it can see of the statement.
+// Fails on a node whose text starts with "FROM unexpandable", to exercise
+// errors.
 static int expand_node(void* user_data, SyntaqliteParser* p, uint32_t node_id) {
   int* count = (int*)user_data;
   SyntaqliteLength len = 0;
   SyntaqliteStmtOffset offset = 0;
   const char* text = syntaqlite_parser_node_text(p, node_id, &len, &offset);
+  // The whole statement is parsed by the time its nodes are expanded.
+  uint32_t stmt_len = 0;
+  const char* stmt = syntaqlite_parser_text(p, NULL, &stmt_len);
+  printf("expanding \"%.*s\" in \"%.*s\"\n", (int)len, text, (int)stmt_len,
+         stmt);
   static const char kFail[] = "FROM unexpandable";
   if (text && len >= sizeof(kFail) - 1 &&
       memcmp(text, kFail, sizeof(kFail) - 1) == 0) {

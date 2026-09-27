@@ -192,14 +192,13 @@ typedef struct SynqMacroState {
 
 } SynqMacroState;
 
-// State for node expansion: the host's callback and the node currently being
-// expanded.
+// State for node expansion: the host's callback, and the text it gave the
+// node it is expanding.
 typedef struct SynqNodeExpansionState {
   SyntaqliteNodeExpandFn expander;
   void* user_data;
-  // Layer of the node currently being expanded, or 0 if none. It's hidden from
-  // the rewrite list until the expander has set its text.
-  uint32_t pending_layer;
+  char* result;
+  uint32_t result_len;
 } SynqNodeExpansionState;
 
 // The rewrites recorded for the current statement, each a layer of text
@@ -382,6 +381,10 @@ void synq_macro_state_init(SynqMacroState* m);
 
 // Free all macro state buffers.
 void synq_macro_state_free(SynqMacroState* m, SyntaqliteMemMethods mem);
+
+// Expands the nodes the statement just parsed marked, innermost first.
+// Returns 0, with the parser's error set, if one of them fails.
+int synq_parser_expand_nodes(SyntaqliteParser* p);
 
 // Initialize and free the rewrite layer tree and its scratch.
 void synq_rewrite_state_init(SynqRewriteState* r);

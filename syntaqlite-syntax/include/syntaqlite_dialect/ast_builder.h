@@ -85,19 +85,22 @@ typedef struct SynqNodeExpandedExtent {
 // expansions, which is how we find the layer a node was written in (see
 // `syntaqlite_parser_node_site`).
 //
-// `first_node` is the id of the first node created under this one. Ids are
-// allocated in order, so every node or list inside it has an id at least this
-// large.
-//
-// A node with no tokens has first_layer == SYNQ_NO_BOUNDS, and one with no
-// child nodes has first_node == UINT32_MAX. Both are ignored when merging.
+// A node with no tokens has first_layer == SYNQ_NO_BOUNDS, which is ignored
+// when merging.
+// A node the grammar marked for the host to expand (see
+// `synq_parser_expand_node`).
+typedef struct SynqMarkedNode {
+  uint32_t node_id;
+  const char* name;
+  uint32_t name_len;
+} SynqMarkedNode;
+
 #define SYNQ_NO_BOUNDS UINT32_MAX
 typedef struct SynqNodeBounds {
   uint32_t first_layer;
   uint32_t first_offset;
   uint32_t last_layer;
   uint32_t last_end;
-  uint32_t first_node;
 } SynqNodeBounds;
 
 // Straddle stack entry values (packed into uint32_t):
@@ -119,10 +122,7 @@ typedef struct SynqParseCtx {
 
   // Parser state
   const char* source;  // Source text base pointer (for offset computation).
-  const SyntaqliteDialect* env;  // Dialect env (for cflag checks in actions).
-  // The owning parser, needed by grammar actions that call
-  // `synq_parser_expand_node`. Opaque here.
-  void* parser;
+  const SyntaqliteDialect* env;   // Dialect env (for cflag checks in actions).
   uint32_t root;                  // Root node ID of the current statement.
   uint32_t stmt_completed;        // Set by grammar actions when ecmd reduces.
   uint32_t pending_explain_mode;  // 1=EXPLAIN, 2=EXPLAIN QUERY PLAN (set by
@@ -185,6 +185,7 @@ typedef struct SynqParseCtx {
   SYNQ_VEC(SynqNodeExpandedExtent) node_expanded_extents;
   SYNQ_VEC(SynqNodeBounds) bounds_stack;
   SYNQ_VEC(SynqNodeBounds) node_bounds;
+  SYNQ_VEC(SynqMarkedNode) marked_nodes;
   uint32_t collect_node_extents;
   uint32_t macro_root_start;
   uint32_t macro_root_end;
@@ -197,14 +198,17 @@ typedef struct SynqParseCtx {
   uint32_t generated_always;
 } SynqParseCtx;
 
-// Asks the host's node expander (see `syntaqlite_parser_set_node_expander`) to
-// replace the node that was just built. `name` becomes the rewrite's name, like
-// a macro name, and shows up in tracebacks. Does nothing if no expander is set;
-// fails the parse if the expander fails.
-void synq_parser_expand_node(SynqParseCtx* ctx,
-                             uint32_t node_id,
-                             const char* name,
-                             uint32_t name_len);
+// Marks the node just built for the host's node expander (see
+// `syntaqlite_parser_set_node_expander`) to replace once the statement is
+// parsed. `name` becomes the rewrite's name, like a macro name, and shows up
+// in tracebacks.
+static inline void synq_parser_expand_node(SynqParseCtx* ctx,
+                                           uint32_t node_id,
+                                           const char* name,
+                                           uint32_t name_len) {
+  SynqMarkedNode node = {node_id, name, name_len};
+  syntaqlite_vec_push(&ctx->marked_nodes, node, ctx->mem);
+}
 
 // Common header for all list nodes in the arena.
 typedef struct SynqListHeader {
@@ -258,6 +262,7 @@ static inline void synq_parse_ctx_init(SynqParseCtx* ctx,
   syntaqlite_vec_init(&ctx->node_expanded_extents);
   syntaqlite_vec_init(&ctx->bounds_stack);
   syntaqlite_vec_init(&ctx->node_bounds);
+  syntaqlite_vec_init(&ctx->marked_nodes);
   ctx->collect_node_extents = 0;
   ctx->macro_root_start = 0;
   ctx->macro_root_end = 0;
@@ -277,6 +282,7 @@ static inline void synq_parse_ctx_free(SynqParseCtx* ctx) {
   syntaqlite_vec_free(&ctx->node_expanded_extents, ctx->mem);
   syntaqlite_vec_free(&ctx->bounds_stack, ctx->mem);
   syntaqlite_vec_free(&ctx->node_bounds, ctx->mem);
+  syntaqlite_vec_free(&ctx->marked_nodes, ctx->mem);
   syntaqlite_vec_free(&ctx->straddle_stack, ctx->mem);
   synq_arena_free(&ctx->ast, ctx->mem);
 }
@@ -291,6 +297,7 @@ static inline void synq_parse_ctx_clear(SynqParseCtx* ctx) {
   syntaqlite_vec_clear(&ctx->node_expanded_extents);
   syntaqlite_vec_clear(&ctx->bounds_stack);
   syntaqlite_vec_clear(&ctx->node_bounds);
+  syntaqlite_vec_clear(&ctx->marked_nodes);
   synq_arena_clear(&ctx->ast);
   ctx->macro_root_start = 0;
   ctx->macro_root_end = 0;
@@ -320,9 +327,6 @@ static inline void synq_extent_record(SynqParseCtx* ctx, uint32_t node_id) {
       syntaqlite_vec_at(&ctx->expanded_stack, stack_len - 1);
   SynqNodeBounds* bounds_entry =
       &syntaqlite_vec_at(&ctx->bounds_stack, stack_len - 1);
-  if (node_id < bounds_entry->first_node) {
-    bounds_entry->first_node = node_id;
-  }
   SynqNodeBounds bounds_top = *bounds_entry;
   if (node_id < ctx->node_extents.count) {
     syntaqlite_vec_at(&ctx->node_extents, node_id) = top;

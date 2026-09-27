@@ -360,9 +360,11 @@ pub enum RewriteKind {
 /// Carries enough information to reconstruct a source-to-expanded rewrite
 /// tree (e.g. to drive Perfetto's `SqlSource::Rewriter` or an equivalent).
 ///
-/// Entries are reported in insertion order: outer rewrites appear before
-/// the nested rewrites they contain, and rewrites at the same nesting level
-/// appear in source order.  Nesting is expressed via [`parent`](Self::parent): a
+/// Entries are reported in insertion order. Macro calls come first: outer
+/// calls before the calls nested in them, and calls at the same nesting level
+/// in source order. Expanded nodes come after, innermost first, so a node's
+/// rewrite comes after the rewrites of the macro calls written inside it.
+/// Nesting is expressed via [`parent`](Self::parent): a
 /// rewrite with `parent() == None` replaces a range in the authored
 /// source; a rewrite with `parent() == Some(i)` replaces a range in the
 /// `i`-th entry's [`expansion`](Self::expansion) buffer.
