@@ -407,6 +407,65 @@ SELECT 1 FROM t
         )
 
 
+
+class NodeSiteParser(CApiTestSuite):
+    def test_node_written_in_a_macro(self):
+        # The select is all macro text, so it was written in the expansion.
+        return CApiScenario(
+            input="""\
+create
+collect_extents 1
+macro_fallback 1
+macro_register one
+SELECT 1
+.
+reset
+SELECT * FROM (one!());
+.
+parse_one
+node_site 5
+node_site 7
+""",
+            expected="""\
+create ok
+collect_extents ok
+macro_fallback ok
+macro_register ok name=one len=8
+reset ok len=23
+parse_one ok root=7 recovery=0
+node_site id=5 parent=0 off=0 len=8
+node_site id=7 parent=source off=0 len=22
+""",
+        )
+
+    def test_explained_statement_includes_explain(self):
+        # EXPLAIN is written in the statement, so the statement is too, even
+        # when the rest of it is a macro's expansion.
+        return CApiScenario(
+            input="""\
+create
+collect_extents 1
+macro_fallback 1
+macro_register one
+SELECT 1
+.
+reset
+EXPLAIN QUERY PLAN one!();
+.
+parse_one
+node_site 4
+""",
+            expected="""\
+create ok
+collect_extents ok
+macro_fallback ok
+macro_register ok name=one len=8
+reset ok len=26
+parse_one ok root=4 recovery=0
+node_site id=4 parent=source off=0 len=25
+""",
+        )
+
 class NodeTokenRangeParser(CApiTestSuite):
     """Tests for `syntaqlite_node_token_range` — the primitive that maps an
     AST node to the inclusive `[first, last]` token indices the parser fed
