@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.12.1
+
+**Custom dialects:**
+- A node expander can read the result of the statement it is expanding, such as its root. Before, the result still described the previous statement, and nothing for the first statement of a source ([#406](https://github.com/LalitMaganti/syntaqlite/pull/406)).
+
+## 0.12.1
+
+*No changes yet.*
+
 ## 0.12.0
 
 **Custom dialects:**
