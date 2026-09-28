@@ -31,9 +31,12 @@ static int expand_node(void* user_data, SyntaqliteParser* p, uint32_t node_id) {
   SyntaqliteLength len = 0;
   SyntaqliteStmtOffset offset = 0;
   const char* text = syntaqlite_parser_node_text(p, node_id, &len, &offset);
-  // The whole statement is parsed by the time its nodes are expanded.
-  uint32_t stmt_len = 0;
-  const char* stmt = syntaqlite_parser_text(p, NULL, &stmt_len);
+  // The whole statement is parsed by the time its nodes are expanded, so its
+  // root can be read.
+  SyntaqliteLength stmt_len = 0;
+  SyntaqliteStmtOffset stmt_offset = 0;
+  const char* stmt = syntaqlite_parser_node_text(p, syntaqlite_result_root(p),
+                                                 &stmt_len, &stmt_offset);
   printf("expanding \"%.*s\" in \"%.*s\"\n", (int)len, text, (int)stmt_len,
          stmt);
   static const char kFail[] = "FROM unexpandable";

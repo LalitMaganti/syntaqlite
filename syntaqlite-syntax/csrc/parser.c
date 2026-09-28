@@ -50,13 +50,16 @@ int32_t synq_parser_set_result_status(SyntaqliteParser* p, int32_t rc) {
     p->stmt_end_offset =
         p->offset > p->stmt_start_offset ? p->offset : p->stmt_start_offset;
   }
+  p->last_status = rc;
 #ifndef SYNTAQLITE_OMIT_MACROS
-  // The statement is whole now, so the nodes it marked can be expanded.
+  // The statement is whole now, so the nodes it marked can be expanded. The
+  // status is set first so the expander can read the statement's result, such
+  // as its root.
   if (rc == SYNTAQLITE_PARSE_OK && !synq_parser_expand_nodes(p)) {
     rc = SYNTAQLITE_PARSE_ERROR;
+    p->last_status = rc;
   }
 #endif
-  p->last_status = rc;
   return rc;
 }
 
