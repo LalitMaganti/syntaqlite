@@ -423,7 +423,6 @@ pub type syntaqlite::util::SourceContext<'a> = syntaqlite::util::DiagnosticRende
 pub unsafe fn syntaqlite::any::AnyDialect::from_c_dialect_ptr(*const syntaqlite_syntax::dialect::ffi::CDialectTemplate) -> Self
 pub use syntaqlite::ParseOutcome
 pub use syntaqlite::any::<<syntaqlite_syntax::any::*>>
-pub use syntaqlite::any::ffi::CDialectTemplate
 pub use syntaqlite::nodes::<<syntaqlite_syntax::nodes::*>>
 pub use syntaqlite::parse::CommentKind
 pub use syntaqlite::parse::IncrementalParseSession
