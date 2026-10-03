@@ -338,17 +338,30 @@ pub(super) fn interpret_core<'a>(
                     }
                 }
                 FmtOp::GroupStart => {
-                    scratch.group_nest.push(GroupNestFrame::Group(running));
+                    // Comments before the group's first token belong around
+                    // the parent's separator, not inside the new group.
+                    if pending != NIL_DOC
+                        && let Some(cctx) = ctx.comment_ctx.as_ref()
+                    {
+                        let drain = cctx.take_comments(source, arena);
+                        if drain.trailing != NIL_DOC || drain.leading != NIL_DOC {
+                            flush_drain(&drain, &mut pending, &mut running, arena);
+                        }
+                    }
+                    scratch
+                        .group_nest
+                        .push(GroupNestFrame::Group(running, pending));
                     running = NIL_DOC;
+                    pending = NIL_DOC;
                 }
                 FmtOp::GroupEnd => {
                     running = arena.cat(running, pending);
                     pending = NIL_DOC;
                     let inner = running;
                     match scratch.group_nest.pop().expect("unmatched GroupEnd") {
-                        GroupNestFrame::Group(parent) => {
+                        GroupNestFrame::Group(parent, parent_pending) => {
                             let g = arena.group(inner);
-                            running = arena.cat(parent, g);
+                            running = arena.cats(&[parent, parent_pending, g]);
                         }
                         GroupNestFrame::Nest(..) => panic!("expected Group frame"),
                     }
@@ -366,7 +379,7 @@ pub(super) fn interpret_core<'a>(
                             let n = arena.nest(1, inner);
                             running = arena.cat(parent, n);
                         }
-                        GroupNestFrame::Group(_) => panic!("expected Nest frame"),
+                        GroupNestFrame::Group(..) => panic!("expected Nest frame"),
                     }
                 }
                 FmtOp::IfSet(idx, skip) => {
@@ -960,7 +973,8 @@ impl FmtOp {
 }
 
 enum GroupNestFrame {
-    Group(DocId),
+    /// Parent document and its deferred separator, outside the child group.
+    Group(DocId, DocId),
     Nest(DocId),
 }
 

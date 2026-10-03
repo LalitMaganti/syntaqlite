@@ -12,6 +12,55 @@ fn fmt(sql: &str) -> String {
 
 // ── Multi-statement comment sync ─────────────────────────────────────────────
 
+#[test]
+fn leading_comment_preserves_values_row_layout() {
+    let sql = "WITH t(a, b, c) AS (VALUES ('sendfile', 'main', 'args[1]'), ('sendfile', 'out', 'args[0]'), ('epoll_ctl', 'main', 'args[2]')) SELECT * FROM t;";
+    let out = fmt(&format!("-- x\n{sql}"));
+    eprintln!("=== actual ===\n{out}=== end ===");
+    assert_eq!(out, format!("-- x\n{}", fmt(sql)));
+    assert_eq!(fmt(&out), out, "formatting should be idempotent");
+}
+
+#[test]
+fn leading_comment_preserves_long_single_column_values_layout() {
+    let rows = (0..41)
+        .map(|i| format!("('name_{i}')"))
+        .collect::<Vec<_>>()
+        .join(", ");
+    let sql = format!("VALUES {rows};");
+    let out = fmt(&format!("-- x\n{sql}"));
+    eprintln!("=== actual ===\n{out}=== end ===");
+    assert_eq!(out, format!("-- x\n{}", fmt(&sql)));
+    assert_eq!(fmt(&out), out, "formatting should be idempotent");
+}
+
+#[test]
+fn values_group_boundary_preserves_comment_placement() {
+    for (sql, expected) in [
+        (
+            "VALUES (1, 2), -- row one\n(3, 4);",
+            "VALUES\n  (1, 2), -- row one\n  (3, 4);\n",
+        ),
+        (
+            "VALUES (1, 2),\n-- row two\n(3, 4);",
+            "VALUES\n  (1, 2),\n  -- row two\n  (3, 4);\n",
+        ),
+        (
+            "-- x\nVALUES (1, 2), (3, 4);",
+            "-- x\nVALUES (1, 2), (3, 4);\n",
+        ),
+        (
+            "VALUES (1, 2), /* row one */ (3, 4);",
+            "VALUES\n  (1, 2),\n  /* row one */ (3, 4);\n",
+        ),
+    ] {
+        let out = fmt(sql);
+        eprintln!("=== actual ===\n{out}=== end ===");
+        assert_eq!(out, expected);
+        assert_eq!(fmt(&out), out, "formatting should be idempotent");
+    }
+}
+
 /// Regression: comments in second statement were reordered / dropped.
 ///
 /// Input has three comments in statement 2:
