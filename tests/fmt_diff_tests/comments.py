@@ -400,8 +400,7 @@ class JoinComment(TestSuite):
                 SELECT 1
                 FROM t1 a
                 -- c
-                JOIN t2 b
-                  ON a.id = b.id;
+                JOIN t2 b ON a.id = b.id;
             """,
         )
 
@@ -568,11 +567,9 @@ class JoinComment(TestSuite):
                 SELECT 1
                 FROM t1 a
                 -- c1
-                JOIN t2 b
-                  ON a.id = b.id
+                JOIN t2 b ON a.id = b.id
                 -- c2
-                LEFT JOIN t3 c
-                  ON c.id = a.id
+                LEFT JOIN t3 c ON c.id = a.id
                 -- c3
                 WHERE
                   a.x = 1;
@@ -626,8 +623,7 @@ class JoinComment(TestSuite):
                 SELECT 1
                 FROM orders o
                 -- foo
-                JOIN order_line_items li
-                  ON li.order_id = o.order_id
+                JOIN order_line_items li ON li.order_id = o.order_id
                 LEFT
                 -- bar
                 JOIN customers c
