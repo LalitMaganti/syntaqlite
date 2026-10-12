@@ -142,6 +142,11 @@ pub(crate) enum SemanticRole {
         old_name: String,
         column: Option<String>,
     },
+    IndexScope {
+        table: String,
+        columns: String,
+        where_clause: Option<String>,
+    },
 }
 
 /// A `semantic { ... }` annotation on a node.
@@ -737,6 +742,11 @@ impl Parser {
                 new_name: require_param(&params, "new_name", node_name, "alter_table")?,
                 old_name: require_param(&params, "old_name", node_name, "alter_table")?,
                 column: get_param(&params, "column").map(str::to_string),
+            },
+            "index_scope" => SemanticRole::IndexScope {
+                table: require_param(&params, "table", node_name, "index_scope")?,
+                columns: require_param(&params, "columns", node_name, "index_scope")?,
+                where_clause: get_param(&params, "where_clause").map(str::to_string),
             },
             _ => {
                 return Err(format!(

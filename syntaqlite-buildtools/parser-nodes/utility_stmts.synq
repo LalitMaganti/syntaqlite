@@ -89,6 +89,8 @@ node CreateIndexStmt {
   columns: index OrderByList
   where_clause: index Expr
 
+  semantic { index_scope(table: table_name, columns: columns, where_clause: where_clause) }
+
   fmt {
     group {
       "CREATE"

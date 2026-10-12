@@ -350,6 +350,20 @@ fn role_to_bytes(
             bytes[4] = fi(old_name);
             bytes[5] = opt(column);
         }
+        SynqRole::IndexScope {
+            table,
+            columns,
+            where_clause,
+        } => {
+            bytes[0] = disc(SemanticRole::IndexScope {
+                table: 0,
+                columns: 0,
+                where_clause: 0,
+            });
+            bytes[1] = fi(table);
+            bytes[2] = fi(columns);
+            bytes[3] = opt(where_clause);
+        }
     }
 
     bytes

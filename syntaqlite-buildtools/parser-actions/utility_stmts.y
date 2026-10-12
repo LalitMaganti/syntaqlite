@@ -212,7 +212,7 @@ cmd(A) ::= createkw uniqueflag(U) INDEX ifnotexists(NE) nm(X) dbnm(D) ON nm(Y) L
     A = synq_parse_create_index_stmt(pCtx,
         idx_name,
         idx_schema,
-        synq_span(pCtx, Y),
+        synq_span_dequote(pCtx, Y),
         (SyntaqliteBool)U,
         (SyntaqliteBool)NE,
         Z,
