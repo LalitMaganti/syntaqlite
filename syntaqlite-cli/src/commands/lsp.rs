@@ -7,7 +7,7 @@ use syntaqlite::AnalysisConfig;
 use syntaqlite::any::AnyDialect;
 
 use crate::config::{self, ConfigMode};
-use crate::util::{build_check_config, build_format_config, build_schema_catalog};
+use crate::util::{build_check_config, build_format_config, build_schema_catalog, schema_sources};
 
 pub(crate) fn run(dialect: AnyDialect, config: &ConfigMode<'_>) -> Result<(), String> {
     let mut lsp_config = syntaqlite::lsp::LspConfig::default();
@@ -26,11 +26,13 @@ pub(crate) fn run(dialect: AnyDialect, config: &ConfigMode<'_>) -> Result<(), St
             None,
         ));
 
+        let mut schema_paths: Vec<String> = Vec::new();
         let default_catalog = if let Some(ref schema) = project_config.schema {
             let paths: Vec<String> = schema
                 .iter()
                 .map(|s| config_dir.join(s).to_string_lossy().into_owned())
                 .collect();
+            schema_paths.extend(paths.iter().cloned());
             match build_schema_catalog(&dialect, &paths) {
                 Ok(catalog) => Some(catalog),
                 Err(e) => {
@@ -55,11 +57,16 @@ pub(crate) fn run(dialect: AnyDialect, config: &ConfigMode<'_>) -> Result<(), St
                 .iter()
                 .map(|s| config_dir.join(s).to_string_lossy().into_owned())
                 .collect();
+            schema_paths.extend(paths.iter().cloned());
             match build_schema_catalog(&dialect, &paths) {
                 Ok(catalog) => schema_entries.push((pattern, catalog)),
                 Err(e) => eprintln!("syntaqlite-lsp: failed to load schema for {glob_str:?}: {e}"),
             }
         }
+
+        schema_paths.sort();
+        schema_paths.dedup();
+        lsp_config.schema_sources = schema_sources(&schema_paths);
 
         let has_schema = default_catalog.is_some() || !schema_entries.is_empty();
         if has_schema {

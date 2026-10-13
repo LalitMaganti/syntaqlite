@@ -171,6 +171,30 @@ def _test_sqlite3_dot_schema(ctx: SuiteContext) -> bool:
             client.shutdown()
 
 
+def _test_definition_in_schema_file(ctx: SuiteContext) -> bool:
+    """Go to definition from a query jumps into the configured schema file."""
+    with tempfile.TemporaryDirectory() as tmp:
+        schema_file = Path(tmp) / "schema.sql"
+        schema_file.write_text("CREATE TABLE users (id INTEGER, name TEXT);\n")
+        client = spawn_lsp(ctx.binary, config=_write_config(Path(tmp), schema_file))
+        try:
+            uri = f"file://{tmp}/q.sql"
+            _open_and_get_diagnostics(client, uri, "SELECT name FROM users;")
+            result = client.send_request("textDocument/definition", {
+                "textDocument": {"uri": uri},
+                "position": {"line": 0, "character": 7},
+            })
+            targets = [(t["targetUri"], t["targetRange"]["start"]) for t in result or []]
+            expected = [(f"file://{schema_file.resolve()}", {"line": 0, "character": 32})]
+            if targets != expected:
+                _fail("definition_in_schema_file", f"expected {expected}, got {targets}")
+                return False
+            _pass("definition_in_schema_file")
+            return True
+        finally:
+            client.shutdown()
+
+
 # ── Suite entry point ─────────────────────────────────────────────────────
 
 def run(ctx: SuiteContext) -> int:
@@ -178,6 +202,7 @@ def run(ctx: SuiteContext) -> int:
         _test_schema_from_ddl,
         _test_no_schema_warns,
         _test_sqlite3_dot_schema,
+        _test_definition_in_schema_file,
     ]
     results = [t(ctx) for t in tests]
     passed = sum(results)

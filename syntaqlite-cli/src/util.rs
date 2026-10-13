@@ -147,6 +147,22 @@ pub(crate) fn build_schema_catalog(
     Ok(catalog)
 }
 
+/// Read schema files as `(file URI, DDL)` pairs. Unreadable files are skipped,
+/// since [`build_schema_catalog`] already reports them.
+pub(crate) fn schema_sources(schema_files: &[String]) -> Vec<(String, String)> {
+    let Ok(paths) = expand_paths(schema_files) else {
+        return Vec::new();
+    };
+    paths
+        .iter()
+        .filter_map(|path| {
+            let abs = fs::canonicalize(path).ok()?;
+            let ddl = fs::read_to_string(&abs).ok()?;
+            Some((format!("file://{}", abs.display()), ddl))
+        })
+        .collect()
+}
+
 /// Resolve schema files for a given set of input files using the discovered
 /// project config. Returns an empty vec when no config or no match.
 pub(crate) fn schemas_from_project_config(

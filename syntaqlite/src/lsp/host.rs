@@ -752,6 +752,16 @@ impl LspHost {
     }
 }
 
+impl LspHost {
+    /// Record the table, view and column definitions in `ddl` as living in
+    /// `file_uri`, so navigation can jump to them. Doesn't change the schema
+    /// used for analysis.
+    #[cfg(feature = "sqlite")]
+    pub fn record_schema_definitions(&mut self, ddl: &str, file_uri: &str) {
+        record_external_definitions(&mut self.external_defs, &self.dialect, ddl, file_uri);
+    }
+}
+
 /// Parse `ddl` and record table/view/column definition spans into `defs`,
 /// tagged with `file_uri`.
 #[cfg(feature = "sqlite")]
