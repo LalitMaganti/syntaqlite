@@ -172,6 +172,24 @@ class Completion(TestSuite):
 """,
         )
 
+    def test_only_clause_keywords_after_select_star(self):
+        return LspDiffTestBlueprint(
+            sql="SELECT * <|>",
+            op="completion",
+            out="""\
+            keyword: EXCEPT
+            keyword: FROM
+            keyword: GROUP
+            keyword: HAVING
+            keyword: INTERSECT
+            keyword: LIMIT
+            keyword: ORDER
+            keyword: UNION
+            keyword: WHERE
+            keyword: WINDOW
+""",
+        )
+
     def test_tables_after_from(self):
         return LspDiffTestBlueprint(
             sql="CREATE TABLE users (id INTEGER);\nCREATE TABLE orders (id INTEGER);\nSELECT * FROM <|>",
@@ -199,10 +217,6 @@ keyword: RIGHT
             sql="SELECT * FR<|>",
             op="completion",
             out="""\
-            table: sqlite_master
-            table: sqlite_schema
-            table: sqlite_temp_master
-            table: sqlite_temp_schema
             keyword: ALTER
             keyword: ANALYZE
             keyword: ATTACH
@@ -236,116 +250,6 @@ keyword: RIGHT
             keyword: WHERE
             keyword: WINDOW
             keyword: WITH
-            function: ->
-            function: ->>
-            function: abs
-            function: avg
-            function: changes
-            function: char
-            function: coalesce
-            function: concat
-            function: concat_ws
-            function: count
-            function: cume_dist
-            function: current_date
-            function: current_time
-            function: current_timestamp
-            function: date
-            function: datetime
-            function: dense_rank
-            function: first_value
-            function: format
-            function: glob
-            function: group_concat
-            function: hex
-            function: if
-            function: ifnull
-            function: iif
-            function: instr
-            function: json
-            function: json_array
-            function: json_array_length
-            function: json_error_position
-            function: json_extract
-            function: json_group_array
-            function: json_group_object
-            function: json_insert
-            function: json_object
-            function: json_patch
-            function: json_pretty
-            function: json_quote
-            function: json_remove
-            function: json_replace
-            function: json_set
-            function: json_type
-            function: json_valid
-            function: jsonb
-            function: jsonb_array
-            function: jsonb_extract
-            function: jsonb_group_array
-            function: jsonb_group_object
-            function: jsonb_insert
-            function: jsonb_object
-            function: jsonb_patch
-            function: jsonb_remove
-            function: jsonb_replace
-            function: jsonb_set
-            function: julianday
-            function: lag
-            function: last_insert_rowid
-            function: last_value
-            function: lead
-            function: length
-            function: like
-            function: likelihood
-            function: likely
-            function: load_extension
-            function: lower
-            function: ltrim
-            function: match
-            function: max
-            function: min
-            function: nth_value
-            function: ntile
-            function: nullif
-            function: octet_length
-            function: percent_rank
-            function: printf
-            function: quote
-            function: random
-            function: randomblob
-            function: rank
-            function: replace
-            function: round
-            function: row_number
-            function: rtrim
-            function: sign
-            function: snippet
-            function: sqlite_compileoption_get
-            function: sqlite_compileoption_used
-            function: sqlite_log
-            function: sqlite_source_id
-            function: sqlite_version
-            function: strftime
-            function: string_agg
-            function: substr
-            function: substring
-            function: subtype
-            function: sum
-            function: time
-            function: timediff
-            function: total
-            function: total_changes
-            function: trim
-            function: typeof
-            function: unhex
-            function: unicode
-            function: unistr
-            function: unistr_quote
-            function: unixepoch
-            function: unlikely
-            function: upper
-            function: zeroblob
 """,
         )
 
@@ -354,10 +258,6 @@ keyword: RIGHT
             sql="SELEC 1; SELECT * FR<|>",
             op="completion",
             out="""\
-            table: sqlite_master
-            table: sqlite_schema
-            table: sqlite_temp_master
-            table: sqlite_temp_schema
             keyword: ALTER
             keyword: ANALYZE
             keyword: ATTACH
@@ -391,116 +291,6 @@ keyword: RIGHT
             keyword: WHERE
             keyword: WINDOW
             keyword: WITH
-            function: ->
-            function: ->>
-            function: abs
-            function: avg
-            function: changes
-            function: char
-            function: coalesce
-            function: concat
-            function: concat_ws
-            function: count
-            function: cume_dist
-            function: current_date
-            function: current_time
-            function: current_timestamp
-            function: date
-            function: datetime
-            function: dense_rank
-            function: first_value
-            function: format
-            function: glob
-            function: group_concat
-            function: hex
-            function: if
-            function: ifnull
-            function: iif
-            function: instr
-            function: json
-            function: json_array
-            function: json_array_length
-            function: json_error_position
-            function: json_extract
-            function: json_group_array
-            function: json_group_object
-            function: json_insert
-            function: json_object
-            function: json_patch
-            function: json_pretty
-            function: json_quote
-            function: json_remove
-            function: json_replace
-            function: json_set
-            function: json_type
-            function: json_valid
-            function: jsonb
-            function: jsonb_array
-            function: jsonb_extract
-            function: jsonb_group_array
-            function: jsonb_group_object
-            function: jsonb_insert
-            function: jsonb_object
-            function: jsonb_patch
-            function: jsonb_remove
-            function: jsonb_replace
-            function: jsonb_set
-            function: julianday
-            function: lag
-            function: last_insert_rowid
-            function: last_value
-            function: lead
-            function: length
-            function: like
-            function: likelihood
-            function: likely
-            function: load_extension
-            function: lower
-            function: ltrim
-            function: match
-            function: max
-            function: min
-            function: nth_value
-            function: ntile
-            function: nullif
-            function: octet_length
-            function: percent_rank
-            function: printf
-            function: quote
-            function: random
-            function: randomblob
-            function: rank
-            function: replace
-            function: round
-            function: row_number
-            function: rtrim
-            function: sign
-            function: snippet
-            function: sqlite_compileoption_get
-            function: sqlite_compileoption_used
-            function: sqlite_log
-            function: sqlite_source_id
-            function: sqlite_version
-            function: strftime
-            function: string_agg
-            function: substr
-            function: substring
-            function: subtype
-            function: sum
-            function: time
-            function: timediff
-            function: total
-            function: total_changes
-            function: trim
-            function: typeof
-            function: unhex
-            function: unicode
-            function: unistr
-            function: unistr_quote
-            function: unixepoch
-            function: unlikely
-            function: upper
-            function: zeroblob
 """,
         )
 
@@ -509,10 +299,6 @@ keyword: RIGHT
             sql="SELECT * FROM s AS x J<|>",
             op="completion",
             out="""\
-            table: sqlite_master
-            table: sqlite_schema
-            table: sqlite_temp_master
-            table: sqlite_temp_schema
             keyword: ALTER
             keyword: ANALYZE
             keyword: ATTACH
