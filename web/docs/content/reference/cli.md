@@ -67,8 +67,8 @@ syntaqlite analyze [OPTIONS] [FILES...]
 
 Check categories: `parse-errors`, `unknown-table`, `unknown-column`,
 `unknown-function`, `function-arity`, `cte-columns`, `qualified-ref`,
-`index-on-view`, `drop-wrong-kind`. Groups: `schema` (all 4 schema checks),
-`all`.
+`index-on-view`, `drop-wrong-kind`, `builtin-modify`. Groups: `schema` (all 4
+schema checks), `all`.
 
 When `--schema` is provided, the analyzer loads `CREATE TABLE` / `CREATE VIEW`
 statements from the schema files and checks the remaining input files against

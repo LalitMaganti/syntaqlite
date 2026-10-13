@@ -44,8 +44,9 @@ does not hide problems in later statements.
 
 Diagnostics cover syntax errors and semantic checks: unknown tables, columns
 and functions, wrong function argument counts, CTE column count mismatches,
-qualified names where SQLite forbids them, `CREATE INDEX` on a view, and
-`DROP TABLE` on a view or `DROP VIEW` on a table.
+qualified names where SQLite forbids them, `CREATE INDEX` on a view,
+`DROP TABLE` on a view or `DROP VIEW` on a table, and DDL that changes a
+built-in table such as `sqlite_schema`.
 Unknown names come with a "did you mean" suggestion when a close match exists.
 
 Each check's level comes from the `[checks]` section of `syntaqlite.toml`.

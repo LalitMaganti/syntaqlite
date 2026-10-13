@@ -88,6 +88,7 @@ impl CheckLevel {
 /// | `qualified-ref` | [`qualified_ref`](Self::qualified_ref) | Qualified names where `SQLite` forbids them | `deny` |
 /// | `index-on-view` | [`index_on_view`](Self::index_on_view) | `CREATE INDEX` on a view | `deny` |
 /// | `drop-wrong-kind` | [`drop_wrong_kind`](Self::drop_wrong_kind) | `DROP TABLE` on a view or `DROP VIEW` on a table | `deny` |
+/// | `builtin-modify` | [`builtin_modify`](Self::builtin_modify) | `DROP`, `ALTER`, `CREATE INDEX` or `CREATE TRIGGER` on a built-in table such as `sqlite_schema` | `deny` |
 ///
 /// The group name `schema` is a shorthand for `unknown-table`,
 /// `unknown-column`, `unknown-function`, and `function-arity`.
@@ -102,6 +103,7 @@ pub struct CheckConfig {
     pub(crate) qualified_ref: CheckLevel,
     pub(crate) index_on_view: CheckLevel,
     pub(crate) drop_wrong_kind: CheckLevel,
+    pub(crate) builtin_modify: CheckLevel,
 }
 
 impl Default for CheckConfig {
@@ -116,6 +118,7 @@ impl Default for CheckConfig {
             qualified_ref: CheckLevel::Deny,
             index_on_view: CheckLevel::Deny,
             drop_wrong_kind: CheckLevel::Deny,
+            builtin_modify: CheckLevel::Deny,
         }
     }
 }
@@ -158,6 +161,10 @@ impl CheckConfig {
     /// Level for dropping a table with DROP VIEW or a view with DROP TABLE.
     pub fn drop_wrong_kind(&self) -> CheckLevel {
         self.drop_wrong_kind
+    }
+    /// Level for DDL that changes a built-in table.
+    pub fn builtin_modify(&self) -> CheckLevel {
+        self.builtin_modify
     }
 
     // ── Builders ─────────────────────────────────────────────────────────
@@ -216,6 +223,12 @@ impl CheckConfig {
         self.drop_wrong_kind = level;
         self
     }
+    /// Set the level for DDL that changes a built-in table.
+    #[must_use]
+    pub fn with_builtin_modify(mut self, level: CheckLevel) -> Self {
+        self.builtin_modify = level;
+        self
+    }
     /// Set all schema checks (`unknown-table`, `unknown-column`,
     /// `unknown-function`, `function-arity`).
     #[must_use]
@@ -238,6 +251,7 @@ impl CheckConfig {
         self.qualified_ref = level;
         self.index_on_view = level;
         self.drop_wrong_kind = level;
+        self.builtin_modify = level;
         self
     }
 
@@ -254,6 +268,7 @@ impl CheckConfig {
         "qualified-ref",
         "index-on-view",
         "drop-wrong-kind",
+        "builtin-modify",
     ];
 
     /// Group names that expand to multiple categories.
@@ -275,6 +290,7 @@ impl CheckConfig {
             "qualified-ref" => self.qualified_ref = level,
             "index-on-view" => self.index_on_view = level,
             "drop-wrong-kind" => self.drop_wrong_kind = level,
+            "builtin-modify" => self.builtin_modify = level,
             "schema" => self = self.with_schema(level),
             "all" => self = self.with_all(level),
             _ => return Err(format!("unknown check category: {name}")),
@@ -391,6 +407,7 @@ mod tests {
         assert_eq!(c.qualified_ref(), CheckLevel::Deny);
         assert_eq!(c.index_on_view(), CheckLevel::Deny);
         assert_eq!(c.drop_wrong_kind(), CheckLevel::Deny);
+        assert_eq!(c.builtin_modify(), CheckLevel::Deny);
     }
 
     #[test]

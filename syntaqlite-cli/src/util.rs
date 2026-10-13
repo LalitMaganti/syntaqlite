@@ -281,6 +281,9 @@ pub(crate) fn build_check_config(
         if let Some(ref v) = opts.drop_wrong_kind {
             checks = checks.with_drop_wrong_kind(CheckLevel::parse(v)?);
         }
+        if let Some(ref v) = opts.builtin_modify {
+            checks = checks.with_builtin_modify(CheckLevel::parse(v)?);
+        }
     }
 
     // CLI flags win (last-spec-wins per category).

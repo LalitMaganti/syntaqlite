@@ -92,6 +92,7 @@ class DiagnosticCode(IntEnum):
     QUALIFIED_REF = 7
     INDEX_ON_VIEW = 8
     DROP_WRONG_KIND = 9
+    BUILTIN_MODIFY = 10
 
 
 class AnalysisOutput(StrEnum):

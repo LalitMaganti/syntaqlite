@@ -22,10 +22,10 @@ use syntaqlite_syntax::any::{
 };
 use syntaqlite_syntax::source::DocRange;
 
-use crate::analysis::QualifiedRefContext;
 use crate::analysis::catalog::{Catalog, ColumnResolution, FunctionCheckResult, drop_kind_is_view};
 use crate::analysis::name_key::NameKey;
 use crate::analysis::stmt_reader::StmtReader;
+use crate::analysis::{BuiltinChange, QualifiedRefContext};
 use crate::dialect::{FIELD_ABSENT, SemanticRole};
 
 use super::query_scope::{QueryScope, RowIdPolicy};
@@ -125,6 +125,14 @@ pub(crate) enum UncheckedRef {
     DropIfExists,
 }
 
+/// A DDL statement that changes one of the dialect's built-in tables.
+#[derive(Copy, Clone)]
+pub(crate) struct BuiltinModifyEvent<'a> {
+    pub(crate) name: &'a str,
+    pub(crate) range: DocRange,
+    pub(crate) change: BuiltinChange,
+}
+
 /// A `DROP TABLE` naming a view, or a `DROP VIEW` naming a table.
 #[derive(Copy, Clone)]
 pub(crate) struct DropWrongKindEvent<'a> {
@@ -177,6 +185,7 @@ pub(crate) trait SemanticVisitor {
     const WANTS_CTE_COLUMN_COUNT: bool = false;
     const WANTS_INDEX_ON_VIEW: bool = false;
     const WANTS_DROP_WRONG_KIND: bool = false;
+    const WANTS_BUILTIN_MODIFY: bool = false;
     const WANTS_CTE_BINDING: bool = false;
     const WANTS_SCOPED_SOURCE: bool = false;
     /// Return true to receive [`enter_query`](Self::enter_query) /
@@ -229,6 +238,13 @@ pub(crate) trait SemanticVisitor {
         &mut self,
         _stmt: &mut AnyParsedStatement<'_>,
         _ev: DropWrongKindEvent<'_>,
+    ) {
+    }
+
+    fn on_builtin_modify(
+        &mut self,
+        _stmt: &mut AnyParsedStatement<'_>,
+        _ev: BuiltinModifyEvent<'_>,
     ) {
     }
 
@@ -441,7 +457,7 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
                 self.walk_compound_scope(visitor, fields, left, right, orderby, limit_clause);
             }
             SemanticRole::AlterTable { target, .. } => {
-                self.walk_schema_target(visitor, node_id, fields, target);
+                self.walk_alter_target(visitor, node_id, fields, target);
             }
             SemanticRole::IndexScope { .. } => {
                 self.walk_index_scope(visitor, node_id, fields, role);
@@ -1003,6 +1019,7 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
                 };
                 visitor.on_source_ref(self.stmt, &mut cx, ev);
             }
+            self.check_builtin(visitor, &name_ident, range, BuiltinChange::Index);
             if V::WANTS_INDEX_ON_VIEW && self.catalog.is_view(&self.key_scratch) {
                 let ev = IndexOnViewEvent { name, range };
                 visitor.on_index_on_view(self.stmt, ev);
@@ -1017,6 +1034,45 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
         self.unqualified_only = None;
         self.walk_opt(visitor, fields.node_id_at(where_clause));
         self.scope.pop();
+    }
+
+    fn walk_alter_target<V: SemanticVisitor>(
+        &mut self,
+        visitor: &mut V,
+        node_id: AnyNodeId,
+        fields: &NodeFields,
+        target_idx: u8,
+    ) {
+        if let Some((name, range)) = self.walk_schema_target(visitor, node_id, fields, target_idx) {
+            self.check_builtin(visitor, &name, range, BuiltinChange::Alter);
+        }
+    }
+
+    /// Report a DDL change to one of the dialect's built-in tables. Returns
+    /// whether the target is a built-in.
+    fn check_builtin<V: SemanticVisitor>(
+        &mut self,
+        visitor: &mut V,
+        name: &str,
+        range: DocRange,
+        change: BuiltinChange,
+    ) -> bool {
+        self.key_scratch.set(name);
+        if !self
+            .catalog
+            .visible_relation_is_dialect_builtin(&self.key_scratch)
+        {
+            return false;
+        }
+        if V::WANTS_BUILTIN_MODIFY {
+            let ev = BuiltinModifyEvent {
+                name,
+                range,
+                change,
+            };
+            visitor.on_builtin_modify(self.stmt, ev);
+        }
+        true
     }
 
     /// Existence-check a `DROP TABLE` / `DROP VIEW` target. With `IF EXISTS`
@@ -1045,6 +1101,11 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
         }
         let target = self.walk_schema_target(visitor, node_id, fields, target);
         self.unchecked = None;
+        if let Some((name, range)) = &target
+            && self.check_builtin(visitor, name, *range, BuiltinChange::Drop)
+        {
+            return;
+        }
         if V::WANTS_DROP_WRONG_KIND
             && let Some((name, range)) = target
         {
@@ -1159,7 +1220,10 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
         };
         let target_name = self
             .walk_schema_target(visitor, node_id, fields, target)
-            .map(|(name, _)| name);
+            .map(|(name, range)| {
+                self.check_builtin(visitor, &name, range, BuiltinChange::Trigger);
+                name
+            });
         self.scope.push();
         for row in ["OLD", "NEW"] {
             match &target_name {

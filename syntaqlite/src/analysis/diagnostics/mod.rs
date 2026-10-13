@@ -153,7 +153,7 @@ impl Diagnostic {
 ///             println!("parse error: {msg}");
 ///         }
 ///         other => {
-///             // FunctionArity, UnknownColumn, CteColumnCountMismatch, QualifiedRef, IndexOnView, DropWrongKind
+///             // FunctionArity, UnknownColumn, CteColumnCountMismatch, QualifiedRef, IndexOnView, DropWrongKind, BuiltinModify
 ///             println!("{other}");
 ///         }
 ///     }
@@ -218,6 +218,13 @@ pub enum DiagnosticMessage {
         /// Whether the relation is a view.
         is_view: bool,
     },
+    /// A DDL statement changes one of `SQLite`'s built-in tables.
+    BuiltinModify {
+        /// The built-in table name.
+        name: String,
+        /// What the statement tried to do.
+        change: BuiltinChange,
+    },
     /// Module import could not be resolved.
     UnknownModule {
         /// The unresolved module path (e.g. `slices.flow`).
@@ -281,8 +288,40 @@ impl std::fmt::Display for DiagnosticMessage {
                 name,
                 is_view: false,
             } => write!(f, "use DROP TABLE to drop table '{name}'"),
+            Self::BuiltinModify { name, change } => match change {
+                BuiltinChange::Drop => write!(f, "built-in table '{name}' may not be dropped"),
+                BuiltinChange::Alter => write!(f, "built-in table '{name}' may not be altered"),
+                BuiltinChange::Index => write!(f, "built-in table '{name}' may not be indexed"),
+                BuiltinChange::Trigger => {
+                    write!(f, "cannot create a trigger on built-in table '{name}'")
+                }
+            },
             Self::UnknownModule { name } => write!(f, "unknown module '{name}'"),
             Self::ParseError(msg) => f.write_str(msg),
+        }
+    }
+}
+
+/// What a [`DiagnosticMessage::BuiltinModify`] statement tried to do.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BuiltinChange {
+    /// `DROP TABLE`.
+    Drop,
+    /// `ALTER TABLE`.
+    Alter,
+    /// `CREATE INDEX`.
+    Index,
+    /// `CREATE TRIGGER`.
+    Trigger,
+}
+
+impl BuiltinChange {
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::Drop => "drop",
+            Self::Alter => "alter",
+            Self::Index => "index",
+            Self::Trigger => "trigger",
         }
     }
 }
@@ -440,6 +479,13 @@ impl serde::Serialize for DiagnosticMessage {
                 m.serialize_entry("kind", "drop_wrong_kind")?;
                 m.serialize_entry("name", name)?;
                 m.serialize_entry("is_view", is_view)?;
+                m.end()
+            }
+            Self::BuiltinModify { name, change } => {
+                let mut m = serializer.serialize_map(Some(3))?;
+                m.serialize_entry("kind", "builtin_modify")?;
+                m.serialize_entry("name", name)?;
+                m.serialize_entry("change", change.as_str())?;
                 m.end()
             }
             Self::UnknownModule { name } => {

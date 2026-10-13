@@ -995,7 +995,7 @@ impl Catalog {
         None
     }
 
-    fn visible_relation_is_dialect_builtin(&self, key: &NameKey) -> bool {
+    pub(crate) fn visible_relation_is_dialect_builtin(&self, key: &NameKey) -> bool {
         for (index, layer) in self.layers.iter().enumerate().rev() {
             if layer.removed_relations.contains(key) {
                 return false;
