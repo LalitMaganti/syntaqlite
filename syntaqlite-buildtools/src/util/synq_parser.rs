@@ -189,6 +189,13 @@ pub(crate) enum SemanticRole {
     Values {
         rows: String,
     },
+    InsertScope {
+        with_recursive: Option<String>,
+        with_ctes: Option<String>,
+        table: String,
+        columns: Option<String>,
+        source: String,
+    },
 }
 
 /// A `semantic { ... }` annotation on a node.
@@ -831,6 +838,13 @@ impl Parser {
             },
             "values" => SemanticRole::Values {
                 rows: require_param(&params, "rows", node_name, "values")?,
+            },
+            "insert_scope" => SemanticRole::InsertScope {
+                with_recursive: get_param(&params, "with_recursive").map(str::to_string),
+                with_ctes: get_param(&params, "with_ctes").map(str::to_string),
+                table: require_param(&params, "table", node_name, "insert_scope")?,
+                columns: get_param(&params, "columns").map(str::to_string),
+                source: require_param(&params, "source", node_name, "insert_scope")?,
             },
             _ => {
                 return Err(format!(

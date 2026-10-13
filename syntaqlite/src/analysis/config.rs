@@ -93,6 +93,7 @@ impl CheckLevel {
 /// | `unknown-window` | [`unknown_window`](Self::unknown_window) | `OVER` naming a window the query doesn't define | `deny` |
 /// | `on-clause-order` | [`on_clause_order`](Self::on_clause_order) | An outer join's `ON` clause referencing a table joined to its right | `deny` |
 /// | `values-terms` | [`values_terms`](Self::values_terms) | `VALUES` rows with a different number of terms than the first row | `deny` |
+/// | `insert-values` | [`insert_values`](Self::insert_values) | `INSERT` statements supplying a different number of values than the columns they fill | `deny` |
 ///
 /// The group name `schema` is a shorthand for `unknown-table`,
 /// `unknown-column`, `unknown-function`, and `function-arity`.
@@ -112,6 +113,7 @@ pub struct CheckConfig {
     pub(crate) unknown_window: CheckLevel,
     pub(crate) on_clause_order: CheckLevel,
     pub(crate) values_terms: CheckLevel,
+    pub(crate) insert_values: CheckLevel,
 }
 
 impl Default for CheckConfig {
@@ -131,6 +133,7 @@ impl Default for CheckConfig {
             unknown_window: CheckLevel::Deny,
             on_clause_order: CheckLevel::Deny,
             values_terms: CheckLevel::Deny,
+            insert_values: CheckLevel::Deny,
         }
     }
 }
@@ -193,6 +196,10 @@ impl CheckConfig {
     /// Level for VALUES rows with different numbers of terms.
     pub fn values_terms(&self) -> CheckLevel {
         self.values_terms
+    }
+    /// Level for INSERTs supplying a different number of values than columns.
+    pub fn insert_values(&self) -> CheckLevel {
+        self.insert_values
     }
 
     // ── Builders ─────────────────────────────────────────────────────────
@@ -281,6 +288,12 @@ impl CheckConfig {
         self.values_terms = level;
         self
     }
+    /// Set the level for INSERTs supplying a different number of values than columns.
+    #[must_use]
+    pub fn with_insert_values(mut self, level: CheckLevel) -> Self {
+        self.insert_values = level;
+        self
+    }
     /// Set all schema checks (`unknown-table`, `unknown-column`,
     /// `unknown-function`, `function-arity`).
     #[must_use]
@@ -308,6 +321,7 @@ impl CheckConfig {
         self.unknown_window = level;
         self.on_clause_order = level;
         self.values_terms = level;
+        self.insert_values = level;
         self
     }
 
@@ -329,6 +343,7 @@ impl CheckConfig {
         "unknown-window",
         "on-clause-order",
         "values-terms",
+        "insert-values",
     ];
 
     /// Group names that expand to multiple categories.
@@ -355,6 +370,7 @@ impl CheckConfig {
             "unknown-window" => self.unknown_window = level,
             "on-clause-order" => self.on_clause_order = level,
             "values-terms" => self.values_terms = level,
+            "insert-values" => self.insert_values = level,
             "schema" => self = self.with_schema(level),
             "all" => self = self.with_all(level),
             _ => return Err(format!("unknown check category: {name}")),
@@ -476,6 +492,7 @@ mod tests {
         assert_eq!(c.unknown_window(), CheckLevel::Deny);
         assert_eq!(c.on_clause_order(), CheckLevel::Deny);
         assert_eq!(c.values_terms(), CheckLevel::Deny);
+        assert_eq!(c.insert_values(), CheckLevel::Deny);
     }
 
     #[test]

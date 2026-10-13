@@ -138,7 +138,7 @@ node InsertStmt {
   upsert: index UpsertClauseList
   returning: index ResultColumnList
 
-  semantic { dml_scope(with_recursive: with_recursive, with_ctes: with_ctes) }
+  semantic { insert_scope(with_recursive: with_recursive, with_ctes: with_ctes, table: table, columns: columns, source: source) }
 
   fmt {
     group {

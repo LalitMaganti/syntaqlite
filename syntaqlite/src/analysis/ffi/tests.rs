@@ -1143,6 +1143,13 @@ fn kind_code_values_terms() {
 }
 
 #[test]
+fn kind_code_insert_values() {
+    let v = Validator::new();
+    v.analyze("CREATE TABLE t(a, b); INSERT INTO t VALUES(1);");
+    assert!(v.has_code(DIAG_CODE_INSERT_VALUES));
+}
+
+#[test]
 fn kind_code_per_statement_matches_aggregate() {
     let v = Validator::new();
     v.analyze("SELECT id FROM no_such_table");
@@ -1172,6 +1179,7 @@ fn diagnostic_code_to_c_covers_all_variants() {
     check(M::UnknownWindow { name: "w".into() }, DIAG_CODE_UNKNOWN_WINDOW);
     check(M::OnClauseOrder { name: "c".into() }, DIAG_CODE_ON_CLAUSE_ORDER);
     check(M::ValuesTerms { first: 2, row: 1 }, DIAG_CODE_VALUES_TERMS);
+    check(M::InsertValues { table: "t".into(), column_list: false, columns: 2, values: 1 }, DIAG_CODE_INSERT_VALUES);
 }
 
 // ── Custom function / table-function registration ────────────────────

@@ -97,6 +97,7 @@ class DiagnosticCode(IntEnum):
     UNKNOWN_WINDOW = 12
     ON_CLAUSE_ORDER = 13
     VALUES_TERMS = 14
+    INSERT_VALUES = 15
 
 
 class AnalysisOutput(StrEnum):

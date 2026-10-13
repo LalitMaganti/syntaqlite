@@ -22,6 +22,8 @@ use syntaqlite_syntax::source::DocRange;
 
 use crate::analysis::catalog::{AritySpec, Column, ColumnKind};
 use crate::analysis::model::DefinedRelation;
+use crate::analysis::name_key::NameKey;
+use crate::analysis::result_columns::is_star;
 use crate::dialect::SemanticRole;
 
 /// Bundles `(stmt, roles)` and exposes role-table-driven extraction.
@@ -309,6 +311,48 @@ impl<'a, 'stmt> StmtReader<'a, 'stmt> {
     }
 
     // ── SELECT-shaped column inference (analyzer + lineage) ─────────────
+
+    /// The table `query` copies, when it is exactly `SELECT * FROM table`.
+    pub(crate) fn bare_star_source(&self, query: AnyNodeId) -> Option<NameKey> {
+        let (
+            SemanticRole::Query {
+                from,
+                columns,
+                where_clause,
+                groupby,
+                having,
+                orderby,
+                limit_clause,
+            },
+            fields,
+        ) = self.role_for_node(query)?
+        else {
+            return None;
+        };
+        let clauses = [where_clause, groupby, having, orderby, limit_clause];
+        if clauses.iter().any(|&idx| fields.node_id_at(idx).is_some()) {
+            return None;
+        }
+        let columns = self.stmt.list_children(fields.node_id_at(columns)?)?;
+        let [column] = columns else {
+            return None;
+        };
+        let (SemanticRole::ResultColumn { flags, expr, .. }, column_fields) =
+            self.role_for_node(*column)?
+        else {
+            return None;
+        };
+        if !is_star(&column_fields, flags) || column_fields.node_id_at(expr).is_some() {
+            return None;
+        }
+        let (SemanticRole::SourceRef { name, .. }, source_fields) =
+            self.role_for_node(fields.node_id_at(from)?)?
+        else {
+            return None;
+        };
+        let table = self.stmt.span_field_ident_text(&source_fields, name)?;
+        Some(NameKey::new(&table))
+    }
 
     /// The output column name for a single result column.
     ///
