@@ -111,7 +111,7 @@ pub enum ColumnKind {
     Hidden,
 }
 
-/// A table column registered in a [`CatalogLayerContents`].
+/// A column of a [`TableDef`] or [`ViewDef`].
 ///
 /// Converts from a name for an ordinary column.
 ///
@@ -191,6 +191,79 @@ impl<'de> serde::Deserialize<'de> for Column {
             Repr::Name(name) => name.into(),
             Repr::Def(def) => Column::new(def.name, def.kind),
         })
+    }
+}
+
+/// A table for [`CatalogLayerContents::insert_table`].
+///
+/// Its columns are unknown until [`columns`](Self::columns) is called, and
+/// any column reference against it is accepted.
+///
+/// Deserializes from `{"name": ..., "columns": [...]}`, where a missing or
+/// `null` column list means the columns are unknown.
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize))]
+pub struct TableDef {
+    name: String,
+    #[cfg_attr(feature = "serde", serde(default))]
+    columns: Option<Vec<Column>>,
+    #[cfg_attr(feature = "serde", serde(skip))]
+    without_rowid: bool,
+}
+
+impl TableDef {
+    /// A table whose columns are unknown.
+    pub fn new(name: impl Into<String>) -> Self {
+        Self {
+            name: name.into(),
+            columns: None,
+            without_rowid: false,
+        }
+    }
+
+    /// Set the table's columns, in order.
+    #[must_use]
+    pub fn columns(mut self, columns: impl IntoIterator<Item = impl Into<Column>>) -> Self {
+        self.columns = Some(columns.into_iter().map(Into::into).collect());
+        self
+    }
+
+    /// Mark the table `WITHOUT ROWID`, so it has no implicit `rowid` column.
+    #[must_use]
+    pub fn without_rowid(mut self) -> Self {
+        self.without_rowid = true;
+        self
+    }
+}
+
+/// A view for [`CatalogLayerContents::insert_view`].
+///
+/// Its columns are unknown until [`columns`](Self::columns) is called, and
+/// any column reference against it is accepted.
+///
+/// Deserializes like [`TableDef`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize))]
+pub struct ViewDef {
+    name: String,
+    #[cfg_attr(feature = "serde", serde(default))]
+    columns: Option<Vec<Column>>,
+}
+
+impl ViewDef {
+    /// A view whose columns are unknown.
+    pub fn new(name: impl Into<String>) -> Self {
+        Self {
+            name: name.into(),
+            columns: None,
+        }
+    }
+
+    /// Set the view's columns, in order.
+    #[must_use]
+    pub fn columns(mut self, columns: impl IntoIterator<Item = impl Into<Column>>) -> Self {
+        self.columns = Some(columns.into_iter().map(Into::into).collect());
+        self
     }
 }
 
@@ -310,46 +383,35 @@ impl CatalogLayerContents {
 
     /// Insert a table into this layer.
     ///
-    /// Pass `columns = Some(vec![...])` when the column list is known so the
-    /// analyzer can validate column references. Pass `columns = None` when the
-    /// table exists but its columns are unknown — references against it are
-    /// conservatively accepted without warnings.
-    ///
-    /// Set `without_rowid` to `true` for `WITHOUT ROWID` tables (suppresses
-    /// the implicit `rowid` column during resolution).
-    ///
     /// # Example
     ///
     /// ```
-    /// # use syntaqlite::analysis::{CatalogLayer, Column};
+    /// # use syntaqlite::analysis::{CatalogLayer, Column, TableDef};
     /// # use syntaqlite::Catalog;
     /// let mut catalog = Catalog::new(syntaqlite::sqlite_dialect());
     /// let db = catalog.layer_mut(CatalogLayer::Database);
     ///
     /// // Known columns — misspelled column names will produce diagnostics.
-    /// db.insert_table("users", Some(vec!["id".into(), "name".into()]), false);
+    /// db.insert_table(TableDef::new("users").columns(["id", "name"]));
     ///
     /// // Generated and hidden columns are declared by kind.
-    /// db.insert_table(
-    ///     "orders",
-    ///     Some(vec!["price".into(), "qty".into(), Column::generated("total")]),
-    ///     false,
-    /// );
+    /// db.insert_table(TableDef::new("orders").columns([
+    ///     Column::from("price"),
+    ///     Column::from("qty"),
+    ///     Column::generated("total"),
+    /// ]));
     ///
     /// // Unknown columns — any column reference is accepted.
-    /// db.insert_table("external_data", None, false);
+    /// db.insert_table(TableDef::new("external_data"));
     /// ```
-    pub fn insert_table(
-        &mut self,
-        name: impl Into<String>,
-        columns: Option<Vec<Column>>,
-        without_rowid: bool,
-    ) {
-        let name = name.into();
-        let key = NameKey::new(&name);
-        self.removed_relations.remove(&key);
-        self.relations.insert(
-            key,
+    pub fn insert_table(&mut self, table: TableDef) {
+        let TableDef {
+            name,
+            columns,
+            without_rowid,
+        } = table;
+        self.insert_entry(
+            &name.clone(),
             RelationEntry {
                 name,
                 columns,
@@ -362,29 +424,26 @@ impl CatalogLayerContents {
     /// Insert a view into this layer.
     ///
     /// Views behave like tables for resolution purposes but never expose an
-    /// implicit `rowid` column. As with [`insert_table`](Self::insert_table),
-    /// pass `None` for `columns` when the column list is unknown.
+    /// implicit `rowid` column.
     ///
     /// # Example
     ///
     /// ```
-    /// # use syntaqlite::analysis::CatalogLayer;
+    /// # use syntaqlite::analysis::{CatalogLayer, ViewDef};
     /// # use syntaqlite::Catalog;
     /// let mut catalog = Catalog::new(syntaqlite::sqlite_dialect());
     /// catalog
     ///     .layer_mut(CatalogLayer::Database)
-    ///     .insert_view("active_users", Some(vec!["id".into(), "name".into()]));
+    ///     .insert_view(ViewDef::new("active_users").columns(["id", "name"]));
     /// ```
-    pub fn insert_view(&mut self, name: impl Into<String>, columns: Option<Vec<String>>) {
-        let name = name.into();
-        let key = NameKey::new(&name);
-        self.removed_relations.remove(&key);
-        self.relations.insert(
-            key,
+    pub fn insert_view(&mut self, view: ViewDef) {
+        let ViewDef { name, columns } = view;
+        self.insert_entry(
+            &name.clone(),
             RelationEntry {
                 name,
-                columns: columns.map(|cols| cols.into_iter().map(Column::from).collect()),
-                without_rowid: true, // views have no rowid
+                columns,
+                without_rowid: true,
                 is_view: true,
             },
         );
@@ -520,7 +579,7 @@ impl CatalogLayerContents {
 
 #[cfg(feature = "sqlite")]
 mod dialect_builtins {
-    use super::{AritySpec, CatalogLayerContents};
+    use super::{AritySpec, CatalogLayerContents, TableDef};
     use crate::dialect::{AnyDialect, FunctionCategory as DialectFunctionCategory, is_available};
 
     pub(super) fn populate(layer: &mut CatalogLayerContents, dialect: &AnyDialect) {
@@ -547,11 +606,12 @@ mod dialect_builtins {
             if !is_available(entry.availability, dialect) {
                 continue;
             }
-            layer.insert_table(
-                entry.info.name,
-                Some(entry.info.columns.iter().map(|&c| c.into()).collect()),
-                entry.info.without_rowid,
-            );
+            let table = TableDef::new(entry.info.name).columns(entry.info.columns.iter().copied());
+            layer.insert_table(if entry.info.without_rowid {
+                table.without_rowid()
+            } else {
+                table
+            });
         }
     }
 }
@@ -629,20 +689,20 @@ const FIXED_LAYER_COUNT: usize = 4;
 /// and call `insert_*` methods on the returned [`CatalogLayerContents`]:
 ///
 /// ```
-/// # use syntaqlite::analysis::CatalogLayer;
+/// # use syntaqlite::analysis::{CatalogLayer, TableDef};
 /// # use syntaqlite::Catalog;
 /// let mut catalog = Catalog::new(syntaqlite::sqlite_dialect());
 ///
 /// // Register a table with known columns.
 /// catalog
 ///     .layer_mut(CatalogLayer::Database)
-///     .insert_table("users", Some(vec!["id".into(), "name".into()]), false);
+///     .insert_table(TableDef::new("users").columns(["id", "name"]));
 ///
 /// // Register a table whose columns are unknown — column references
 /// // against it are conservatively accepted without warnings.
 /// catalog
 ///     .layer_mut(CatalogLayer::Database)
-///     .insert_table("logs", None, false);
+///     .insert_table(TableDef::new("logs"));
 /// ```
 #[derive(Clone)]
 pub struct Catalog {
@@ -663,13 +723,13 @@ impl Catalog {
     /// # Example
     ///
     /// ```
-    /// # use syntaqlite::analysis::CatalogLayer;
+    /// # use syntaqlite::analysis::{CatalogLayer, TableDef};
     /// # use syntaqlite::Catalog;
     /// let mut catalog = Catalog::new(syntaqlite::sqlite_dialect());
     ///
     /// catalog
     ///     .layer_mut(CatalogLayer::Database)
-    ///     .insert_table("orders", Some(vec!["id".into(), "total".into()]), false);
+    ///     .insert_table(TableDef::new("orders").columns(["id", "total"]));
     /// ```
     pub fn new(dialect: impl Into<AnyDialect>) -> Self {
         let dialect = dialect.into();
@@ -796,23 +856,11 @@ impl Catalog {
         #[derive(serde::Deserialize)]
         struct Root {
             #[serde(default)]
-            tables: Vec<TableInput>,
+            tables: Vec<TableDef>,
             #[serde(default)]
-            views: Vec<ViewInput>,
+            views: Vec<ViewDef>,
             #[serde(default)]
             functions: Vec<FunctionInput>,
-        }
-        #[derive(serde::Deserialize)]
-        struct TableInput {
-            name: String,
-            #[serde(default)]
-            columns: Vec<Column>,
-        }
-        #[derive(serde::Deserialize)]
-        struct ViewInput {
-            name: String,
-            #[serde(default)]
-            columns: Vec<String>,
         }
         #[derive(serde::Deserialize)]
         struct FunctionInput {
@@ -826,28 +874,11 @@ impl Catalog {
 
         let mut catalog = Catalog::new(dialect);
         let db = catalog.layer_mut(CatalogLayer::Database);
-        for t in root.tables {
-            // Empty column list means "unknown columns — accept any ref conservatively".
-            // Only use Some(cols) when columns are explicitly specified.
-            let cols = if t.columns.is_empty() {
-                None
-            } else {
-                Some(
-                    t.columns
-                        .into_iter()
-                        .map(|c| Column::new(c.name.to_ascii_lowercase(), c.kind))
-                        .collect(),
-                )
-            };
-            db.insert_table(t.name, cols, false);
+        for table in root.tables {
+            db.insert_table(table);
         }
-        for v in root.views {
-            let cols = if v.columns.is_empty() {
-                None
-            } else {
-                Some(v.columns.iter().map(|c| c.to_ascii_lowercase()).collect())
-            };
-            db.insert_view(v.name, cols);
+        for view in root.views {
+            db.insert_view(view);
         }
         for f in root.functions {
             let arity = match f.args {
@@ -900,7 +931,11 @@ impl Catalog {
                         fields[without_rowid.field as usize],
                         FieldValue::Flags(f) if without_rowid.is_set(f)
                     );
-                self.layers[target.index()].insert_table(normalized_name, cols, is_without_rowid);
+                self.layers[target.index()].insert_table(TableDef {
+                    name: normalized_name,
+                    columns: cols,
+                    without_rowid: is_without_rowid,
+                });
             }
             SemanticRole::DefineView {
                 name,
@@ -912,8 +947,10 @@ impl Catalog {
                 };
                 let normalized_name = name_val.into_owned();
                 let cols = reader.extract_columns(&fields, columns, select);
-                let names = cols.map(|cols| cols.into_iter().map(|c| c.name).collect());
-                self.layers[target.index()].insert_view(normalized_name, names);
+                self.layers[target.index()].insert_view(ViewDef {
+                    name: normalized_name,
+                    columns: cols,
+                });
             }
             SemanticRole::DefineFunction {
                 name,
@@ -1086,8 +1123,11 @@ impl Catalog {
     /// column references against it are conservatively accepted.
     pub(crate) fn add_query_table(&mut self, name: &str, columns: Option<Vec<String>>) {
         if let Some(frame) = self.layers[FIXED_LAYER_COUNT..].last_mut() {
-            let columns = columns.map(|cols| cols.into_iter().map(Column::from).collect());
-            frame.insert_table(name, columns, false);
+            frame.insert_table(TableDef {
+                name: name.to_string(),
+                columns: columns.map(|cols| cols.into_iter().map(Column::from).collect()),
+                without_rowid: false,
+            });
         }
     }
 
@@ -1337,11 +1377,8 @@ mod tests {
     #[test]
     fn add_table_and_resolve() {
         let mut cat = sqlite_catalog();
-        cat.layer_mut(CatalogLayer::Database).insert_table(
-            "users",
-            Some(vec!["id".into(), "name".into()]),
-            false,
-        );
+        cat.layer_mut(CatalogLayer::Database)
+            .insert_table(TableDef::new("users").columns(["id", "name"]));
         assert!(cat.resolve_relation(&NameKey::new("users")));
         assert!(cat.resolve_relation(&NameKey::new("USERS")));
         assert!(!cat.resolve_relation(&NameKey::new("orders")));
@@ -1351,7 +1388,7 @@ mod tests {
     fn add_view_and_resolve() {
         let mut cat = sqlite_catalog();
         cat.layer_mut(CatalogLayer::Database)
-            .insert_view("active_users", Some(vec!["id".to_string()]));
+            .insert_view(ViewDef::new("active_users").columns(["id"]));
         assert!(cat.resolve_relation(&NameKey::new("active_users")));
     }
 
@@ -1578,8 +1615,27 @@ mod tests {
                 "{column} should be rejected"
             );
         }
-        let view = r#"{"views": [{"name": "v", "columns": [{"name": "a"}]}]}"#;
-        assert!(Catalog::from_json(dialect, view).is_err());
+    }
+
+    #[test]
+    fn json_omitted_columns_are_unknown_and_empty_ones_known() {
+        let dialect = crate::sqlite::dialect::dialect();
+        let cat = Catalog::from_json(
+            dialect,
+            r#"{"tables": [{"name": "a"}, {"name": "b", "columns": null}, {"name": "c", "columns": []}],
+                "views": [{"name": "v", "columns": [{"name": "x", "kind": "normal"}]}]}"#,
+        )
+        .unwrap();
+        for unknown in ["a", "b"] {
+            assert!(
+                cat.visible_relation(&NameKey::new(unknown))
+                    .unwrap()
+                    .columns
+                    .is_none()
+            );
+        }
+        assert_eq!(column_kinds(&cat, "c"), []);
+        assert_eq!(column_kinds(&cat, "v"), [("x".into(), ColumnKind::Normal)]);
     }
 
     #[test]
@@ -1619,7 +1675,7 @@ mod tests {
         let dialect = crate::sqlite::dialect::dialect();
         let mut cat = Catalog::new(dialect.clone());
         cat.layer_mut(CatalogLayer::Database)
-            .insert_table("x1", None, false);
+            .insert_table(TableDef::new("x1"));
         accumulate_into(
             &mut cat,
             &dialect,
@@ -1658,7 +1714,7 @@ mod tests {
         let mut cat = Catalog::new(dialect.clone());
         // Simulate a table established by an earlier (already promoted) pass.
         cat.layer_mut(CatalogLayer::Connection)
-            .insert_table("t3", Some(vec!["a".into()]), false);
+            .insert_table(TableDef::new("t3").columns(["a"]));
         accumulate_into(
             &mut cat,
             &dialect,
@@ -1706,7 +1762,7 @@ mod tests {
     fn clear_database() {
         let mut cat = sqlite_catalog();
         cat.layer_mut(CatalogLayer::Database)
-            .insert_table("tmp", Some(vec!["id".into()]), false);
+            .insert_table(TableDef::new("tmp").columns(["id"]));
         assert!(cat.resolve_relation(&NameKey::new("tmp")));
         cat.new_database();
         assert!(!cat.resolve_relation(&NameKey::new("tmp")));
@@ -1715,11 +1771,8 @@ mod tests {
     #[test]
     fn clear_connection() {
         let mut cat = sqlite_catalog();
-        cat.layer_mut(CatalogLayer::Connection).insert_table(
-            "conn_tbl",
-            Some(vec!["id".into()]),
-            false,
-        );
+        cat.layer_mut(CatalogLayer::Connection)
+            .insert_table(TableDef::new("conn_tbl").columns(["id"]));
         cat.new_connection();
         assert!(!cat.resolve_relation(&NameKey::new("conn_tbl")));
     }
@@ -1727,11 +1780,8 @@ mod tests {
     #[test]
     fn connection_layer_resolves() {
         let mut cat = sqlite_catalog();
-        cat.layer_mut(CatalogLayer::Connection).insert_table(
-            "conn_tbl",
-            Some(vec!["id".into()]),
-            false,
-        );
+        cat.layer_mut(CatalogLayer::Connection)
+            .insert_table(TableDef::new("conn_tbl").columns(["id"]));
         assert!(cat.resolve_relation(&NameKey::new("conn_tbl")));
     }
 
@@ -1739,9 +1789,9 @@ mod tests {
     fn is_view_matches_inserted_views_only() {
         let mut cat = sqlite_catalog();
         cat.layer_mut(CatalogLayer::Database)
-            .insert_table("users", Some(vec!["id".into()]), false);
+            .insert_table(TableDef::new("users").columns(["id"]));
         cat.layer_mut(CatalogLayer::Database)
-            .insert_view("active_users", Some(vec!["id".into()]));
+            .insert_view(ViewDef::new("active_users").columns(["id"]));
 
         assert!(!cat.is_view(&NameKey::new("users")));
         assert!(cat.is_view(&NameKey::new("active_users")));
@@ -1753,10 +1803,10 @@ mod tests {
         let mut catalog = sqlite_catalog();
         catalog
             .layer_mut(CatalogLayer::Database)
-            .insert_table("t1", Some(vec!["a".into()]), false);
+            .insert_table(TableDef::new("t1").columns(["a"]));
         catalog
             .layer_mut(CatalogLayer::Database)
-            .insert_view("v1", Some(vec!["b".into()]));
+            .insert_view(ViewDef::new("v1").columns(["b"]));
 
         let names: HashSet<&str> = catalog
             .layer(CatalogLayer::Database)

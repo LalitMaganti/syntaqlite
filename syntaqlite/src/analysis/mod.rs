@@ -23,13 +23,13 @@
 //!
 //! ```
 //! use syntaqlite::analysis::{
-//!     AnalysisContext, Analyzer, Catalog, CatalogLayer,
+//!     AnalysisContext, Analyzer, Catalog, CatalogLayer, TableDef,
 //! };
 //!
 //! let mut analyzer = Analyzer::new();
 //! let mut catalog = Catalog::new(syntaqlite::sqlite_dialect());
 //! catalog.layer_mut(CatalogLayer::Database)
-//!     .insert_table("users", Some(vec!["id".into(), "name".into()]), false);
+//!     .insert_table(TableDef::new("users").columns(["id", "name"]));
 //!
 //! let mut ctx = AnalysisContext::new(&mut catalog);
 //! let model = analyzer.analyze("SELECT id, nme FROM users", &mut ctx);
@@ -69,6 +69,7 @@ pub(crate) mod stmt_reader;
 #[cfg(feature = "analysis")]
 pub use catalog::{
     AritySpec, Catalog, CatalogLayer, CatalogLayerContents, Column, ColumnKind, FunctionCategory,
+    TableDef, ViewDef,
 };
 #[doc(inline)]
 #[cfg(feature = "analysis")]

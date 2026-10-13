@@ -122,25 +122,10 @@ impl Validator {
     /// Register a table whose columns carry a `SyntaqliteColumnKind` value.
     fn add_table_with_kinds(&self, name: &str, cols: &[(&str, u32)]) {
         let c_name = CString::new(name).unwrap();
-        let c_cols: Vec<CString> = cols
-            .iter()
-            .map(|(c, _)| CString::new(*c).unwrap())
-            .collect();
-        let defs: Vec<SyntaqliteColumnDef> = c_cols
-            .iter()
-            .zip(cols)
-            .map(|(c, &(_, kind))| SyntaqliteColumnDef {
-                name: c.as_ptr(),
-                kind,
-            })
-            .collect();
+        let (_keep_cstrs, defs) = column_defs(cols);
         let table = SyntaqliteTableDef {
             name: c_name.as_ptr(),
-            columns: if defs.is_empty() {
-                std::ptr::null()
-            } else {
-                defs.as_ptr()
-            },
+            columns: defs_ptr(&defs),
             column_count: u32::try_from(defs.len()).unwrap(),
         };
         // SAFETY: FFI test — handle from `syntaqlite_analyzer_create_sqlite`;
@@ -148,18 +133,20 @@ impl Validator {
         unsafe { syntaqlite_analyzer_add_tables(self.0, &raw const table, 1) };
     }
 
-    /// Register a view; empty `cols` means NULL columns (accepts any ref).
+    /// Register a view of normal columns; empty `cols` means NULL columns
+    /// (accepts any ref).
     fn add_view(&self, name: &str, cols: &[&str]) {
         let c_name = CString::new(name).unwrap();
-        let (_keep_cstrs, _keep_ptrs, cols_ptr, col_count) = cstring_vec(cols);
-        let rel = SyntaqliteRelationDef {
+        let cols: Vec<(&str, u32)> = cols.iter().map(|&c| (c, 0)).collect();
+        let (_keep_cstrs, defs) = column_defs(&cols);
+        let view = SyntaqliteViewDef {
             name: c_name.as_ptr(),
-            columns: cols_ptr,
-            column_count: col_count,
+            columns: defs_ptr(&defs),
+            column_count: u32::try_from(defs.len()).unwrap(),
         };
         // SAFETY: FFI test — handle from `syntaqlite_analyzer_create_sqlite`;
-        // all C strings and the `SyntaqliteRelationDef` outlive the call.
-        unsafe { syntaqlite_analyzer_add_views(self.0, &raw const rel, 1) };
+        // all C strings and the `SyntaqliteViewDef` outlive the call.
+        unsafe { syntaqlite_analyzer_add_views(self.0, &raw const view, 1) };
     }
 
     #[expect(clippy::cast_possible_truncation)]
@@ -214,17 +201,46 @@ impl Validator {
     }
 }
 
+/// Column definitions for `(name, kind)` pairs, with the C strings they
+/// point into.
+fn column_defs(cols: &[(&str, u32)]) -> (Vec<CString>, Vec<SyntaqliteColumnDef>) {
+    let names: Vec<CString> = cols
+        .iter()
+        .map(|(c, _)| CString::new(*c).unwrap())
+        .collect();
+    let defs = names
+        .iter()
+        .zip(cols)
+        .map(|(name, &(_, kind))| SyntaqliteColumnDef {
+            name: name.as_ptr(),
+            kind,
+        })
+        .collect();
+    (names, defs)
+}
+
+/// NULL for no columns, which registers the columns as unknown.
+fn defs_ptr(defs: &[SyntaqliteColumnDef]) -> *const SyntaqliteColumnDef {
+    if defs.is_empty() {
+        std::ptr::null()
+    } else {
+        defs.as_ptr()
+    }
+}
+
 /// Build an FFI-ready column array from `&[&str]`, returning the owning
 /// `Vec<CString>` + pointer vector (must stay alive across the call)
 /// plus the `(cols_ptr, col_count)` pair to pass to the FFI.
-#[expect(clippy::cast_possible_truncation)]
 fn cstring_vec(cols: &[&str]) -> (Vec<CString>, Vec<*const c_char>, *const *const c_char, u32) {
     let c_cols: Vec<CString> = cols.iter().map(|c| CString::new(*c).unwrap()).collect();
     let c_col_ptrs: Vec<*const c_char> = c_cols.iter().map(|c| c.as_ptr()).collect();
     let (cols_ptr, col_count) = if c_col_ptrs.is_empty() {
         (std::ptr::null(), 0u32)
     } else {
-        (c_col_ptrs.as_ptr(), c_col_ptrs.len() as u32)
+        (
+            c_col_ptrs.as_ptr(),
+            u32::try_from(c_col_ptrs.len()).unwrap(),
+        )
     };
     (c_cols, c_col_ptrs, cols_ptr, col_count)
 }

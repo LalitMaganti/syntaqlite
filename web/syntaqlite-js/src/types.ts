@@ -139,26 +139,23 @@ export interface AnalyzeDiagnostic {
  */
 export type ColumnKind = "normal" | "generated" | "hidden";
 
-/** A table column: a name, or a name with its kind. */
+/** A column: a name, or a name with its kind. */
 export type ColumnSpec = string | {name: string; kind?: ColumnKind};
 
-/** A table added to the analysis catalog. */
-export interface TableSpec {
-  name: string;
-  columns?: ColumnSpec[];
-}
-
-/** A view added to the analysis catalog. */
+/**
+ * A table or view added to the analysis catalog. Omitted `columns` means
+ * the columns are unknown.
+ */
 export interface RelationSpec {
   name: string;
-  columns?: string[];
+  columns?: ColumnSpec[];
 }
 
 export interface AnalyzeOptions {
   /** DDL parsed into a schema catalog for schema-aware validation. */
   schemaDdl?: string;
   /** Tables added to the catalog. */
-  tables?: TableSpec[];
+  tables?: RelationSpec[];
   /** Views added to the catalog. */
   views?: RelationSpec[];
   /** Dotted module path to SQL source, resolving INCLUDE MODULE imports. */

@@ -78,7 +78,8 @@ Zero-copy: tokens reference byte offsets into the source string.
 | `AnalysisContext::new(&mut catalog)` | Bundle the catalog, config, and optional module resolver for a single analysis call |
 | `analyzer.analyze(sql, &mut ctx) -> Analysis` | Analyze SQL, returning diagnostics and lineage |
 | `Catalog::new(dialect)` | Create an empty catalog |
-| `catalog.layer_mut(CatalogLayer::Database).insert_table(name, cols, false)` | Register a table. Columns convert from names; use `Column::generated` and `Column::hidden` for generated and hidden columns |
+| `catalog.layer_mut(CatalogLayer::Database).insert_table(TableDef::new(name).columns(cols))` | Register a table. Columns convert from names; use `Column::generated` and `Column::hidden` for generated and hidden columns, and `.without_rowid()` for a `WITHOUT ROWID` table |
+| `catalog.layer_mut(CatalogLayer::Database).insert_view(ViewDef::new(name).columns(cols))` | Register a view |
 | `AnalysisConfig::default()` | Default config (warnings for unknowns) |
 | `AnalysisConfig::default().with_strict_schema()` | Strict mode (errors for unknowns) |
 | `model.diagnostics()` | Parse and semantic diagnostics |

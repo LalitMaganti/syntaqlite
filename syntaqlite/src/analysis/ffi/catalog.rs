@@ -9,10 +9,10 @@ use std::ffi::{CStr, c_char};
 use crate::analysis::AnalysisConfig;
 use crate::analysis::catalog::{Catalog, CatalogLayer};
 
+use super::SyntaqliteAnalyzer;
 use super::codes::{arity_spec_from_c, column_kind_from_c, function_category_from_c};
-use super::types::SyntaqliteTableDef;
-use super::{SyntaqliteAnalyzer, SyntaqliteRelationDef};
-use crate::analysis::catalog::Column;
+use super::types::{SyntaqliteColumnDef, SyntaqliteTableDef, SyntaqliteViewDef};
+use crate::analysis::catalog::{Column, TableDef, ViewDef};
 
 /// Clear accumulated DDL from the catalog.
 ///
@@ -47,89 +47,88 @@ pub unsafe extern "C" fn syntaqlite_analyzer_add_tables(
 ) {
     // SAFETY: caller guarantees `v` is valid.
     let v = unsafe { &mut *v };
-    let state = v.state_mut();
-
+    let layer = v.state_mut().user_catalog.layer_mut(CatalogLayer::Database);
     for i in 0..count as usize {
         // SAFETY: caller guarantees `tables[i]` is valid.
         let def = unsafe { &*tables.add(i) };
-
-        // SAFETY: caller guarantees `name` is a valid NUL-terminated C string.
-        let name = unsafe { CStr::from_ptr(def.name) }
-            .to_str()
-            .unwrap_or("")
-            .to_owned();
-
-        let columns = if def.columns.is_null() {
-            None
-        } else {
-            let cols: Option<Vec<Column>> = (0..def.column_count as usize)
-                .map(|j| {
-                    // SAFETY: caller guarantees `columns[j]` is valid.
-                    let col = unsafe { &*def.columns.add(j) };
-                    // SAFETY: caller guarantees `name` is a valid NUL-terminated C string.
-                    let col_name = unsafe { CStr::from_ptr(col.name) }.to_str().unwrap_or("");
-                    Some(Column::new(col_name, column_kind_from_c(col.kind)?))
-                })
-                .collect();
-            let Some(cols) = cols else { continue };
-            Some(cols)
+        // SAFETY: caller guarantees `name` and `columns` are valid.
+        let Some((name, columns)) =
+            (unsafe { relation_from_c(def.name, def.columns, def.column_count) })
+        else {
+            continue;
         };
-
-        state
-            .user_catalog
-            .layer_mut(CatalogLayer::Database)
-            .insert_table(name, columns, false);
+        let table = TableDef::new(name);
+        layer.insert_table(match columns {
+            Some(columns) => table.columns(columns),
+            None => table,
+        });
     }
 }
 
-/// Add views to the database layer of the catalog.
-///
-/// Uses the same `SyntaqliteRelationDef` struct as `add_tables` — `name` is
-/// the view name, `columns` are the view's output columns.
+/// Add views to the database layer of the catalog. A view with an
+/// out-of-range column kind is not added.
 ///
 /// # Safety
 ///
-/// Same requirements as `syntaqlite_analyzer_add_tables`.
+/// Same requirements as `syntaqlite_analyzer_add_tables`, with `views`
+/// pointing to `count` valid `SyntaqliteViewDef` entries.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn syntaqlite_analyzer_add_views(
     v: *mut SyntaqliteAnalyzer,
-    views: *const SyntaqliteRelationDef,
+    views: *const SyntaqliteViewDef,
     count: u32,
 ) {
     // SAFETY: caller guarantees `v` is valid.
     let v = unsafe { &mut *v };
-    let state = v.state_mut();
-
+    let layer = v.state_mut().user_catalog.layer_mut(CatalogLayer::Database);
     for i in 0..count as usize {
         // SAFETY: caller guarantees `views[i]` is valid.
         let def = unsafe { &*views.add(i) };
-
-        // SAFETY: caller guarantees `name` is a valid NUL-terminated C string.
-        let name = unsafe { CStr::from_ptr(def.name) }
-            .to_str()
-            .unwrap_or("")
-            .to_owned();
-
-        let columns = if def.columns.is_null() {
-            None
-        } else {
-            let cols: Vec<String> = (0..def.column_count as usize)
-                .map(|j| {
-                    // SAFETY: caller guarantees `columns[j]` is valid.
-                    unsafe { CStr::from_ptr(*def.columns.add(j)) }
-                        .to_str()
-                        .unwrap_or("")
-                        .to_owned()
-                })
-                .collect();
-            Some(cols)
+        // SAFETY: caller guarantees `name` and `columns` are valid.
+        let Some((name, columns)) =
+            (unsafe { relation_from_c(def.name, def.columns, def.column_count) })
+        else {
+            continue;
         };
-
-        state
-            .user_catalog
-            .layer_mut(CatalogLayer::Database)
-            .insert_view(name, columns);
+        let view = ViewDef::new(name);
+        layer.insert_view(match columns {
+            Some(columns) => view.columns(columns),
+            None => view,
+        });
     }
+}
+
+/// A relation's name and columns, which are `None` when `columns` is NULL.
+/// `None` overall when a column has an out-of-range kind.
+///
+/// # Safety
+///
+/// `name` must be a valid NUL-terminated C string. `columns` may be NULL;
+/// if non-NULL it must point to `count` valid `SyntaqliteColumnDef` entries
+/// whose names are valid NUL-terminated C strings.
+unsafe fn relation_from_c(
+    name: *const c_char,
+    columns: *const SyntaqliteColumnDef,
+    count: u32,
+) -> Option<(String, Option<Vec<Column>>)> {
+    // SAFETY: caller guarantees `name` is a valid NUL-terminated C string.
+    let name = unsafe { CStr::from_ptr(name) }
+        .to_str()
+        .unwrap_or("")
+        .to_owned();
+    if columns.is_null() {
+        return Some((name, None));
+    }
+    let columns = (0..count as usize)
+        .map(|j| {
+            // SAFETY: caller guarantees `columns[j]` is valid.
+            let col = unsafe { &*columns.add(j) };
+            // SAFETY: caller guarantees the column name is a valid NUL-terminated C string.
+            let col_name = unsafe { CStr::from_ptr(col.name) }.to_str().unwrap_or("");
+            Some(Column::new(col_name, column_kind_from_c(col.kind)?))
+        })
+        .collect::<Option<Vec<_>>>()?;
+    Some((name, Some(columns)))
 }
 
 /// Load schema from DDL statements (CREATE TABLE, CREATE VIEW, etc.).

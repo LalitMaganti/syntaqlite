@@ -49,7 +49,7 @@ use walker::{NoopVisitor, SemanticVisitor, SemanticWalker};
 ///
 /// ```
 /// # use syntaqlite::{Catalog, Analyzer, AnalysisContext};
-/// # use syntaqlite::analysis::{CatalogLayer, Severity};
+/// # use syntaqlite::analysis::{CatalogLayer, Severity, TableDef};
 /// // 1. Create analyzer (reusable across many inputs).
 /// let mut analyzer = Analyzer::new();
 ///
@@ -57,7 +57,7 @@ use walker::{NoopVisitor, SemanticVisitor, SemanticWalker};
 /// let mut catalog = Catalog::new(syntaqlite::sqlite_dialect());
 /// catalog
 ///     .layer_mut(CatalogLayer::Database)
-///     .insert_table("users", Some(vec!["id".into(), "name".into()]), false);
+///     .insert_table(TableDef::new("users").columns(["id", "name"]));
 ///
 /// // 3. Bundle the per-call state and analyze a query.
 /// let mut ctx = AnalysisContext::new(&mut catalog);
@@ -140,12 +140,12 @@ impl Analyzer {
     ///
     /// ```
     /// # use syntaqlite::{AnalysisContext, Catalog, Analyzer};
-    /// # use syntaqlite::analysis::{CatalogLayer, Severity};
+    /// # use syntaqlite::analysis::{CatalogLayer, Severity, TableDef};
     /// let mut analyzer = Analyzer::new();
     /// let mut catalog = Catalog::new(syntaqlite::sqlite_dialect());
     /// catalog
     ///     .layer_mut(CatalogLayer::Database)
-    ///     .insert_table("users", Some(vec!["id".into(), "name".into()]), false);
+    ///     .insert_table(TableDef::new("users").columns(["id", "name"]));
     ///
     /// let mut ctx = AnalysisContext::new(&mut catalog);
     ///
@@ -399,7 +399,7 @@ impl Default for Analyzer {
 
 #[cfg(test)]
 mod tests {
-    use super::super::catalog::ColumnResolution;
+    use super::super::catalog::{ColumnResolution, TableDef};
     use super::query_scope::{QueryScope, RowIdPolicy};
     use super::*;
 
@@ -537,11 +537,9 @@ mod tests {
     fn mixed_scope_partial_resolution_suppresses_column_fp() {
         let mut analyzer = sqlite_analyzer();
         let mut catalog = sqlite_catalog();
-        catalog.layer_mut(CatalogLayer::Database).insert_table(
-            "known_tbl",
-            Some(vec!["id".into()]),
-            false,
-        );
+        catalog
+            .layer_mut(CatalogLayer::Database)
+            .insert_table(TableDef::new("known_tbl").columns(["id"]));
         let mut ctx = AnalysisContext::new(&mut catalog);
         let model = analyzer.analyze("SELECT y FROM known_tbl JOIN missing_tbl ON 1=1", &mut ctx);
         let msgs = diag_messages(&model);
@@ -556,11 +554,9 @@ mod tests {
     fn unknown_qualifier_flagged_with_scope_suggestion() {
         let mut analyzer = sqlite_analyzer();
         let mut catalog = sqlite_catalog();
-        catalog.layer_mut(CatalogLayer::Database).insert_table(
-            "foo",
-            Some(vec!["id".into(), "name".into()]),
-            false,
-        );
+        catalog
+            .layer_mut(CatalogLayer::Database)
+            .insert_table(TableDef::new("foo").columns(["id", "name"]));
         let mut ctx = AnalysisContext::new(&mut catalog);
         // Issue #281: `b` is never defined; the only alias in scope is `a`.
         let model = analyzer.analyze("SELECT b.id FROM foo AS a", &mut ctx);
@@ -577,11 +573,9 @@ mod tests {
     fn aliased_table_hides_base_name() {
         let mut analyzer = sqlite_analyzer();
         let mut catalog = sqlite_catalog();
-        catalog.layer_mut(CatalogLayer::Database).insert_table(
-            "foo",
-            Some(vec!["id".into()]),
-            false,
-        );
+        catalog
+            .layer_mut(CatalogLayer::Database)
+            .insert_table(TableDef::new("foo").columns(["id"]));
         let mut ctx = AnalysisContext::new(&mut catalog);
         // SQLite: once aliased, the base name is not addressable.
         let model = analyzer.analyze("SELECT foo.id FROM foo AS a", &mut ctx);
@@ -595,11 +589,9 @@ mod tests {
     fn excluded_resolves_in_upsert_do_update() {
         let mut analyzer = sqlite_analyzer();
         let mut catalog = sqlite_catalog();
-        catalog.layer_mut(CatalogLayer::Database).insert_table(
-            "foo",
-            Some(vec!["id".into(), "name".into()]),
-            false,
-        );
+        catalog
+            .layer_mut(CatalogLayer::Database)
+            .insert_table(TableDef::new("foo").columns(["id", "name"]));
         let mut ctx = AnalysisContext::new(&mut catalog);
         let model = analyzer.analyze(
             "INSERT INTO foo(id) VALUES (1) ON CONFLICT(id) \
@@ -613,11 +605,9 @@ mod tests {
     fn excluded_carries_target_columns() {
         let mut analyzer = sqlite_analyzer();
         let mut catalog = sqlite_catalog();
-        catalog.layer_mut(CatalogLayer::Database).insert_table(
-            "foo",
-            Some(vec!["id".into(), "name".into()]),
-            false,
-        );
+        catalog
+            .layer_mut(CatalogLayer::Database)
+            .insert_table(TableDef::new("foo").columns(["id", "name"]));
         let mut ctx = AnalysisContext::new(&mut catalog);
         let model = analyzer.analyze(
             "INSERT INTO foo(id) VALUES (1) ON CONFLICT(id) DO UPDATE SET name = excluded.nosuch",
@@ -633,11 +623,9 @@ mod tests {
     fn excluded_not_visible_outside_do_update() {
         let mut analyzer = sqlite_analyzer();
         let mut catalog = sqlite_catalog();
-        catalog.layer_mut(CatalogLayer::Database).insert_table(
-            "foo",
-            Some(vec!["id".into()]),
-            false,
-        );
+        catalog
+            .layer_mut(CatalogLayer::Database)
+            .insert_table(TableDef::new("foo").columns(["id"]));
         let mut ctx = AnalysisContext::new(&mut catalog);
         let model = analyzer.analyze("SELECT excluded.id FROM foo", &mut ctx);
         assert_eq!(
@@ -651,11 +639,9 @@ mod tests {
         let mut analyzer = sqlite_analyzer();
         let mut catalog = sqlite_catalog();
         for (name, cols) in [("t1", vec!["a", "b"]), ("t2", vec!["x", "y"])] {
-            catalog.layer_mut(CatalogLayer::Database).insert_table(
-                name,
-                Some(cols.into_iter().map(Into::into).collect()),
-                false,
-            );
+            catalog
+                .layer_mut(CatalogLayer::Database)
+                .insert_table(TableDef::new(name).columns(cols));
         }
         let mut ctx = AnalysisContext::new(&mut catalog);
         // UPDATE ... FROM: the SET expression references the FROM alias.
@@ -681,10 +667,10 @@ mod tests {
         let mut catalog = sqlite_catalog();
         catalog
             .layer_mut(CatalogLayer::Database)
-            .insert_table("t1", Some(vec!["a".into()]), false);
+            .insert_table(TableDef::new("t1").columns(["a"]));
         catalog
             .layer_mut(CatalogLayer::Database)
-            .insert_table("t2", Some(vec!["x".into()]), false);
+            .insert_table(TableDef::new("t2").columns(["x"]));
         let mut ctx = AnalysisContext::new(&mut catalog);
         // Terms may reference any arm's sources...
         let model = analyzer.analyze(
@@ -715,7 +701,7 @@ mod tests {
         let mut catalog = sqlite_catalog();
         catalog
             .layer_mut(CatalogLayer::Database)
-            .insert_table("t1", Some(vec!["a".into()]), false);
+            .insert_table(TableDef::new("t1").columns(["a"]));
         let mut ctx = AnalysisContext::new(&mut catalog);
         let model = analyzer.analyze("SELECT b.a FROM t1 AS 'b'", &mut ctx);
         assert_eq!(diag_messages(&model), Vec::<String>::new());
@@ -725,11 +711,9 @@ mod tests {
     fn view_body_name_resolution_is_deferred() {
         let mut analyzer = sqlite_analyzer();
         let mut catalog = sqlite_catalog();
-        catalog.layer_mut(CatalogLayer::Database).insert_table(
-            "t1",
-            Some(vec!["aa".into()]),
-            false,
-        );
+        catalog
+            .layer_mut(CatalogLayer::Database)
+            .insert_table(TableDef::new("t1").columns(["aa"]));
         let mut ctx = AnalysisContext::new(&mut catalog);
         // SQLite stores view bodies unresolved; errors surface at first use.
         let model = analyzer.analyze(
@@ -745,7 +729,7 @@ mod tests {
         let mut catalog = sqlite_catalog();
         catalog
             .layer_mut(CatalogLayer::Database)
-            .insert_table("t1", Some(vec!["a".into()]), false);
+            .insert_table(TableDef::new("t1").columns(["a"]));
         let mut ctx = AnalysisContext::new(&mut catalog);
         // Embedded-SQL hole placeholders stand in for host expressions.
         let model = analyzer.analyze("SELECT ___.a FROM t1", &mut ctx);
@@ -777,11 +761,9 @@ mod tests {
     fn dqs_fallback_against_known_scope() {
         let mut analyzer = sqlite_analyzer();
         let mut catalog = sqlite_catalog();
-        catalog.layer_mut(CatalogLayer::Database).insert_table(
-            "t1",
-            Some(vec!["a".into(), "b".into()]),
-            false,
-        );
+        catalog
+            .layer_mut(CatalogLayer::Database)
+            .insert_table(TableDef::new("t1").columns(["a", "b"]));
         let mut ctx = AnalysisContext::new(&mut catalog);
         let model = analyzer.analyze("SELECT b FROM t1 WHERE a IN (\"hello\", 'there')", &mut ctx);
         assert_eq!(diag_messages(&model), Vec::<String>::new());
@@ -793,7 +775,7 @@ mod tests {
         let mut catalog = sqlite_catalog();
         catalog
             .layer_mut(CatalogLayer::Database)
-            .insert_table("t1", Some(vec!["a".into()]), false);
+            .insert_table(TableDef::new("t1").columns(["a"]));
         let mut ctx = AnalysisContext::new(&mut catalog);
         // Backtick- and bracket-quoted identifiers are always identifiers —
         // no DQS fallback.  `nope` is a real unknown column ref here.
@@ -964,7 +946,7 @@ mod tests {
         let mut catalog = sqlite_catalog();
         catalog
             .layer_mut(CatalogLayer::Database)
-            .insert_table("t", Some(vec!["a".into()]), false);
+            .insert_table(TableDef::new("t").columns(["a"]));
         let mut ctx = AnalysisContext::new(&mut catalog);
         let mut cap = HookCapture::default();
         let _ = analyzer.analyze_with_visitor(

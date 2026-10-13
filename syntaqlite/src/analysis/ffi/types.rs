@@ -28,9 +28,9 @@ pub struct SyntaqliteTableDef {
 }
 
 #[repr(C)]
-pub struct SyntaqliteRelationDef {
+pub struct SyntaqliteViewDef {
     pub name: *const c_char,
-    pub columns: *const *const c_char,
+    pub columns: *const SyntaqliteColumnDef,
     pub column_count: u32,
 }
 

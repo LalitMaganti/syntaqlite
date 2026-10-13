@@ -243,7 +243,7 @@ syntaqlite.Table(name, columns=None)
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `name` | `str` | Table name |
-| `columns` | `list[str \| Column] \| None` | Column names, or [`Column`](#syntaqlite-column) values for generated and hidden columns. When `None`, any column reference is accepted. |
+| `columns` | `list[str \| Column] \| None` | Column names, or [`Column`](#syntaqlite-column) values for generated and hidden columns. When `None`, the columns are unknown and any column reference is accepted. |
 
 ### `syntaqlite.Column`
 
@@ -251,7 +251,7 @@ syntaqlite.Table(name, columns=None)
 syntaqlite.Column(name, kind=syntaqlite.ColumnKind.NORMAL)
 ```
 
-A table column with its [`ColumnKind`](#syntaqlite-columnkind).
+A table or view column with its [`ColumnKind`](#syntaqlite-columnkind).
 
 ### `syntaqlite.ColumnKind`
 
@@ -270,10 +270,7 @@ column list. Every column can be referenced by name.
 syntaqlite.View(name, columns=None)
 ```
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `name` | `str` | View name |
-| `columns` | `list[str] \| None` | Column names. When `None`, any column reference is accepted. |
+Same fields as [`Table`](#syntaqlite-table).
 
 ## Result types
 

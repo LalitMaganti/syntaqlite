@@ -28,13 +28,13 @@ use crate::util::render_source_error;
 ///
 /// ```
 /// # use syntaqlite::{AnalysisContext, Analyzer, Catalog};
-/// # use syntaqlite::analysis::CatalogLayer;
+/// # use syntaqlite::analysis::{CatalogLayer, TableDef};
 /// # use syntaqlite::util::DiagnosticRenderer;
 /// let mut analyzer = Analyzer::new();
 /// let mut catalog = Catalog::new(syntaqlite::sqlite_dialect());
 /// catalog
 ///     .layer_mut(CatalogLayer::Database)
-///     .insert_table("users", Some(vec!["id".into(), "name".into()]), false);
+///     .insert_table(TableDef::new("users").columns(["id", "name"]));
 ///
 /// let source = "SELECT id FROM usr;";
 /// let mut ctx = AnalysisContext::new(&mut catalog);

@@ -7,7 +7,8 @@ export type SchemaFormat = "simple" | "ddl";
 
 interface TableEntry {
   name: string;
-  columns: string[];
+  /** Omitted when the columns are unknown. */
+  columns?: string[];
 }
 
 export interface SessionContextPayload {
@@ -25,16 +26,14 @@ export function parseSimple(rawText: string): SessionContextPayload {
 
     const colonIdx = line.indexOf(":");
     if (colonIdx === -1) {
-      // Table name only, no columns.
+      // Table name only: columns unknown.
       const name = line.trim();
-      if (name) tables.push({name, columns: []});
+      if (name) tables.push({name});
     } else {
       const name = line.slice(0, colonIdx).trim();
       const colsPart = line.slice(colonIdx + 1).trim();
-      const columns = colsPart
-        ? colsPart.split(",").map((c) => c.trim()).filter(Boolean)
-        : [];
-      if (name) tables.push({name, columns});
+      const columns = colsPart.split(",").map((c) => c.trim()).filter(Boolean);
+      if (name) tables.push(columns.length ? {name, columns} : {name});
     }
   }
   return {tables, views: [], functions: []};

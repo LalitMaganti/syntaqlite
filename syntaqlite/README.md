@@ -68,12 +68,13 @@ The parser is incremental: it yields one statement at a time, so you can process
 Check SQL against a schema without touching a database. Catches unknown tables, columns, functions, CTE column mismatches, and more.
 
 ```rust
+use syntaqlite::analysis::TableDef;
 use syntaqlite::{AnalysisContext, Catalog, CatalogLayer, Analyzer, sqlite_dialect};
 
 let mut analyzer = Analyzer::new();
 let mut catalog = Catalog::new(sqlite_dialect());
 catalog.layer_mut(CatalogLayer::Database)
-    .insert_table("users", Some(vec!["id".into(), "name".into()]), false);
+    .insert_table(TableDef::new("users").columns(["id", "name"]));
 
 let mut ctx = AnalysisContext::new(&mut catalog);
 let model = analyzer.analyze("SELECT id, email FROM users", &mut ctx);
@@ -97,16 +98,18 @@ Output:
 The `Catalog` has five layers resolved in order: Query, Document, Connection, Database, Dialect. For most use cases, insert your schema into the `Database` layer:
 
 ```rust
+use syntaqlite::analysis::{TableDef, ViewDef};
+
 let layer = catalog.layer_mut(CatalogLayer::Database);
 
 // Known columns: validates column references
-layer.insert_table("orders", Some(vec!["id".into(), "total".into()]), false);
+layer.insert_table(TableDef::new("orders").columns(["id", "total"]));
 
 // Unknown columns: table exists but accepts any column reference
-layer.insert_table("legacy_data", None, false);
+layer.insert_table(TableDef::new("legacy_data"));
 
 // Views
-layer.insert_view("active_users", Some(vec!["id".into(), "name".into()]));
+layer.insert_view(ViewDef::new("active_users").columns(["id", "name"]));
 
 // Custom functions
 use syntaqlite::{FunctionCategory, AritySpec};
