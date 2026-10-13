@@ -465,6 +465,7 @@ impl<'b> SemanticWalker<'_, 'b> {
         visitor: &mut V,
         fields: &NodeFields,
         bindings_idx: u8,
+        where_clause: u8,
     ) {
         let has_ctes = bindings_idx != FIELD_ABSENT;
         if has_ctes {
@@ -480,6 +481,9 @@ impl<'b> SemanticWalker<'_, 'b> {
             {
                 self.register_sources(child_id);
             }
+        }
+        if where_clause != FIELD_ABSENT {
+            self.note_where_terms(fields.node_id_at(where_clause));
         }
         self.walk_dml_children_except_ctes(visitor, fields, bindings_idx);
         self.scope.pop();
@@ -504,7 +508,7 @@ impl<'b> SemanticWalker<'_, 'b> {
         else {
             unreachable!("not an insert role: {role:?}");
         };
-        self.walk_dml_scope(visitor, fields, with_ctes);
+        self.walk_dml_scope(visitor, fields, with_ctes, FIELD_ABSENT);
         // `DEFAULT VALUES` has no source.
         if V::WANTS_INSERT_VALUES
             && let Some(source) = fields.node_id_at(source)

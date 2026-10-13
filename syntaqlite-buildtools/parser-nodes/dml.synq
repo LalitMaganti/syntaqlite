@@ -44,7 +44,7 @@ node DeleteStmt {
   limit_clause: index LimitClause
   returning: index ResultColumnList
 
-  semantic { dml_scope(with_recursive: with_recursive, with_ctes: with_ctes) }
+  semantic { dml_scope(with_recursive: with_recursive, with_ctes: with_ctes, where_clause: where_clause) }
 
   fmt {
     group {
@@ -96,7 +96,7 @@ node UpdateStmt {
   limit_clause: index LimitClause
   returning: index ResultColumnList
 
-  semantic { dml_scope(with_recursive: with_recursive, with_ctes: with_ctes) }
+  semantic { dml_scope(with_recursive: with_recursive, with_ctes: with_ctes, where_clause: where_clause) }
 
   fmt {
     group {

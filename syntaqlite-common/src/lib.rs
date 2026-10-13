@@ -253,6 +253,8 @@ pub mod roles {
             with_recursive: FieldIdx,
             /// Field index of the CTE binding list (`FIELD_ABSENT` if absent).
             with_ctes: FieldIdx,
+            /// Field index of the WHERE clause (`FIELD_ABSENT` if absent).
+            where_clause: FieldIdx,
         } = 15,
 
         /// No semantic role — recurse into children generically.
