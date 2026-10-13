@@ -95,6 +95,7 @@ static const char* code_str(uint32_t code) {
     case SYNTAQLITE_DIAG_BUILTIN_MODIFY:            return "BUILTIN_MODIFY";
     case SYNTAQLITE_DIAG_COMPOUND_COLUMNS:          return "COMPOUND_COLUMNS";
     case SYNTAQLITE_DIAG_UNKNOWN_WINDOW:            return "UNKNOWN_WINDOW";
+    case SYNTAQLITE_DIAG_ON_CLAUSE_ORDER:           return "ON_CLAUSE_ORDER";
     default:                                         return "?";
   }
 }

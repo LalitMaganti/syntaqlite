@@ -91,6 +91,7 @@ impl CheckLevel {
 /// | `builtin-modify` | [`builtin_modify`](Self::builtin_modify) | `DROP`, `ALTER`, `CREATE INDEX` or `CREATE TRIGGER` on a built-in table such as `sqlite_schema` | `deny` |
 /// | `compound-columns` | [`compound_columns`](Self::compound_columns) | Compound `SELECT` arms with different numbers of result columns | `deny` |
 /// | `unknown-window` | [`unknown_window`](Self::unknown_window) | `OVER` naming a window the query doesn't define | `deny` |
+/// | `on-clause-order` | [`on_clause_order`](Self::on_clause_order) | An outer join's `ON` clause referencing a table joined to its right | `deny` |
 ///
 /// The group name `schema` is a shorthand for `unknown-table`,
 /// `unknown-column`, `unknown-function`, and `function-arity`.
@@ -108,6 +109,7 @@ pub struct CheckConfig {
     pub(crate) builtin_modify: CheckLevel,
     pub(crate) compound_columns: CheckLevel,
     pub(crate) unknown_window: CheckLevel,
+    pub(crate) on_clause_order: CheckLevel,
 }
 
 impl Default for CheckConfig {
@@ -125,6 +127,7 @@ impl Default for CheckConfig {
             builtin_modify: CheckLevel::Deny,
             compound_columns: CheckLevel::Deny,
             unknown_window: CheckLevel::Deny,
+            on_clause_order: CheckLevel::Deny,
         }
     }
 }
@@ -179,6 +182,10 @@ impl CheckConfig {
     /// Level for window specifications naming an undefined window.
     pub fn unknown_window(&self) -> CheckLevel {
         self.unknown_window
+    }
+    /// Level for ON clauses that reference a table joined to their right.
+    pub fn on_clause_order(&self) -> CheckLevel {
+        self.on_clause_order
     }
 
     // ── Builders ─────────────────────────────────────────────────────────
@@ -255,6 +262,12 @@ impl CheckConfig {
         self.unknown_window = level;
         self
     }
+    /// Set the level for ON clauses that reference a table joined to their right.
+    #[must_use]
+    pub fn with_on_clause_order(mut self, level: CheckLevel) -> Self {
+        self.on_clause_order = level;
+        self
+    }
     /// Set all schema checks (`unknown-table`, `unknown-column`,
     /// `unknown-function`, `function-arity`).
     #[must_use]
@@ -280,6 +293,7 @@ impl CheckConfig {
         self.builtin_modify = level;
         self.compound_columns = level;
         self.unknown_window = level;
+        self.on_clause_order = level;
         self
     }
 
@@ -299,6 +313,7 @@ impl CheckConfig {
         "builtin-modify",
         "compound-columns",
         "unknown-window",
+        "on-clause-order",
     ];
 
     /// Group names that expand to multiple categories.
@@ -323,6 +338,7 @@ impl CheckConfig {
             "builtin-modify" => self.builtin_modify = level,
             "compound-columns" => self.compound_columns = level,
             "unknown-window" => self.unknown_window = level,
+            "on-clause-order" => self.on_clause_order = level,
             "schema" => self = self.with_schema(level),
             "all" => self = self.with_all(level),
             _ => return Err(format!("unknown check category: {name}")),
@@ -442,6 +458,7 @@ mod tests {
         assert_eq!(c.builtin_modify(), CheckLevel::Deny);
         assert_eq!(c.compound_columns(), CheckLevel::Deny);
         assert_eq!(c.unknown_window(), CheckLevel::Deny);
+        assert_eq!(c.on_clause_order(), CheckLevel::Deny);
     }
 
     #[test]

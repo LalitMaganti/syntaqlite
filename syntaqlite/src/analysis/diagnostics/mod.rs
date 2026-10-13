@@ -239,6 +239,12 @@ pub enum DiagnosticMessage {
         /// The window name.
         name: String,
     },
+    /// An ON clause references a table joined after it, where `SQLite`
+    /// forbids that.
+    OnClauseOrder {
+        /// The later table, as named in the query.
+        name: String,
+    },
     /// Module import could not be resolved.
     UnknownModule {
         /// The unresolved module path (e.g. `slices.flow`).
@@ -319,6 +325,12 @@ impl std::fmt::Display for DiagnosticMessage {
                 "SELECTs to the left and right of {operator} have {left} and {right} result columns"
             ),
             Self::UnknownWindow { name } => write!(f, "unknown window '{name}'"),
+            Self::OnClauseOrder { name } => {
+                write!(
+                    f,
+                    "ON clause references '{name}', which is joined to its right"
+                )
+            }
             Self::UnknownModule { name } => write!(f, "unknown module '{name}'"),
             Self::ParseError(msg) => f.write_str(msg),
         }
@@ -522,6 +534,7 @@ impl serde::Serialize for DiagnosticMessage {
                 m.end()
             }
             Self::UnknownWindow { name } => kind_and_name(serializer, "unknown_window", name),
+            Self::OnClauseOrder { name } => kind_and_name(serializer, "on_clause_order", name),
             Self::UnknownModule { name } => kind_and_name(serializer, "unknown_module", name),
         }
     }

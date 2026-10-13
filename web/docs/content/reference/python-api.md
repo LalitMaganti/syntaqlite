@@ -360,6 +360,7 @@ syntaqlite.RenderOptions(*, source_name="")
 | `BUILTIN_MODIFY` | `10` |
 | `COMPOUND_COLUMNS` | `11` |
 | `UNKNOWN_WINDOW` | `12` |
+| `ON_CLAUSE_ORDER` | `13` |
 
 ### `DefinedRelation`
 
