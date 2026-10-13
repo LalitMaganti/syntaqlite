@@ -170,8 +170,8 @@ static void print_diag(const SyntaqliteDiagnostic* d, const char* prefix, uint32
          d->message ? d->message : "");
 }
 
-static void add_relation_one(SyntaqliteAnalyzer* v, int is_view,
-                              const char* name, const char* cols_csv) {
+static void add_view_one(SyntaqliteAnalyzer* v, const char* name,
+                         const char* cols_csv) {
   char** cols = NULL;
   uint32_t n = split_csv(cols_csv, &cols);
   SyntaqliteRelationDef def;
@@ -179,8 +179,33 @@ static void add_relation_one(SyntaqliteAnalyzer* v, int is_view,
   def.columns = (const char* const*)cols;
   def.column_count = n;
   if (cols_csv && cols_csv[0] == '\0') def.columns = NULL;  // treat "" as unknown cols
-  if (is_view) syntaqlite_analyzer_add_views(v, &def, 1);
-  else         syntaqlite_analyzer_add_tables(v, &def, 1);
+  syntaqlite_analyzer_add_views(v, &def, 1);
+  free_argv(cols, n);
+}
+
+// Table columns are `name`, `name:generated` or `name:hidden`.
+static void add_table_one(SyntaqliteAnalyzer* v, const char* name,
+                          const char* cols_csv) {
+  char** cols = NULL;
+  uint32_t n = split_csv(cols_csv, &cols);
+  SyntaqliteColumnDef* defs = n ? calloc(n, sizeof(SyntaqliteColumnDef)) : NULL;
+  for (uint32_t i = 0; i < n; i++) {
+    char* sep = strchr(cols[i], ':');
+    defs[i].name = cols[i];
+    defs[i].kind = SYNTAQLITE_COLUMN_NORMAL;
+    if (sep) {
+      *sep = '\0';
+      if (strcmp(sep + 1, "generated") == 0) defs[i].kind = SYNTAQLITE_COLUMN_GENERATED;
+      if (strcmp(sep + 1, "hidden") == 0) defs[i].kind = SYNTAQLITE_COLUMN_HIDDEN;
+    }
+  }
+  SyntaqliteTableDef def;
+  def.name = name;
+  def.columns = defs;
+  def.column_count = n;
+  if (cols_csv && cols_csv[0] == '\0') def.columns = NULL;  // treat "" as unknown cols
+  syntaqlite_analyzer_add_tables(v, &def, 1);
+  free(defs);
   free_argv(cols, n);
 }
 
@@ -247,7 +272,8 @@ int main(void) {
       if (argc < 2) { printf("%s err bad_arg\n", verb); continue; }
       const char* name = argv[1];
       const char* cols = argc >= 3 ? argv[2] : "-";
-      add_relation_one(v, strcmp(verb, "add_view") == 0, name, cols);
+      if (strcmp(verb, "add_view") == 0) add_view_one(v, name, cols);
+      else add_table_one(v, name, cols);
       printf("%s ok\n", verb);
     } else if (strcmp(verb, "add_function") == 0) {
       SyntaqliteFunctionCategory cat;

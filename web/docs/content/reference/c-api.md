@@ -185,9 +185,30 @@ typedef struct {
   uint32_t kind_code;                  // SyntaqliteDiagnosticCode value
 } SyntaqliteDiagnostic;
 
-// Relation definition for batch catalog registration (tables and views).
+// How a table column takes part in SELECT * and in an INSERT without a
+// column list.
+typedef enum {
+  SYNTAQLITE_COLUMN_NORMAL    = 0,
+  SYNTAQLITE_COLUMN_GENERATED = 1,  // in SELECT *, not filled by INSERT
+  SYNTAQLITE_COLUMN_HIDDEN    = 2,  // a virtual-table column in neither
+} SyntaqliteColumnKind;
+
+// A table column.
 typedef struct {
-  const char* name;              // NUL-terminated table name
+  const char* name;              // NUL-terminated column name
+  SyntaqliteColumnKind kind;
+} SyntaqliteColumnDef;
+
+// Table definition for batch catalog registration.
+typedef struct {
+  const char* name;                    // NUL-terminated table name
+  const SyntaqliteColumnDef* columns;  // NULL = columns unknown (accepts any ref)
+  uint32_t column_count;               // ignored when columns is NULL
+} SyntaqliteTableDef;
+
+// View definition for batch catalog registration.
+typedef struct {
+  const char* name;              // NUL-terminated view name
   const char* const* columns;    // NULL = columns unknown (accepts any ref)
   uint32_t column_count;         // ignored when columns is NULL
 } SyntaqliteRelationDef;
@@ -241,7 +262,7 @@ typedef struct {
 |----------|-------------|
 | `syntaqlite_analyzer_create_sqlite()` | Create an analyzer with default mode (`DOCUMENT`) |
 | `syntaqlite_analyzer_set_mode(v, mode)` | Set `DOCUMENT` or `EXECUTE` mode |
-| `syntaqlite_analyzer_add_tables(v, tables, count)` | Register schema tables from `SyntaqliteRelationDef` array |
+| `syntaqlite_analyzer_add_tables(v, tables, count)` | Register schema tables from `SyntaqliteTableDef` array. A table with an out-of-range column kind is not added |
 | `syntaqlite_analyzer_add_views(v, views, count)` | Register schema views from `SyntaqliteRelationDef` array |
 | `syntaqlite_analyzer_load_schema_ddl(v, sql, len)` | Load schema from DDL statements (CREATE TABLE/VIEW). Returns parse error count |
 | `syntaqlite_analyzer_analyze(v, sql, len)` | Analyze SQL, returns diagnostic count |

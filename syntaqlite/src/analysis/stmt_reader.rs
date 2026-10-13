@@ -20,7 +20,7 @@ use std::borrow::Cow;
 use syntaqlite_syntax::any::{AnyNodeId, AnyParsedStatement, FieldValue, NodeFields};
 use syntaqlite_syntax::source::DocRange;
 
-use crate::analysis::catalog::AritySpec;
+use crate::analysis::catalog::{AritySpec, Column, ColumnKind};
 use crate::analysis::model::DefinedRelation;
 use crate::dialect::SemanticRole;
 
@@ -239,7 +239,7 @@ impl<'a, 'stmt> StmtReader<'a, 'stmt> {
         fields: &NodeFields,
         columns_field: u8,
         select_field: u8,
-    ) -> Option<Vec<String>> {
+    ) -> Option<Vec<Column>> {
         if let Some(col_list_id) = fields.node_id_at(columns_field) {
             let mut columns = Vec::new();
             self.columns_from_column_list(col_list_id, &mut columns);
@@ -247,12 +247,13 @@ impl<'a, 'stmt> StmtReader<'a, 'stmt> {
                 return Some(columns);
             }
         }
-        fields
+        let names = fields
             .node_id_at(select_field)
-            .and_then(|id| self.columns_from_select(id))
+            .and_then(|id| self.columns_from_select(id))?;
+        Some(names.into_iter().map(Column::from).collect())
     }
 
-    fn columns_from_column_list(&self, list_id: AnyNodeId, out: &mut Vec<String>) {
+    fn columns_from_column_list(&self, list_id: AnyNodeId, out: &mut Vec<Column>) {
         let Some(children) = self.stmt.list_children(list_id) else {
             return;
         };
@@ -262,8 +263,36 @@ impl<'a, 'stmt> StmtReader<'a, 'stmt> {
                 .or_else(|| self.column_ref_name_span(child_id))
                 .map(|(name, _)| name);
             if let Some(name) = name {
-                out.push(name.to_ascii_lowercase());
+                let kind = self.column_def_kind(child_id);
+                out.push(Column::new(name.to_ascii_lowercase(), kind));
             }
+        }
+    }
+
+    /// A column definition is generated when one of its constraints is
+    /// `GENERATED ALWAYS AS`. Anything else, such as a view's column name,
+    /// is a normal column.
+    pub(crate) fn column_def_kind(&self, node_id: AnyNodeId) -> ColumnKind {
+        let Some((SemanticRole::ColumnDef { constraints, .. }, fields)) =
+            self.role_for_node(node_id)
+        else {
+            return ColumnKind::Normal;
+        };
+        let constraints = fields
+            .node_id_at(constraints)
+            .and_then(|id| self.stmt.list_children(id))
+            .unwrap_or(&[]);
+        let generated = constraints.iter().any(|&id| {
+            matches!(
+                self.role_for_node(id),
+                Some((SemanticRole::ColumnConstraint { generated, .. }, fields))
+                    if fields.node_id_at(generated).is_some()
+            )
+        });
+        if generated {
+            ColumnKind::Generated
+        } else {
+            ColumnKind::Normal
         }
     }
 

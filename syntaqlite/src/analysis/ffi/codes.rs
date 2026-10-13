@@ -6,7 +6,7 @@
 //! `syntaqlite/include/syntaqlite/analysis.h`.
 
 use crate::analysis::CheckLevel;
-use crate::analysis::catalog::{AritySpec, FunctionCategory};
+use crate::analysis::catalog::{AritySpec, ColumnKind, FunctionCategory};
 use crate::analysis::diagnostics::{DiagnosticMessage, Severity};
 
 pub(super) const SEVERITY_ERROR: u32 = 0;
@@ -83,6 +83,19 @@ pub(super) fn function_category_from_c(category: u32) -> Option<FunctionCategory
         SYNTAQLITE_FUNCTION_SCALAR => Some(FunctionCategory::Scalar),
         SYNTAQLITE_FUNCTION_AGGREGATE => Some(FunctionCategory::Aggregate),
         SYNTAQLITE_FUNCTION_WINDOW => Some(FunctionCategory::Window),
+        _ => None,
+    }
+}
+
+pub(crate) const SYNTAQLITE_COLUMN_NORMAL: u32 = 0;
+pub(crate) const SYNTAQLITE_COLUMN_GENERATED: u32 = 1;
+pub(crate) const SYNTAQLITE_COLUMN_HIDDEN: u32 = 2;
+
+pub(super) fn column_kind_from_c(kind: u32) -> Option<ColumnKind> {
+    match kind {
+        SYNTAQLITE_COLUMN_NORMAL => Some(ColumnKind::Normal),
+        SYNTAQLITE_COLUMN_GENERATED => Some(ColumnKind::Generated),
+        SYNTAQLITE_COLUMN_HIDDEN => Some(ColumnKind::Hidden),
         _ => None,
     }
 }

@@ -15,6 +15,19 @@ pub struct SyntaqliteDiagnostic {
 }
 
 #[repr(C)]
+pub struct SyntaqliteColumnDef {
+    pub name: *const c_char,
+    pub kind: u32,
+}
+
+#[repr(C)]
+pub struct SyntaqliteTableDef {
+    pub name: *const c_char,
+    pub columns: *const SyntaqliteColumnDef,
+    pub column_count: u32,
+}
+
+#[repr(C)]
 pub struct SyntaqliteRelationDef {
     pub name: *const c_char,
     pub columns: *const *const c_char,

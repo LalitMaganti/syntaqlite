@@ -82,6 +82,25 @@ diagnostics count=0
 """,
         )
 
+    def test_column_kinds(self):
+        return CApiScenario(
+            input="""\
+create
+add_table ft body,len:generated,rank:hidden
+analyze
+SELECT body, len, rank FROM ft;
+.
+dump_diagnostics
+""",
+            expected="""\
+create ok
+add_table ok
+analyze ok stmts=1 diags=0
+diagnostics count=0
+.
+""",
+        )
+
     def test_add_view(self):
         return CApiScenario(
             input="""\

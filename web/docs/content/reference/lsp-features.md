@@ -158,7 +158,10 @@ analysis without a config file, which is useful when embedding the server.
 The params are one of:
 
 - `{"ddl": "CREATE TABLE ..."}` to build the schema from DDL.
-- `{"context": {...}}` to pass a structured schema as JSON.
+- `{"context": {...}}` to pass a structured schema as JSON, with `tables`,
+  `views` and `functions`. A table column is a name, or
+  `{"name": "total", "kind": "generated"}` where `kind` is `normal`,
+  `generated` or `hidden`.
 - `{}` or `null` to clear it.
 
 The result is `{"errors": [...]}`. DDL that only partially parses is still

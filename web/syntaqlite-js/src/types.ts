@@ -132,7 +132,23 @@ export interface AnalyzeDiagnostic {
   help?: string;
 }
 
-/** A table or view added to the analysis catalog. */
+/**
+ * How a table column takes part in `SELECT *` and in an INSERT without a
+ * column list: `generated` columns are in `SELECT *` but not filled by the
+ * INSERT, and `hidden` virtual-table columns are in neither.
+ */
+export type ColumnKind = "normal" | "generated" | "hidden";
+
+/** A table column: a name, or a name with its kind. */
+export type ColumnSpec = string | {name: string; kind?: ColumnKind};
+
+/** A table added to the analysis catalog. */
+export interface TableSpec {
+  name: string;
+  columns?: ColumnSpec[];
+}
+
+/** A view added to the analysis catalog. */
 export interface RelationSpec {
   name: string;
   columns?: string[];
@@ -142,7 +158,7 @@ export interface AnalyzeOptions {
   /** DDL parsed into a schema catalog for schema-aware validation. */
   schemaDdl?: string;
   /** Tables added to the catalog. */
-  tables?: RelationSpec[];
+  tables?: TableSpec[];
   /** Views added to the catalog. */
   views?: RelationSpec[];
   /** Dotted module path to SQL source, resolving INCLUDE MODULE imports. */

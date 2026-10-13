@@ -136,9 +136,9 @@ int main(void) {
     SyntaqliteAnalyzer* v = syntaqlite_analyzer_create_sqlite();
 
     // Register your schema
-    SyntaqliteRelationDef tables[] = {
-        {"users",  (const char*[]){"id", "name", "email"}, 3},
-        {"posts",  (const char*[]){"id", "user_id", "body"}, 3},
+    SyntaqliteTableDef tables[] = {
+        {"users", (SyntaqliteColumnDef[]){{"id"}, {"name"}, {"email"}}, 3},
+        {"posts", (SyntaqliteColumnDef[]){{"id"}, {"user_id"}, {"body"}}, 3},
     };
     syntaqlite_analyzer_add_tables(v, tables, 2);
 
@@ -172,9 +172,9 @@ int main(void) {
     SyntaqliteAnalyzer* v = syntaqlite_analyzer_create_sqlite();
 
     // Register schema
-    SyntaqliteRelationDef tables[] = {
-        {"users", (const char*[]){"id", "name", "email"}, 3},
-        {"posts", (const char*[]){"id", "user_id", "body"},  3},
+    SyntaqliteTableDef tables[] = {
+        {"users", (SyntaqliteColumnDef[]){{"id"}, {"name"}, {"email"}}, 3},
+        {"posts", (SyntaqliteColumnDef[]){{"id"}, {"user_id"}, {"body"}}, 3},
     };
     syntaqlite_analyzer_add_tables(v, tables, 2);
 

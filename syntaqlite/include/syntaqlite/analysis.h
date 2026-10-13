@@ -89,7 +89,28 @@ typedef struct {
   uint32_t kind_code;  // SyntaqliteDiagnosticCode value
 } SyntaqliteDiagnostic;
 
-// Relation definition for batch catalog registration (tables and views).
+// How a table column takes part in `SELECT *` and in an INSERT without a
+// column list. Every column can be referenced by name.
+typedef enum {
+  SYNTAQLITE_COLUMN_NORMAL    = 0,
+  SYNTAQLITE_COLUMN_GENERATED = 1,  // in SELECT *, not filled by INSERT
+  SYNTAQLITE_COLUMN_HIDDEN    = 2,  // a virtual-table column in neither
+} SyntaqliteColumnKind;
+
+// A table column for batch catalog registration.
+typedef struct {
+  const char* name;
+  SyntaqliteColumnKind kind;
+} SyntaqliteColumnDef;
+
+// Table definition for batch catalog registration.
+typedef struct {
+  const char* name;
+  const SyntaqliteColumnDef* columns;  // NULL = columns unknown
+  uint32_t column_count;               // ignored when columns is NULL
+} SyntaqliteTableDef;
+
+// View definition for batch catalog registration.
 typedef struct {
   const char* name;
   const char* const* columns;  // NULL = columns unknown
@@ -249,13 +270,14 @@ SYNTAQLITE_API void syntaqlite_analyzer_reset_catalog(SyntaqliteAnalyzer* v);
 
 // Add tables to the database layer of the catalog. These tables will be
 // visible to all subsequent analyze() calls until reset_catalog() is called.
+// A table with an out-of-range column kind is not added.
 SYNTAQLITE_API void syntaqlite_analyzer_add_tables(
     SyntaqliteAnalyzer* v,
-    const SyntaqliteRelationDef* tables,
+    const SyntaqliteTableDef* tables,
     uint32_t count);
 
-// Add views to the database layer of the catalog. Uses the same struct as
-// add_tables — name is the view name, columns are output columns.
+// Add views to the database layer of the catalog. `columns` are the view's
+// output columns.
 SYNTAQLITE_API void syntaqlite_analyzer_add_views(
     SyntaqliteAnalyzer* v,
     const SyntaqliteRelationDef* views,

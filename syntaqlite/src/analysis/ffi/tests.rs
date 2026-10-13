@@ -112,9 +112,44 @@ impl Validator {
         unsafe { syntaqlite_analyzer_set_check_level(self.0, c_name.as_ptr(), level) }
     }
 
-    /// Register one relation (table or view); empty `cols` means NULL
-    /// columns (accepts any ref).
-    fn add_relation(&self, name: &str, cols: &[&str], is_view: bool) {
+    /// Register a table of normal columns; empty `cols` means NULL columns
+    /// (accepts any ref).
+    fn add_table(&self, name: &str, cols: &[&str]) {
+        let cols: Vec<(&str, u32)> = cols.iter().map(|&c| (c, 0)).collect();
+        self.add_table_with_kinds(name, &cols);
+    }
+
+    /// Register a table whose columns carry a `SyntaqliteColumnKind` value.
+    fn add_table_with_kinds(&self, name: &str, cols: &[(&str, u32)]) {
+        let c_name = CString::new(name).unwrap();
+        let c_cols: Vec<CString> = cols
+            .iter()
+            .map(|(c, _)| CString::new(*c).unwrap())
+            .collect();
+        let defs: Vec<SyntaqliteColumnDef> = c_cols
+            .iter()
+            .zip(cols)
+            .map(|(c, &(_, kind))| SyntaqliteColumnDef {
+                name: c.as_ptr(),
+                kind,
+            })
+            .collect();
+        let table = SyntaqliteTableDef {
+            name: c_name.as_ptr(),
+            columns: if defs.is_empty() {
+                std::ptr::null()
+            } else {
+                defs.as_ptr()
+            },
+            column_count: u32::try_from(defs.len()).unwrap(),
+        };
+        // SAFETY: FFI test — handle from `syntaqlite_analyzer_create_sqlite`;
+        // all C strings and the `SyntaqliteTableDef` outlive the call.
+        unsafe { syntaqlite_analyzer_add_tables(self.0, &raw const table, 1) };
+    }
+
+    /// Register a view; empty `cols` means NULL columns (accepts any ref).
+    fn add_view(&self, name: &str, cols: &[&str]) {
         let c_name = CString::new(name).unwrap();
         let (_keep_cstrs, _keep_ptrs, cols_ptr, col_count) = cstring_vec(cols);
         let rel = SyntaqliteRelationDef {
@@ -124,20 +159,7 @@ impl Validator {
         };
         // SAFETY: FFI test — handle from `syntaqlite_analyzer_create_sqlite`;
         // all C strings and the `SyntaqliteRelationDef` outlive the call.
-        unsafe {
-            if is_view {
-                syntaqlite_analyzer_add_views(self.0, &raw const rel, 1);
-            } else {
-                syntaqlite_analyzer_add_tables(self.0, &raw const rel, 1);
-            }
-        }
-    }
-
-    fn add_table(&self, name: &str, cols: &[&str]) {
-        self.add_relation(name, cols, false);
-    }
-    fn add_view(&self, name: &str, cols: &[&str]) {
-        self.add_relation(name, cols, true);
+        unsafe { syntaqlite_analyzer_add_views(self.0, &raw const rel, 1) };
     }
 
     #[expect(clippy::cast_possible_truncation)]
@@ -389,6 +411,30 @@ fn add_tables_wrong_column_produces_diagnostic() {
     assert!(
         msg.contains("nonexistent"),
         "should mention the column: {msg}"
+    );
+}
+
+#[test]
+fn add_tables_columns_of_every_kind_resolve() {
+    let v = Validator::new();
+    v.add_table_with_kinds(
+        "ft",
+        &[
+            ("body", SYNTAQLITE_COLUMN_NORMAL),
+            ("len", SYNTAQLITE_COLUMN_GENERATED),
+            ("rank", SYNTAQLITE_COLUMN_HIDDEN),
+        ],
+    );
+    assert_eq!(v.analyze("SELECT body, len, rank FROM ft"), 0);
+}
+
+#[test]
+fn add_tables_skips_a_table_with_an_unknown_column_kind() {
+    let v = Validator::new();
+    v.add_table_with_kinds("t", &[("a", 99)]);
+    assert!(
+        v.analyze("SELECT a FROM t") > 0,
+        "t should not be registered"
     );
 }
 
