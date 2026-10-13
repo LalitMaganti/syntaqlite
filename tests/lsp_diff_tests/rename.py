@@ -69,3 +69,14 @@ class Rename(TestSuite):
             1:31..1:33 -> "key"
 """,
         )
+
+    def test_rename_column_renames_check(self):
+        return LspDiffTestBlueprint(
+            sql="CREATE TABLE t (<|>qty INT CHECK (qty > 0));",
+            op="rename",
+            new_name="amount",
+            out="""\
+            0:16..0:19 -> "amount"
+            0:31..0:34 -> "amount"
+""",
+        )

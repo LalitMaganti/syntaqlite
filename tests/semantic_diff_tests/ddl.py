@@ -288,3 +288,71 @@ class CreateIndexColumns(TestSuite):
               |                   ^
 """,
         )
+
+
+class CreateTableColumnConstraints(TestSuite):
+    def test_check_sees_all_columns(self):
+        return DiffTestBlueprint(
+            sql="CREATE TABLE t (a CHECK (a > b AND rowid > 0), b);",
+            strict_schema=True,
+            out="",
+        )
+
+    def test_check_unknown_column(self):
+        return DiffTestBlueprint(
+            sql="CREATE TABLE t (a CHECK (nope > 0));",
+            strict_schema=True,
+            out="""\
+            error: unknown column 'nope'
+             --> <stdin>:1:26
+              |
+            1 | CREATE TABLE t (a CHECK (nope > 0));
+              |                          ^~~~
+            """,
+        )
+
+    def test_check_rowid_in_without_rowid_table(self):
+        return DiffTestBlueprint(
+            sql="CREATE TABLE t (a PRIMARY KEY CHECK (rowid > 0)) WITHOUT ROWID;",
+            strict_schema=True,
+            out="""\
+            error: unknown column 'rowid'
+             --> <stdin>:1:38
+              |
+            1 | CREATE TABLE t (a PRIMARY KEY CHECK (rowid > 0)) WITHOUT ROWID;
+              |                                      ^~~~~
+            """,
+        )
+
+    def test_generated_unknown_column(self):
+        return DiffTestBlueprint(
+            sql="CREATE TABLE t (a, b AS (nope + 1));",
+            strict_schema=True,
+            out="""\
+            error: unknown column 'nope'
+             --> <stdin>:1:26
+              |
+            1 | CREATE TABLE t (a, b AS (nope + 1));
+              |                          ^~~~
+            """,
+        )
+
+    def test_generated_cannot_use_rowid(self):
+        return DiffTestBlueprint(
+            sql="CREATE TABLE t (a, b AS (rowid));",
+            strict_schema=True,
+            out="""\
+            error: unknown column 'rowid'
+             --> <stdin>:1:26
+              |
+            1 | CREATE TABLE t (a, b AS (rowid));
+              |                          ^~~~~
+            """,
+        )
+
+    def test_default_and_references_are_not_resolved(self):
+        return DiffTestBlueprint(
+            sql="CREATE TABLE t (a DEFAULT nope, b REFERENCES p (x));",
+            strict_schema=True,
+            out="",
+        )

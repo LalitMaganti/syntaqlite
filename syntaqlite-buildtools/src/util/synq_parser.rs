@@ -147,6 +147,10 @@ pub(crate) enum SemanticRole {
         columns: String,
         where_clause: Option<String>,
     },
+    ColumnConstraint {
+        check: Option<String>,
+        generated: Option<String>,
+    },
 }
 
 /// A `semantic { ... }` annotation on a node.
@@ -747,6 +751,10 @@ impl Parser {
                 table: require_param(&params, "table", node_name, "index_scope")?,
                 columns: require_param(&params, "columns", node_name, "index_scope")?,
                 where_clause: get_param(&params, "where_clause").map(str::to_string),
+            },
+            "column_constraint" => SemanticRole::ColumnConstraint {
+                check: get_param(&params, "check").map(str::to_string),
+                generated: get_param(&params, "generated").map(str::to_string),
             },
             _ => {
                 return Err(format!(
