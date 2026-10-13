@@ -537,6 +537,9 @@ const FIXED_LAYER_COUNT: usize = 4;
 #[derive(Clone)]
 pub struct Catalog {
     layers: Vec<CatalogLayerContents>,
+    /// Relations the most recently accumulated statement removed, so its
+    /// own existence check still sees them.
+    retired_by_statement: HashSet<NameKey>,
 }
 
 impl Catalog {
@@ -562,7 +565,10 @@ impl Catalog {
         let dialect = dialect.into();
         let mut layers = vec![CatalogLayerContents::default(); FIXED_LAYER_COUNT];
         layers[LAYER_DIALECT].populate_dialect_builtins(&dialect);
-        Self { layers }
+        Self {
+            layers,
+            retired_by_statement: HashSet::default(),
+        }
     }
 
     // ── Direct layer access ───────────────────────────────────────────────────
@@ -624,6 +630,7 @@ impl Catalog {
     pub fn new_document(&mut self) {
         self.layers.truncate(FIXED_LAYER_COUNT);
         self.layers[LAYER_DOCUMENT].clear();
+        self.retired_by_statement.clear();
     }
 
     // ── Convenience constructors ──────────────────────────────────────────────
@@ -746,6 +753,7 @@ impl Catalog {
         root: AnyNodeId,
         dialect: &AnyDialect,
     ) {
+        self.retired_by_statement.clear();
         let Some((tag, fields)) = stmt.extract_fields(root) else {
             return;
         };
@@ -853,6 +861,7 @@ impl Catalog {
             .is_some_and(|r| r.is_view == drops_view)
         {
             self.layers[target.index()].remove_relation(&name);
+            self.retired_by_statement.insert(key);
         }
     }
 
@@ -931,6 +940,7 @@ impl Catalog {
                 entry.name = new.to_string();
                 self.layers[layer].insert_entry(&new, entry);
                 self.layers[layer].remove_relation(&table_name);
+                self.retired_by_statement.insert(table_key.clone());
             }
             None => {}
         }
@@ -1002,17 +1012,13 @@ impl Catalog {
         self.visible_relation(key).is_some()
     }
 
-    /// Returns `true` if `key` is (or was) defined as a relation in any layer,
-    /// counting tombstones as "defined". Used by the ALTER-target existence
-    /// check: a `RENAME TO` retires the old name in the same Document layer
-    /// before this check runs, so a tombstone here means the target *did*
-    /// exist and its rename must not flag its own source as missing. Erring
-    /// toward "defined" only ever risks accepting an ALTER of an
-    /// already-retired name (a gap), never a false unknown-table report.
+    /// Returns `true` if `key` is a visible relation, or one the most recent
+    /// statement removed. Used by the ALTER and DROP target checks: the
+    /// catalog applies a `RENAME TO` or `DROP` before the check runs, so the
+    /// statement must not flag its own target. A name an earlier statement
+    /// removed reads as missing.
     pub(crate) fn relation_defined(&self, key: &NameKey) -> bool {
-        self.layers
-            .iter()
-            .any(|l| l.relations.contains_key(key) || l.removed_relations.contains(key))
+        self.resolve_relation(key) || self.retired_by_statement.contains(key)
     }
 
     /// Returns `true` if `key` is a view in any layer.
