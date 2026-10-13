@@ -364,6 +364,14 @@ fn role_to_bytes(
             bytes[2] = fi(columns);
             bytes[3] = opt(where_clause);
         }
+        SynqRole::ColumnConstraint { check, generated } => {
+            bytes[0] = disc(SemanticRole::ColumnConstraint {
+                check: 0,
+                generated: 0,
+            });
+            bytes[1] = opt(check);
+            bytes[2] = opt(generated);
+        }
     }
 
     bytes

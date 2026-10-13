@@ -235,8 +235,17 @@ pub(crate) struct SemanticWalker<'a, 'b> {
     roles: &'static [SemanticRole],
     /// Depth of nested CREATE VIEW bodies currently being walked.
     view_body_depth: u32,
+    /// The table whose CREATE TABLE column list is being walked.
+    defining_table: Option<DefiningTable>,
     /// Reusable lookup key — catalog/scope probes share one allocation.
     key_scratch: NameKey,
+}
+
+/// A table being created, as seen by expressions in its own definition.
+struct DefiningTable {
+    name: String,
+    columns: Option<Vec<String>>,
+    rowid: RowIdPolicy,
 }
 
 impl<'a, 'b> SemanticWalker<'a, 'b> {
@@ -251,6 +260,7 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
             scope: QueryScope::default(),
             roles,
             view_body_depth: 0,
+            defining_table: None,
             key_scratch: NameKey::default(),
         }
     }
@@ -294,20 +304,14 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
         fields: &NodeFields,
     ) {
         match role {
-            SemanticRole::DefineTable { select, .. } => {
-                if V::WANTS_RELATION_DEFINITION || V::WANTS_COLUMN_DEFINITION {
-                    self.emit_ddl_definitions(visitor, node_id);
-                }
-                self.walk_opt(visitor, fields.node_id_at(select));
-            }
+            SemanticRole::DefineTable {
+                name,
+                columns,
+                select,
+                ..
+            } => self.walk_define_table(visitor, node_id, fields, name, columns, select),
             SemanticRole::DefineView { select, .. } => {
-                if V::WANTS_RELATION_DEFINITION || V::WANTS_COLUMN_DEFINITION {
-                    self.emit_ddl_definitions(visitor, node_id);
-                }
-                // SQLite defers view-body name resolution to first use.
-                self.view_body_depth += 1;
-                self.walk_opt(visitor, fields.node_id_at(select));
-                self.view_body_depth -= 1;
+                self.walk_define_view(visitor, node_id, fields, select);
             }
             SemanticRole::DefineFunction { select, .. } => {
                 self.walk_opt(visitor, fields.node_id_at(select));
@@ -393,6 +397,9 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
             }
             SemanticRole::IndexScope { table, .. } => {
                 self.walk_index_scope(visitor, node_id, fields, table);
+            }
+            SemanticRole::ColumnConstraint { check, generated } => {
+                self.walk_column_constraint(visitor, fields, check, generated);
             }
         }
     }
@@ -747,6 +754,90 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
             scope: &mut self.scope,
         };
         visitor.on_source_ref(self.stmt, &mut cx, ev);
+    }
+
+    /// Record a CREATE TABLE's definitions, then walk its column list with
+    /// the table available to constraint expressions.
+    fn walk_define_table<V: SemanticVisitor>(
+        &mut self,
+        visitor: &mut V,
+        node_id: AnyNodeId,
+        fields: &NodeFields,
+        name_idx: u8,
+        columns_idx: u8,
+        select_idx: u8,
+    ) {
+        if V::WANTS_RELATION_DEFINITION || V::WANTS_COLUMN_DEFINITION {
+            self.emit_ddl_definitions(visitor, node_id);
+        }
+        if let Some(name) = self.stmt.span_field_ident_text(fields, name_idx) {
+            self.key_scratch.set(&name);
+            let (columns, without_rowid) = self.catalog.table_source_info(&self.key_scratch);
+            self.defining_table = Some(DefiningTable {
+                name: name.into_owned(),
+                columns,
+                rowid: without_rowid.into(),
+            });
+            self.walk_opt(visitor, fields.node_id_at(columns_idx));
+            self.defining_table = None;
+        }
+        self.walk_opt(visitor, fields.node_id_at(select_idx));
+    }
+
+    fn walk_define_view<V: SemanticVisitor>(
+        &mut self,
+        visitor: &mut V,
+        node_id: AnyNodeId,
+        fields: &NodeFields,
+        select_idx: u8,
+    ) {
+        if V::WANTS_RELATION_DEFINITION || V::WANTS_COLUMN_DEFINITION {
+            self.emit_ddl_definitions(visitor, node_id);
+        }
+        // SQLite defers view-body name resolution to first use.
+        self.view_body_depth += 1;
+        self.walk_opt(visitor, fields.node_id_at(select_idx));
+        self.view_body_depth -= 1;
+    }
+
+    /// Resolve a column constraint's CHECK and GENERATED expressions against
+    /// the table being created. DEFAULT and REFERENCES are not column scopes.
+    fn walk_column_constraint<V: SemanticVisitor>(
+        &mut self,
+        visitor: &mut V,
+        fields: &NodeFields,
+        check_idx: u8,
+        generated_idx: u8,
+    ) {
+        let Some(table) = self.defining_table.take() else {
+            return;
+        };
+        self.walk_in_table_scope(visitor, fields.node_id_at(check_idx), &table, table.rowid);
+        // Generated columns cannot reference rowid.
+        self.walk_in_table_scope(
+            visitor,
+            fields.node_id_at(generated_idx),
+            &table,
+            RowIdPolicy::WithoutRowId,
+        );
+        self.defining_table = Some(table);
+    }
+
+    fn walk_in_table_scope<V: SemanticVisitor>(
+        &mut self,
+        visitor: &mut V,
+        node: Option<AnyNodeId>,
+        table: &DefiningTable,
+        rowid: RowIdPolicy,
+    ) {
+        let Some(node) = node else {
+            return;
+        };
+        self.scope.push();
+        self.scope
+            .add_table(&table.name, table.columns.clone(), rowid);
+        self.walk_node(visitor, node);
+        self.scope.pop();
     }
 
     /// Existence-check a `CREATE INDEX` target table, then resolve the

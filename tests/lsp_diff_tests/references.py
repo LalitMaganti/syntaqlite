@@ -78,3 +78,14 @@ class References(TestSuite):
             1:34..1:36
 """,
         )
+
+    def test_column_in_check_and_generated(self):
+        return LspDiffTestBlueprint(
+            sql="CREATE TABLE t (<|>qty INT CHECK (qty > 0), total AS (qty * 2));",
+            op="references",
+            include_declaration=False,
+            out="""\
+            0:31..0:34
+            0:51..0:54
+""",
+        )

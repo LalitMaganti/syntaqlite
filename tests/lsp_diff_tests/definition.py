@@ -94,3 +94,12 @@ target: 0:13..0:18
 target: 0:16..0:18
 """,
         )
+
+    def test_check_column(self):
+        return LspDiffTestBlueprint(
+            sql="CREATE TABLE t (a INT, b INT CHECK (<|>a < b));",
+            op="definition",
+            out="""\
+target: 0:16..0:17
+""",
+        )

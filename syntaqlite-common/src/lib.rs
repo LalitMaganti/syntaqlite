@@ -310,6 +310,15 @@ pub mod roles {
             /// Field index of the partial-index WHERE (`FIELD_ABSENT` if absent).
             where_clause: FieldIdx,
         } = 20,
+
+        /// Column constraint inside CREATE TABLE: resolves its CHECK and
+        /// GENERATED expressions against the table being created.
+        ColumnConstraint {
+            /// Field index of the CHECK expression (`FIELD_ABSENT` if absent).
+            check: FieldIdx,
+            /// Field index of the GENERATED expression (`FIELD_ABSENT` if absent).
+            generated: FieldIdx,
+        } = 21,
     }
 
     /// Metadata for a node type that defines a template macro.
@@ -413,6 +422,13 @@ pub mod roles {
                     where_clause: 0,
                 },
                 20,
+            );
+            check(
+                SemanticRole::ColumnConstraint {
+                    check: 0,
+                    generated: 0,
+                },
+                21,
             );
         }
 

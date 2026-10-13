@@ -85,6 +85,8 @@ node ColumnConstraint {
   generated_expr: index Expr
   fk_clause: index ForeignKeyClause
 
+  semantic { column_constraint(check: check_expr, generated: generated_expr) }
+
   fmt {
     switch(kind) {
       PRIMARY_KEY {
