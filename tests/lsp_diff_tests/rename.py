@@ -142,3 +142,14 @@ class Rename(TestSuite):
             1:9..1:12 -> "amount"
 """,
         )
+
+    def test_rename_table_renames_drop_if_exists_target(self):
+        return LspDiffTestBlueprint(
+            sql="CREATE TABLE <|>t (a INT);\nDROP TABLE IF EXISTS t;",
+            op="rename",
+            new_name="u",
+            out="""\
+            0:13..0:14 -> "u"
+            1:21..1:22 -> "u"
+""",
+        )

@@ -59,6 +59,8 @@ enum AcceptedRef {
     ForeignKeyParentDeferred,
     /// `SQLite` never checks a trigger's `UPDATE OF` column names.
     TriggerUpdateOfUnchecked,
+    /// `DROP ... IF EXISTS` targets may legitimately be missing.
+    DropIfExistsMissing,
 }
 
 impl From<UncheckedRef> for AcceptedRef {
@@ -66,6 +68,7 @@ impl From<UncheckedRef> for AcceptedRef {
         match r {
             UncheckedRef::ForeignKeyParent => Self::ForeignKeyParentDeferred,
             UncheckedRef::TriggerUpdateOf => Self::TriggerUpdateOfUnchecked,
+            UncheckedRef::DropIfExists => Self::DropIfExistsMissing,
         }
     }
 }
