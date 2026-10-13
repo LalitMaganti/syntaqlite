@@ -67,3 +67,14 @@ class References(TestSuite):
             1:20..1:25
 """,
         )
+
+    def test_column_in_create_index(self):
+        return LspDiffTestBlueprint(
+            sql="CREATE TABLE t (<|>id INT, n INT);\nCREATE INDEX i ON t (id, n) WHERE id > 0;",
+            op="references",
+            include_declaration=False,
+            out="""\
+            1:21..1:23
+            1:34..1:36
+""",
+        )

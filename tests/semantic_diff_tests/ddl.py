@@ -226,3 +226,65 @@ class CreateIndexTarget(TestSuite):
               |                   ^
 """,
         )
+
+
+class CreateIndexColumns(TestSuite):
+    def test_known_columns(self):
+        return DiffTestBlueprint(
+            sql="CREATE TABLE t (a, b); CREATE INDEX i ON t (a, lower(b)) WHERE b > 0;",
+            strict_schema=True,
+            out="",
+        )
+
+    def test_unknown_column(self):
+        return DiffTestBlueprint(
+            sql="CREATE TABLE t (a, b); CREATE INDEX i ON t (c);",
+            strict_schema=True,
+            out="""\
+            error: unknown column 'c'
+             --> <stdin>:1:45
+              |
+            1 | CREATE TABLE t (a, b); CREATE INDEX i ON t (c);
+              |                                             ^
+              = help: did you mean 'a'?
+            """,
+        )
+
+    def test_unknown_column_in_where(self):
+        return DiffTestBlueprint(
+            sql="CREATE TABLE t (a, b); CREATE INDEX i ON t (a) WHERE nope > 0;",
+            strict_schema=True,
+            out="""\
+            error: unknown column 'nope'
+             --> <stdin>:1:54
+              |
+            1 | CREATE TABLE t (a, b); CREATE INDEX i ON t (a) WHERE nope > 0;
+              |                                                      ^~~~
+            """,
+        )
+
+    def test_rowid_not_indexable(self):
+        return DiffTestBlueprint(
+            sql="CREATE TABLE t (a); CREATE INDEX i ON t (rowid);",
+            strict_schema=True,
+            out="""\
+            error: unknown column 'rowid'
+             --> <stdin>:1:42
+              |
+            1 | CREATE TABLE t (a); CREATE INDEX i ON t (rowid);
+              |                                          ^~~~~
+            """,
+        )
+
+    def test_unknown_table_does_not_flag_columns(self):
+        return DiffTestBlueprint(
+            sql="CREATE INDEX i ON t (a);",
+            strict_schema=True,
+            out="""\
+            error: unknown table 't'
+             --> <stdin>:1:19
+              |
+            1 | CREATE INDEX i ON t (a);
+              |                   ^
+""",
+        )
