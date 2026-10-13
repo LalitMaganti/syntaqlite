@@ -18,18 +18,63 @@ use crate::analysis::Catalog;
 use crate::dialect::AnyDialect;
 
 use crate::analysis::completion::CompletionContext;
+use crate::analysis::engine::walker::{ColumnRefEvent, SemanticVisitor, WalkCtx};
+
+use syntaqlite_syntax::any::AnyParsedStatement;
 
 use super::{CompletionEntry, CompletionInfo, CompletionKind};
 
+/// Identifier substituted at the cursor to find the names in scope there.
+pub(crate) const CURSOR_MARKER: &str = "syntaqlite_completion_cursor";
+
+/// The column and source names visible at the cursor.
+pub(crate) struct CursorScope {
+    columns: Vec<String>,
+    sources: Vec<String>,
+}
+
+/// Records the scope at the unqualified [`CURSOR_MARKER`] column reference.
+#[derive(Default)]
+pub(crate) struct CursorScopeCapture {
+    scope: Option<CursorScope>,
+}
+
+impl CursorScopeCapture {
+    /// The captured scope, if the cursor was inside a query with sources.
+    pub(crate) fn into_scope(self) -> Option<CursorScope> {
+        self.scope.filter(|s| !s.sources.is_empty())
+    }
+}
+
+impl SemanticVisitor for CursorScopeCapture {
+    const WANTS_COLUMN_REF: bool = true;
+
+    fn on_column_ref(
+        &mut self,
+        _stmt: &mut AnyParsedStatement<'_>,
+        cx: &mut WalkCtx<'_>,
+        ev: ColumnRefEvent<'_>,
+    ) {
+        if ev.table.is_none() && ev.column == CURSOR_MARKER {
+            self.scope = Some(CursorScope {
+                columns: cx.scope.all_column_names(None),
+                sources: cx.scope.all_source_names(),
+            });
+        }
+    }
+}
+
 /// Assemble completion items from the given completion info, dialect, and
-/// catalog, keeping only those matching the partially typed word. The result
+/// catalog, keeping only those matching the partially typed word. Columns and
+/// table names come from `scope` when the cursor is inside a query. The result
 /// is sorted by [`CompletionKind::sort_priority`], then by match rank.
 pub(crate) fn build_completion_items(
     info: &CompletionInfo,
     dialect: &AnyDialect,
     catalog: &Catalog,
+    scope: Option<&CursorScope>,
 ) -> Vec<CompletionEntry> {
-    let mut items = candidate_items(info, dialect, catalog);
+    let mut items = candidate_items(info, dialect, catalog, scope);
     if let Some(typed) = &info.prefix {
         items.retain_mut(|item| match match_rank(typed, item.label()) {
             Some(rank) => {
@@ -68,6 +113,7 @@ fn candidate_items(
     info: &CompletionInfo,
     dialect: &AnyDialect,
     catalog: &Catalog,
+    scope: Option<&CursorScope>,
 ) -> Vec<CompletionEntry> {
     let expected_set: HashSet<u32> = info.tokens.iter().map(|&t| u32::from(t)).collect();
 
@@ -107,7 +153,14 @@ fn candidate_items(
         return items;
     }
 
-    match info.context {
+    // A captured scope means the cursor is a column position, whatever
+    // context the parser reported.
+    let context = if scope.is_some() {
+        CompletionContext::Expression
+    } else {
+        info.context
+    };
+    match context {
         CompletionContext::TableRef => {
             for name in catalog.all_relation_names() {
                 if seen.insert(name.clone()) {
@@ -121,12 +174,16 @@ fn candidate_items(
                     items.push(CompletionEntry::new(name, CompletionKind::Function));
                 }
             }
-            for name in catalog.all_column_names(None) {
+            let (columns, tables) = match scope {
+                Some(scope) => (scope.columns.clone(), scope.sources.clone()),
+                None => (catalog.all_column_names(None), catalog.all_relation_names()),
+            };
+            for name in columns {
                 if seen.insert(name.clone()) {
                     items.push(CompletionEntry::new(name, CompletionKind::Column));
                 }
             }
-            for name in catalog.all_relation_names() {
+            for name in tables {
                 if seen.insert(name.clone()) {
                     items.push(CompletionEntry::new(name, CompletionKind::Table));
                 }

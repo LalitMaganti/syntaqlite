@@ -70,6 +70,9 @@ server requests completion after a space, `.`, newline, tab, or `;`.
   valid.
 - After `FROM` or `JOIN`, names are limited to tables and views.
 - After `t.`, only the columns of `t` are offered.
+- Inside a query, columns and table names come from the tables in scope:
+  its `FROM` and `JOIN` sources and their aliases, and those of enclosing
+  queries. Outside a query, every table's columns are offered.
 
 Items are filtered by the partially typed word, ignoring case. A word matches
 a name if it is a prefix of the name, a prefix of one of its `_`-separated
@@ -167,5 +170,3 @@ open document are republished after the change.
 
 - A `REFERENCES` parent table defined later in the file is not resolved for
   navigation.
-- Unqualified column completion offers columns from every table in the
-  schema, not only those in the query's `FROM` clause.
