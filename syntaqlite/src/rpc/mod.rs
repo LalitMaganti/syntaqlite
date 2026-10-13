@@ -781,6 +781,7 @@ const DIAG_CODE_CTE_COLUMN_COUNT_MISMATCH: u32 = 6;
 const DIAG_CODE_QUALIFIED_REF: u32 = 7;
 const DIAG_CODE_INDEX_ON_VIEW: u32 = 8;
 const DIAG_CODE_DROP_WRONG_KIND: u32 = 9;
+const DIAG_CODE_BUILTIN_MODIFY: u32 = 10;
 
 fn diag_code(msg: &DiagnosticMessage) -> u32 {
     match msg {
@@ -794,5 +795,6 @@ fn diag_code(msg: &DiagnosticMessage) -> u32 {
         DiagnosticMessage::QualifiedRef { .. } => DIAG_CODE_QUALIFIED_REF,
         DiagnosticMessage::IndexOnView { .. } => DIAG_CODE_INDEX_ON_VIEW,
         DiagnosticMessage::DropWrongKind { .. } => DIAG_CODE_DROP_WRONG_KIND,
+        DiagnosticMessage::BuiltinModify { .. } => DIAG_CODE_BUILTIN_MODIFY,
     }
 }

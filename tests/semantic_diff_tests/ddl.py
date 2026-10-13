@@ -588,7 +588,13 @@ class DropTable(TestSuite):
         return DiffTestBlueprint(
             sql="DROP TABLE sqlite_master; SELECT name FROM sqlite_master;",
             strict_schema=True,
-            out="",
+            out="""\
+                error: built-in table 'sqlite_master' may not be dropped
+                 --> <stdin>:1:12
+                  |
+                1 | DROP TABLE sqlite_master; SELECT name FROM sqlite_master;
+                  |            ^~~~~~~~~~~~~
+            """,
         )
 
 
@@ -771,4 +777,48 @@ class DropWrongKind(TestSuite):
             1 | CREATE TABLE t (a); DROP VIEW IF EXISTS t;
               |                                         ^
             """,
+        )
+
+
+class BuiltinModify(TestSuite):
+    def test_drop_builtin(self):
+        return DiffTestBlueprint(
+            sql="DROP TABLE sqlite_master;",
+            out="""\
+            error: built-in table 'sqlite_master' may not be dropped
+             --> <stdin>:1:12
+              |
+            1 | DROP TABLE sqlite_master;
+              |            ^~~~~~~~~~~~~
+            """,
+        )
+
+    def test_index_builtin(self):
+        return DiffTestBlueprint(
+            sql="CREATE INDEX i ON sqlite_schema (name);",
+            out="""\
+            error: built-in table 'sqlite_schema' may not be indexed
+             --> <stdin>:1:19
+              |
+            1 | CREATE INDEX i ON sqlite_schema (name);
+              |                   ^~~~~~~~~~~~~
+            """,
+        )
+
+    def test_trigger_on_builtin(self):
+        return DiffTestBlueprint(
+            sql="CREATE TRIGGER t AFTER INSERT ON sqlite_master BEGIN SELECT 1; END;",
+            out="""\
+            error: cannot create a trigger on built-in table 'sqlite_master'
+             --> <stdin>:1:34
+              |
+            1 | CREATE TRIGGER t AFTER INSERT ON sqlite_master BEGIN SELECT 1; END;
+              |                                  ^~~~~~~~~~~~~
+            """,
+        )
+
+    def test_reading_builtin_is_fine(self):
+        return DiffTestBlueprint(
+            sql="SELECT name FROM sqlite_schema;",
+            out="",
         )

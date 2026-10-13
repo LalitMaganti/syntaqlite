@@ -357,6 +357,7 @@ syntaqlite.RenderOptions(*, source_name="")
 | `QUALIFIED_REF` | `7` |
 | `INDEX_ON_VIEW` | `8` |
 | `DROP_WRONG_KIND` | `9` |
+| `BUILTIN_MODIFY` | `10` |
 
 ### `DefinedRelation`
 
