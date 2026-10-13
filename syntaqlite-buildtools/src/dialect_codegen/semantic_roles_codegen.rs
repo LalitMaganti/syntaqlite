@@ -295,13 +295,16 @@ fn role_to_bytes(
         SynqRole::DmlScope {
             with_recursive,
             with_ctes,
+            where_clause,
         } => {
             bytes[0] = disc(SemanticRole::DmlScope {
                 with_recursive: 0,
                 with_ctes: 0,
+                where_clause: 0,
             });
             bytes[1] = opt(with_recursive);
             bytes[2] = opt(with_ctes);
+            bytes[3] = opt(where_clause);
         }
         SynqRole::UpsertScope {
             columns,

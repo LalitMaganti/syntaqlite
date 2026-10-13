@@ -230,6 +230,9 @@ impl<'b> SemanticWalker<'_, 'b> {
                 .add_table("", Some(aliases), RowIdPolicy::WithRowId);
         }
 
+        self.note_where_terms(fields.node_id_at(where_clause));
+        // SQLite moves HAVING terms without aggregates into WHERE.
+        self.note_where_terms(fields.node_id_at(having));
         for idx in [where_clause, groupby, having, orderby, limit_clause] {
             self.walk_opt(visitor, fields.node_id_at(idx));
         }
@@ -293,6 +296,7 @@ impl<'b> SemanticWalker<'_, 'b> {
                 .collect();
             self.on_clause = Some(OnClauseLimit { frame, later });
         }
+        self.note_where_terms(fields.node_id_at(on));
         self.walk_opt(visitor, fields.node_id_at(on));
         self.on_clause = outer;
     }
@@ -605,6 +609,7 @@ impl<'b> SemanticWalker<'_, 'b> {
                     {
                         self.report_row_value(visitor, node_id, first, Some(other));
                     } else if op_name.is_some_and(compares_elementwise)
+                        && self.where_terms.contains(&node_id)
                         && let [Some(left), Some(right), None] = operands
                     {
                         self.allow_nested_row_values(visitor, left, right);
@@ -643,9 +648,34 @@ impl<'b> SemanticWalker<'_, 'b> {
         self.walk_children(visitor, node_id);
     }
 
-    /// A CASE with an operand compares it to each WHEN value.
-    /// `SQLite` compares two row values with `=` or `IS` element by element,
-    /// so their elements may be row values too, as long as they match.
+    /// Note the terms of a WHERE, ON or HAVING clause: its operands joined
+    /// by AND or OR.
+    pub(super) fn note_where_terms(&mut self, expr: Option<AnyNodeId>) {
+        let Some(expr) = expr else {
+            return;
+        };
+        let expr = self.unparen(expr);
+        let reader = StmtReader::new(self.stmt, self.roles);
+        if let Some((
+            SemanticRole::RowValueOperands {
+                op, first, second, ..
+            },
+            fields,
+        )) = reader.role_for_node(expr)
+            && op != FIELD_ABSENT
+            && matches!(self.stmt.enum_name(expr, op), "AND" | "OR")
+        {
+            self.note_where_terms(fields.node_id_at(first));
+            self.note_where_terms(fields.node_id_at(second));
+        } else {
+            self.where_terms.insert(expr);
+        }
+    }
+
+    /// `SQLite`'s query planner splits a WHERE term comparing row values
+    /// with `=` or `IS` into one term per element, so the elements may be
+    /// row values too, as long as they match. Whether it splits an OR's
+    /// branches depends on the indexes, so they are accepted too.
     fn allow_nested_row_values<V: SemanticVisitor>(
         &mut self,
         visitor: &mut V,

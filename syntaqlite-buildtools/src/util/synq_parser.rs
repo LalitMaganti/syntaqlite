@@ -121,6 +121,7 @@ pub(crate) enum SemanticRole {
     DmlScope {
         with_recursive: Option<String>,
         with_ctes: Option<String>,
+        where_clause: Option<String>,
     },
     UpsertScope {
         columns: Option<String>,
@@ -807,6 +808,7 @@ impl Parser {
             "dml_scope" => SemanticRole::DmlScope {
                 with_recursive: get_param(&params, "with_recursive").map(str::to_string),
                 with_ctes: get_param(&params, "with_ctes").map(str::to_string),
+                where_clause: get_param(&params, "where_clause").map(str::to_string),
             },
             "upsert_scope" => SemanticRole::UpsertScope {
                 columns: get_param(&params, "columns").map(str::to_string),

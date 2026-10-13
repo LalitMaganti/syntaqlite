@@ -221,6 +221,46 @@ class RowValue(TestSuite):
             """,
         )
 
+    def test_nested_row_values_outside_where_terms(self):
+        return DiffTestBlueprint(
+            sql="SELECT (1, (2, 3)) = (1, (2, 3)) WHERE NOT (1, (2, 3)) = (1, (2, 3));",
+            out="""\
+            error: row value of 2 values used where one value is expected
+             --> <stdin>:1:12
+              |
+            1 | SELECT (1, (2, 3)) = (1, (2, 3)) WHERE NOT (1, (2, 3)) = (1, (2, 3));
+              |            ^~~~~~
+            error: row value of 2 values used where one value is expected
+             --> <stdin>:1:26
+              |
+            1 | SELECT (1, (2, 3)) = (1, (2, 3)) WHERE NOT (1, (2, 3)) = (1, (2, 3));
+              |                          ^~~~~~
+            error: row value of 2 values used where one value is expected
+             --> <stdin>:1:48
+              |
+            1 | SELECT (1, (2, 3)) = (1, (2, 3)) WHERE NOT (1, (2, 3)) = (1, (2, 3));
+              |                                                ^~~~~~
+            error: row value of 2 values used where one value is expected
+             --> <stdin>:1:62
+              |
+            1 | SELECT (1, (2, 3)) = (1, (2, 3)) WHERE NOT (1, (2, 3)) = (1, (2, 3));
+              |                                                              ^~~~~~
+            """,
+        )
+
+    def test_nested_row_values_in_where_terms(self):
+        return DiffTestBlueprint(
+            sql=(
+            "CREATE TABLE t (a, b); CREATE INDEX ta ON t (a); CREATE INDEX tb ON t (b); "
+            "SELECT * FROM t JOIN t AS u ON (t.a, (t.b, 1)) = (u.a, (u.b, 1)); "
+            "SELECT * FROM t WHERE a = 1 OR (b, (a, 1)) = (2, (3, 1)); "
+            "SELECT a FROM t GROUP BY a HAVING (a, (1, 2)) = (1, (1, 2)); "
+            "DELETE FROM t WHERE (a, (b, 1)) = (1, (2, 1)); "
+            "UPDATE t SET a = 1 WHERE (a, (b, 1)) = (1, (2, 1));"
+            ),
+            out="",
+        )
+
     def test_nested_row_values_compared_with_equals(self):
         return DiffTestBlueprint(
             sql="SELECT 1 WHERE (2, (2, 0)) IS (2, (2, 0)) AND (2, (2, 0)) = (2, (2, 0, 1));",

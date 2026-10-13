@@ -58,6 +58,8 @@ pub(crate) struct SemanticWalker<'a, 'b> {
     /// Expressions in positions that accept a row value, such as a
     /// comparison's operands.
     row_value_positions: HashSet<AnyNodeId>,
+    /// Terms of the WHERE, ON and HAVING clauses being walked.
+    where_terms: HashSet<AnyNodeId>,
     /// Expressions are being walked where `SQLite` forbids qualified names.
     unqualified_only: Option<QualifiedRefContext>,
     /// Reusable lookup key — catalog/scope probes share one allocation.
@@ -96,6 +98,7 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
             right_join_in_from: false,
             on_clause: None,
             row_value_positions: HashSet::new(),
+            where_terms: HashSet::new(),
             unqualified_only: None,
             key_scratch: NameKey::default(),
         }
@@ -202,7 +205,8 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
             SemanticRole::DmlScope {
                 with_recursive: _,
                 with_ctes,
-            } => self.walk_dml_scope(visitor, fields, with_ctes),
+                where_clause,
+            } => self.walk_dml_scope(visitor, fields, with_ctes, where_clause),
             SemanticRole::InsertScope { .. } => self.walk_insert_scope(visitor, fields, role),
             SemanticRole::UpsertScope {
                 columns,
