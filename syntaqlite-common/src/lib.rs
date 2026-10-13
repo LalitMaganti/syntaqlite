@@ -288,10 +288,10 @@ pub mod roles {
 
         /// ALTER TABLE statement: existence-checks the target and mutates the
         /// catalog (add/drop/rename column, rename table). The `op` field
-        /// selects which mutation to apply; the runtime interprets its enum
-        /// discriminant against the dialect's alter-op ordering.
+        /// selects which mutation to apply, by the dialect's name for its
+        /// value (`ADD_COLUMN`, `DROP_COLUMN`, `RENAME_COLUMN`, `RENAME_TABLE`).
         AlterTable {
-            /// Field index of the alter-op enum discriminant.
+            /// Field index of the alter-op enum.
             op: FieldIdx,
             /// Field index of the target relation (a qualified-name node).
             target: FieldIdx,
@@ -348,10 +348,10 @@ pub mod roles {
         } = 23,
 
         /// DROP statement: existence-checks the target and removes a dropped
-        /// table or view from the catalog. The runtime interprets `kind`'s
-        /// enum discriminant against the dialect's drop-object ordering.
+        /// table or view from the catalog. `kind` selects the object type by
+        /// the dialect's name for its value (`TABLE`, `VIEW`).
         DropObject {
-            /// Field index of the drop-object-type enum discriminant.
+            /// Field index of the drop-object-type enum.
             kind: FieldIdx,
             /// Field index of the target (a qualified-name node).
             target: FieldIdx,
