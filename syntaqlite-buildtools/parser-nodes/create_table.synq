@@ -45,6 +45,8 @@ node ForeignKeyClause {
   deferrable: inline Deferrable
   initial_defer: inline InitialDeferMode
 
+  semantic { foreign_key(table: ref_table, columns: ref_columns) }
+
   fmt {
     group {
       if_span(ref_table) { "REFERENCES" space span(ref_table) }
@@ -85,7 +87,7 @@ node ColumnConstraint {
   generated_expr: index Expr
   fk_clause: index ForeignKeyClause
 
-  semantic { column_constraint(check: check_expr, generated: generated_expr) }
+  semantic { column_constraint(check: check_expr, generated: generated_expr, references: fk_clause) }
 
   fmt {
     switch(kind) {
@@ -210,7 +212,7 @@ node TableConstraint {
   check_expr: index Expr
   fk_clause: index ForeignKeyClause
 
-  semantic { table_constraint(check: check_expr, columns: pk_columns, fk_columns: fk_columns) }
+  semantic { table_constraint(check: check_expr, columns: pk_columns, fk_columns: fk_columns, references: fk_clause) }
 
   fmt {
     switch(kind) {

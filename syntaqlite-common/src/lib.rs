@@ -318,6 +318,8 @@ pub mod roles {
             check: FieldIdx,
             /// Field index of the GENERATED expression (`FIELD_ABSENT` if absent).
             generated: FieldIdx,
+            /// Field index of the REFERENCES clause (`FIELD_ABSENT` if absent).
+            references: FieldIdx,
         } = 21,
 
         /// Table constraint inside CREATE TABLE: resolves its CHECK expression,
@@ -330,7 +332,18 @@ pub mod roles {
             columns: FieldIdx,
             /// Field index of the FOREIGN KEY child column list (`FIELD_ABSENT` if absent).
             fk_columns: FieldIdx,
+            /// Field index of the REFERENCES clause (`FIELD_ABSENT` if absent).
+            references: FieldIdx,
         } = 22,
+
+        /// REFERENCES clause: resolves the parent table and its columns.
+        /// `SQLite` checks neither until the foreign key is enforced.
+        ForeignKey {
+            /// Field index of the parent table name.
+            table: FieldIdx,
+            /// Field index of the parent column list (`FIELD_ABSENT` if absent).
+            columns: FieldIdx,
+        } = 23,
     }
 
     /// Metadata for a node type that defines a template macro.
@@ -439,6 +452,7 @@ pub mod roles {
                 SemanticRole::ColumnConstraint {
                     check: 0,
                     generated: 0,
+                    references: 0,
                 },
                 21,
             );
@@ -447,8 +461,16 @@ pub mod roles {
                     check: 0,
                     columns: 0,
                     fk_columns: 0,
+                    references: 0,
                 },
                 22,
+            );
+            check(
+                SemanticRole::ForeignKey {
+                    table: 0,
+                    columns: 0,
+                },
+                23,
             );
         }
 

@@ -103,3 +103,21 @@ target: 0:16..0:18
 target: 0:16..0:17
 """,
         )
+
+    def test_references_parent_table(self):
+        return LspDiffTestBlueprint(
+            sql="CREATE TABLE p (id INT); CREATE TABLE c (pid INT REFERENCES <|>p (id));",
+            op="definition",
+            out="""\
+target: 0:13..0:14
+""",
+        )
+
+    def test_self_referencing_foreign_key_column(self):
+        return LspDiffTestBlueprint(
+            sql="CREATE TABLE t (id INT, parent INT REFERENCES t (<|>id));",
+            op="definition",
+            out="""\
+target: 0:16..0:18
+""",
+        )
