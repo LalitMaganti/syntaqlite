@@ -162,6 +162,11 @@ pub(crate) enum SemanticRole {
         table: String,
         columns: Option<String>,
     },
+    DropObject {
+        kind: String,
+        target: String,
+        if_exists: String,
+    },
 }
 
 /// A `semantic { ... }` annotation on a node.
@@ -777,6 +782,11 @@ impl Parser {
             "foreign_key" => SemanticRole::ForeignKey {
                 table: require_param(&params, "table", node_name, "foreign_key")?,
                 columns: get_param(&params, "columns").map(str::to_string),
+            },
+            "drop_object" => SemanticRole::DropObject {
+                kind: require_param(&params, "kind", node_name, "drop_object")?,
+                target: require_param(&params, "target", node_name, "drop_object")?,
+                if_exists: require_param(&params, "if_exists", node_name, "drop_object")?,
             },
             _ => {
                 return Err(format!(
