@@ -31,6 +31,7 @@ pub(crate) const DIAG_CODE_UNKNOWN_MODULE: u32 = 4;
 pub(crate) const DIAG_CODE_FUNCTION_ARITY: u32 = 5;
 pub(crate) const DIAG_CODE_CTE_COLUMN_COUNT_MISMATCH: u32 = 6;
 pub(crate) const DIAG_CODE_QUALIFIED_REF: u32 = 7;
+pub(crate) const DIAG_CODE_INDEX_ON_VIEW: u32 = 8;
 
 pub(super) fn diagnostic_code_to_c(msg: &DiagnosticMessage) -> u32 {
     match msg {
@@ -42,6 +43,7 @@ pub(super) fn diagnostic_code_to_c(msg: &DiagnosticMessage) -> u32 {
         DiagnosticMessage::FunctionArity { .. } => DIAG_CODE_FUNCTION_ARITY,
         DiagnosticMessage::CteColumnCountMismatch { .. } => DIAG_CODE_CTE_COLUMN_COUNT_MISMATCH,
         DiagnosticMessage::QualifiedRef { .. } => DIAG_CODE_QUALIFIED_REF,
+        DiagnosticMessage::IndexOnView { .. } => DIAG_CODE_INDEX_ON_VIEW,
     }
 }
 

@@ -779,6 +779,7 @@ const DIAG_CODE_UNKNOWN_MODULE: u32 = 4;
 const DIAG_CODE_FUNCTION_ARITY: u32 = 5;
 const DIAG_CODE_CTE_COLUMN_COUNT_MISMATCH: u32 = 6;
 const DIAG_CODE_QUALIFIED_REF: u32 = 7;
+const DIAG_CODE_INDEX_ON_VIEW: u32 = 8;
 
 fn diag_code(msg: &DiagnosticMessage) -> u32 {
     match msg {
@@ -790,5 +791,6 @@ fn diag_code(msg: &DiagnosticMessage) -> u32 {
         DiagnosticMessage::FunctionArity { .. } => DIAG_CODE_FUNCTION_ARITY,
         DiagnosticMessage::CteColumnCountMismatch { .. } => DIAG_CODE_CTE_COLUMN_COUNT_MISMATCH,
         DiagnosticMessage::QualifiedRef { .. } => DIAG_CODE_QUALIFIED_REF,
+        DiagnosticMessage::IndexOnView { .. } => DIAG_CODE_INDEX_ON_VIEW,
     }
 }

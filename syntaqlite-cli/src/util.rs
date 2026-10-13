@@ -259,6 +259,9 @@ pub(crate) fn build_check_config(
         if let Some(ref v) = opts.qualified_ref {
             checks = checks.with_qualified_ref(CheckLevel::parse(v)?);
         }
+        if let Some(ref v) = opts.index_on_view {
+            checks = checks.with_index_on_view(CheckLevel::parse(v)?);
+        }
     }
 
     // CLI flags win (last-spec-wins per category).
