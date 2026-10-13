@@ -395,14 +395,14 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
             SemanticRole::IndexScope { table, .. } => {
                 self.walk_index_scope(visitor, node_id, fields, table);
             }
-            SemanticRole::ColumnConstraint {
-                check,
-                generated: no_rowid,
+            SemanticRole::ColumnConstraint { check, generated } => {
+                self.walk_constraint(visitor, fields, check, &[generated]);
             }
-            | SemanticRole::TableConstraint {
+            SemanticRole::TableConstraint {
                 check,
-                columns: no_rowid,
-            } => self.walk_constraint(visitor, fields, check, no_rowid),
+                columns,
+                fk_columns,
+            } => self.walk_constraint(visitor, fields, check, &[columns, fk_columns]),
         }
     }
 
@@ -807,19 +807,21 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
         visitor: &mut V,
         fields: &NodeFields,
         check_idx: u8,
-        no_rowid_idx: u8,
+        no_rowid_idxs: &[u8],
     ) {
         let Some(table) = self.defining_table.take() else {
             return;
         };
         self.walk_in_table_scope(visitor, fields.node_id_at(check_idx), &table, table.rowid);
         // Generated columns and key columns cannot reference rowid.
-        self.walk_in_table_scope(
-            visitor,
-            fields.node_id_at(no_rowid_idx),
-            &table,
-            RowIdPolicy::WithoutRowId,
-        );
+        for &idx in no_rowid_idxs {
+            self.walk_in_table_scope(
+                visitor,
+                fields.node_id_at(idx),
+                &table,
+                RowIdPolicy::WithoutRowId,
+            );
+        }
         self.defining_table = Some(table);
     }
 

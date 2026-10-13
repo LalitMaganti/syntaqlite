@@ -101,3 +101,13 @@ class References(TestSuite):
             0:62..0:64
 """,
         )
+
+    def test_column_in_foreign_key(self):
+        return LspDiffTestBlueprint(
+            sql="CREATE TABLE t (<|>pid INT, FOREIGN KEY (pid) REFERENCES p (id));",
+            op="references",
+            include_declaration=False,
+            out="""\
+            0:38..0:41
+""",
+        )

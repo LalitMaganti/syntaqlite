@@ -372,13 +372,19 @@ fn role_to_bytes(
             bytes[1] = opt(check);
             bytes[2] = opt(generated);
         }
-        SynqRole::TableConstraint { check, columns } => {
+        SynqRole::TableConstraint {
+            check,
+            columns,
+            fk_columns,
+        } => {
             bytes[0] = disc(SemanticRole::TableConstraint {
                 check: 0,
                 columns: 0,
+                fk_columns: 0,
             });
             bytes[1] = opt(check);
             bytes[2] = opt(columns);
+            bytes[3] = opt(fk_columns);
         }
     }
 
