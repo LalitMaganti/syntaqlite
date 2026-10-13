@@ -126,6 +126,13 @@ pub(crate) enum UncheckedRef {
     DropIfExists,
 }
 
+/// An ON clause referencing a table joined to its right.
+#[derive(Copy, Clone)]
+pub(crate) struct OnClauseOrderEvent<'a> {
+    pub(crate) name: &'a str,
+    pub(crate) range: DocRange,
+}
+
 /// A window specification naming a window its query doesn't define.
 #[derive(Copy, Clone)]
 pub(crate) struct UnknownWindowEvent<'a> {
@@ -205,6 +212,7 @@ pub(crate) trait SemanticVisitor {
     const WANTS_BUILTIN_MODIFY: bool = false;
     const WANTS_COMPOUND_COLUMNS: bool = false;
     const WANTS_UNKNOWN_WINDOW: bool = false;
+    const WANTS_ON_CLAUSE_ORDER: bool = false;
     const WANTS_CTE_BINDING: bool = false;
     const WANTS_SCOPED_SOURCE: bool = false;
     /// Return true to receive [`enter_query`](Self::enter_query) /
@@ -281,6 +289,13 @@ pub(crate) trait SemanticVisitor {
     ) {
     }
 
+    fn on_on_clause_order(
+        &mut self,
+        _stmt: &mut AnyParsedStatement<'_>,
+        _ev: OnClauseOrderEvent<'_>,
+    ) {
+    }
+
     /// Called once per CTE binding, BEFORE its body is walked. The body
     /// will observe the binding's own name as a resolved catalog source
     /// (`SQLite` allows any CTE to self-reference, with or without the
@@ -334,10 +349,21 @@ pub(crate) struct SemanticWalker<'a, 'b> {
     unchecked: Option<UncheckedRef>,
     /// Window names defined by each enclosing query, innermost last.
     windows: Vec<HashSet<NameKey>>,
+    /// Whether the current query's FROM clause has a RIGHT or FULL join.
+    right_join_in_from: bool,
+    /// Sources an ON clause being walked may not reference.
+    on_clause: Option<OnClauseLimit>,
     /// Expressions are being walked where `SQLite` forbids qualified names.
     unqualified_only: Option<QualifiedRefContext>,
     /// Reusable lookup key — catalog/scope probes share one allocation.
     key_scratch: NameKey,
+}
+
+/// The names an ON clause may not reference: sources in frame `frame` that
+/// are joined to its right.
+struct OnClauseLimit {
+    frame: usize,
+    later: HashSet<NameKey>,
 }
 
 /// A table being created, as seen by expressions in its own definition.
@@ -362,6 +388,8 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
             defining_table: None,
             unchecked: None,
             windows: Vec::new(),
+            right_join_in_from: false,
+            on_clause: None,
             unqualified_only: None,
             key_scratch: NameKey::default(),
         }
@@ -423,6 +451,7 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
             | SemanticRole::CteBinding { .. }
             | SemanticRole::WindowDefinition { .. } => self.walk_children(visitor, node_id),
             SemanticRole::WindowRef { .. } => self.walk_window_ref(visitor, node_id, fields, role),
+            SemanticRole::Join { .. } => self.walk_join(visitor, node_id, fields, role),
 
             SemanticRole::Call { name, args } => {
                 self.walk_call(visitor, node_id, fields, name, args);
@@ -737,6 +766,18 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
             None => None,
         };
         let resolution = self.scope.resolve_column(table_key, &column_ident);
+        if V::WANTS_ON_CLAUSE_ORDER
+            && let Some(limit) = &self.on_clause
+            && let Some((frame, source)) = self.scope.resolving_source(table_key, &column_ident)
+            && frame == limit.frame
+            && limit.later.contains(&source)
+        {
+            let ev = OnClauseOrderEvent {
+                name: table.unwrap_or(source.as_str()),
+                range: table_range.unwrap_or(range),
+            };
+            visitor.on_on_clause_order(self.stmt, ev);
+        }
 
         if V::WANTS_COLUMN_REF {
             let ev = ColumnRefEvent {
@@ -1173,6 +1214,10 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
         self.scope.push();
         let windows = self.window_names(fields);
         self.windows.push(windows);
+        let outer_right_join = self.right_join_in_from;
+        self.right_join_in_from = fields
+            .node_id_at(from)
+            .is_some_and(|id| self.has_right_join(id));
         if let Some(from_id) = fields.node_id_at(from) {
             self.register_sources(from_id);
         }
@@ -1191,10 +1236,135 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
             self.walk_opt(visitor, fields.node_id_at(idx));
         }
         self.windows.pop();
+        self.right_join_in_from = outer_right_join;
         self.scope.pop();
 
         if V::WANTS_QUERY {
             visitor.exit_query(self.stmt, node_id);
+        }
+    }
+
+    /// Walk a join's sources, then its ON clause. An outer join's ON clause,
+    /// or any ON clause when the FROM has a RIGHT or FULL join, may not
+    /// reference tables joined to its right.
+    fn walk_join<V: SemanticVisitor>(
+        &mut self,
+        visitor: &mut V,
+        node_id: AnyNodeId,
+        fields: &NodeFields,
+        role: SemanticRole,
+    ) {
+        let SemanticRole::Join {
+            kind,
+            left,
+            right,
+            on,
+        } = role
+        else {
+            unreachable!("not a join role: {role:?}");
+        };
+        for idx in 0..fields.len() {
+            #[expect(
+                clippy::cast_possible_truncation,
+                reason = "NodeFields holds at most 16"
+            )]
+            let idx = idx as u8;
+            if idx != on {
+                self.walk_opt(visitor, fields.node_id_at(idx));
+            }
+        }
+        let restricted = self.right_join_in_from
+            || JoinKind::from_name(self.stmt.enum_name(node_id, kind)).outer;
+        let outer = self.on_clause.take();
+        if V::WANTS_ON_CLAUSE_ORDER && restricted {
+            let frame = self
+                .scope
+                .innermost()
+                .expect("joins are walked inside a query scope");
+            let mut inside = HashSet::new();
+            for idx in [left, right] {
+                let source = fields.node_id_at(idx).expect("a join has both sources");
+                self.source_names(source, &mut inside);
+            }
+            let later = self
+                .scope
+                .frame_names(frame)
+                .difference(&inside)
+                .cloned()
+                .collect();
+            self.on_clause = Some(OnClauseLimit { frame, later });
+        }
+        self.walk_opt(visitor, fields.node_id_at(on));
+        self.on_clause = outer;
+    }
+
+    /// Whether a FROM clause contains a RIGHT or FULL join.
+    fn has_right_join(&self, node_id: AnyNodeId) -> bool {
+        if let Some(children) = self.stmt.list_children(node_id) {
+            return children
+                .iter()
+                .any(|&id| !id.is_null() && self.has_right_join(id));
+        }
+        let reader = StmtReader::new(self.stmt, self.roles);
+        let (role, fields) = reader
+            .role_for_node(node_id)
+            .expect("a non-list node has fields");
+        match role {
+            SemanticRole::Join {
+                kind, left, right, ..
+            } => {
+                JoinKind::from_name(self.stmt.enum_name(node_id, kind)).right
+                    || [left, right]
+                        .into_iter()
+                        .filter_map(|idx| fields.node_id_at(idx))
+                        .any(|id| self.has_right_join(id))
+            }
+            SemanticRole::Query { .. } | SemanticRole::CompoundScope { .. } => false,
+            _ => self
+                .stmt
+                .child_node_ids(node_id)
+                .into_iter()
+                .any(|id| !id.is_null() && self.has_right_join(id)),
+        }
+    }
+
+    /// Names a FROM subtree binds, without entering nested queries.
+    fn source_names(&self, node_id: AnyNodeId, out: &mut HashSet<NameKey>) {
+        if let Some(children) = self.stmt.list_children(node_id) {
+            for &id in children {
+                if !id.is_null() {
+                    self.source_names(id, out);
+                }
+            }
+            return;
+        }
+        let reader = StmtReader::new(self.stmt, self.roles);
+        let (role, fields) = reader
+            .role_for_node(node_id)
+            .expect("a non-list node has fields");
+        match role {
+            SemanticRole::SourceRef { name, alias, .. } => {
+                let (alias_ident, _) = self.stmt.name_ident_text(fields.node_id_at(alias));
+                if !alias_ident.is_empty() {
+                    out.insert(NameKey::new(&alias_ident));
+                } else if let Some(name) = self.stmt.span_field_ident_text(&fields, name) {
+                    out.insert(NameKey::new(&name));
+                }
+            }
+            SemanticRole::ScopedSource { alias, .. } => {
+                let (alias_ident, _) = self.stmt.name_ident_text(fields.node_id_at(alias));
+                if !alias_ident.is_empty() {
+                    out.insert(NameKey::new(&alias_ident));
+                }
+            }
+            SemanticRole::Query { .. } | SemanticRole::CompoundScope { .. } => {}
+            _ => {
+                for id in self.stmt.child_node_ids(node_id) {
+                    if !id.is_null() {
+                        self.source_names(id, out);
+                    }
+                }
+            }
         }
     }
 
@@ -1717,6 +1887,23 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
             }
             true
         });
+    }
+}
+
+/// What a join's kind implies for ON clause ordering.
+struct JoinKind {
+    outer: bool,
+    right: bool,
+}
+
+impl JoinKind {
+    /// From the dialect's name for the join type, such as `NATURAL_LEFT`.
+    fn from_name(name: &str) -> Self {
+        let base = name.strip_prefix("NATURAL_").unwrap_or(name);
+        Self {
+            outer: matches!(base, "LEFT" | "RIGHT" | "FULL"),
+            right: matches!(base, "RIGHT" | "FULL"),
+        }
     }
 }
 

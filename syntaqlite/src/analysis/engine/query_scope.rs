@@ -9,7 +9,7 @@
 //! first (correlated subqueries). CTE definitions are never stored here —
 //! CTEs only contribute columns when they appear in a FROM clause.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use crate::analysis::catalog::ColumnResolution;
 use crate::analysis::name_key::NameKey;
@@ -77,6 +77,43 @@ pub(crate) struct QueryScope {
 impl QueryScope {
     pub(crate) fn has_frames(&self) -> bool {
         !self.frames.is_empty()
+    }
+
+    /// Index of the innermost frame.
+    pub(crate) fn innermost(&self) -> Option<usize> {
+        self.frames.len().checked_sub(1)
+    }
+
+    /// Names bound in frame `frame`.
+    pub(crate) fn frame_names(&self, frame: usize) -> HashSet<NameKey> {
+        self.frames
+            .get(frame)
+            .map(|f| f.named.keys().cloned().collect())
+            .unwrap_or_default()
+    }
+
+    /// The frame and bound name a column reference resolves through, when it
+    /// resolves to a named source.
+    pub(crate) fn resolving_source(
+        &self,
+        table: Option<&NameKey>,
+        column: &str,
+    ) -> Option<(usize, NameKey)> {
+        for (idx, frame) in self.frames.iter().enumerate().rev() {
+            match table {
+                Some(table) => {
+                    if frame.named.contains_key(table) {
+                        return Some((idx, table.clone()));
+                    }
+                }
+                None => {
+                    if let Some((key, _)) = frame.named.iter().find(|(_, t)| t.has_column(column)) {
+                        return Some((idx, key.clone()));
+                    }
+                }
+            }
+        }
+        None
     }
 
     pub(crate) fn push(&mut self) {

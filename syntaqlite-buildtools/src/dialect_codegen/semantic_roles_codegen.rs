@@ -443,6 +443,23 @@ fn role_to_bytes(
             bytes[0] = disc(SemanticRole::WindowDefinition { name: 0 });
             bytes[1] = fi(name);
         }
+        SynqRole::Join {
+            kind,
+            left,
+            right,
+            on,
+        } => {
+            bytes[0] = disc(SemanticRole::Join {
+                kind: 0,
+                left: 0,
+                right: 0,
+                on: 0,
+            });
+            bytes[1] = fi(kind);
+            bytes[2] = fi(left);
+            bytes[3] = fi(right);
+            bytes[4] = opt(on);
+        }
     }
 
     bytes

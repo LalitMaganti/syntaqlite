@@ -784,6 +784,7 @@ const DIAG_CODE_DROP_WRONG_KIND: u32 = 9;
 const DIAG_CODE_BUILTIN_MODIFY: u32 = 10;
 const DIAG_CODE_COMPOUND_COLUMNS: u32 = 11;
 const DIAG_CODE_UNKNOWN_WINDOW: u32 = 12;
+const DIAG_CODE_ON_CLAUSE_ORDER: u32 = 13;
 
 fn diag_code(msg: &DiagnosticMessage) -> u32 {
     match msg {
@@ -800,5 +801,6 @@ fn diag_code(msg: &DiagnosticMessage) -> u32 {
         DiagnosticMessage::BuiltinModify { .. } => DIAG_CODE_BUILTIN_MODIFY,
         DiagnosticMessage::CompoundColumns { .. } => DIAG_CODE_COMPOUND_COLUMNS,
         DiagnosticMessage::UnknownWindow { .. } => DIAG_CODE_UNKNOWN_WINDOW,
+        DiagnosticMessage::OnClauseOrder { .. } => DIAG_CODE_ON_CLAUSE_ORDER,
     }
 }

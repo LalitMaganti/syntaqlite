@@ -71,3 +71,35 @@ class CompoundColumns(TestSuite):
             sql="CREATE TABLE a (x, y); SELECT * FROM a EXCEPT SELECT x FROM a;",
             out="",
         )
+
+
+class OnClauseOrder(TestSuite):
+    def test_left_join_on_references_later_table(self):
+        return DiffTestBlueprint(
+            sql="CREATE TABLE a (x); CREATE TABLE b (x); CREATE TABLE c (x); SELECT * FROM a LEFT JOIN b ON a.x = c.x JOIN c ON 1;",
+            out="""\
+            error: ON clause references 'c', which is joined to its right
+             --> <stdin>:1:98
+              |
+            1 | CREATE TABLE a (x); CREATE TABLE b (x); CREATE TABLE c (x); SELECT * FROM a LEFT JOIN b ON a.x = c.x JOIN c ON 1;
+              |                                                                                                  ^
+            """,
+        )
+
+    def test_inner_join_on_may_reference_later_table(self):
+        return DiffTestBlueprint(
+            sql="CREATE TABLE a (x); CREATE TABLE b (x); CREATE TABLE c (x); SELECT * FROM a JOIN b ON a.x = c.x JOIN c ON 1;",
+            out="",
+        )
+
+    def test_right_join_restricts_every_on_clause(self):
+        return DiffTestBlueprint(
+            sql="CREATE TABLE a (x); CREATE TABLE b (x); CREATE TABLE c (x); CREATE TABLE d (x); SELECT * FROM a JOIN b ON a.x = c.x JOIN c ON 1 RIGHT JOIN d ON 1;",
+            out="""\
+            error: ON clause references 'c', which is joined to its right
+             --> <stdin>:1:113
+              |
+            1 | CREATE TABLE a (x); CREATE TABLE b (x); CREATE TABLE c (x); CREATE TABLE d (x); SELECT * FROM a JOIN b ON a.x = c.x JOIN c ON 1 RIGHT JOIN d ON 1;
+              |                                                                                                                 ^
+            """,
+        )

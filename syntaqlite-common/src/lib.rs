@@ -382,6 +382,19 @@ pub mod roles {
             /// Field index of the window name.
             name: FieldIdx,
         } = 27,
+
+        /// A join between two table sources. The runtime interprets `kind`'s
+        /// enum discriminant against the dialect's join-type ordering.
+        Join {
+            /// Field index of the join-type enum discriminant.
+            kind: FieldIdx,
+            /// Field index of the left source.
+            left: FieldIdx,
+            /// Field index of the right source.
+            right: FieldIdx,
+            /// Field index of the ON expression (`FIELD_ABSENT` if absent).
+            on: FieldIdx,
+        } = 28,
     }
 
     /// Metadata for a node type that defines a template macro.
@@ -528,6 +541,15 @@ pub mod roles {
                 26,
             );
             check(SemanticRole::WindowDefinition { name: 0 }, 27);
+            check(
+                SemanticRole::Join {
+                    kind: 0,
+                    left: 0,
+                    right: 0,
+                    on: 0,
+                },
+                28,
+            );
         }
 
         #[test]

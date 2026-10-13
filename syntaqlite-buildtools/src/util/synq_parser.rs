@@ -179,6 +179,12 @@ pub(crate) enum SemanticRole {
     WindowDefinition {
         name: String,
     },
+    Join {
+        kind: String,
+        left: String,
+        right: String,
+        on: Option<String>,
+    },
 }
 
 /// A `semantic { ... }` annotation on a node.
@@ -811,6 +817,12 @@ impl Parser {
             },
             "window_definition" => SemanticRole::WindowDefinition {
                 name: require_param(&params, "name", node_name, "window_definition")?,
+            },
+            "join" => SemanticRole::Join {
+                kind: require_param(&params, "kind", node_name, "join")?,
+                left: require_param(&params, "left", node_name, "join")?,
+                right: require_param(&params, "right", node_name, "join")?,
+                on: get_param(&params, "on").map(str::to_string),
             },
             _ => {
                 return Err(format!(

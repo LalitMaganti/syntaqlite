@@ -647,6 +647,7 @@ def _test_diagnostic_code_enum_members(stq) -> bool:
         "BUILTIN_MODIFY",
         "COMPOUND_COLUMNS",
         "UNKNOWN_WINDOW",
+        "ON_CLAUSE_ORDER",
     }
     actual = {m.name for m in stq.DiagnosticCode}
     if actual != expected:
