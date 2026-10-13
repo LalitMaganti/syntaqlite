@@ -130,3 +130,12 @@ target: 0:16..0:18
 target: 0:16..0:19
 """,
         )
+
+    def test_view_declared_column(self):
+        return LspDiffTestBlueprint(
+            sql="CREATE VIEW v (a) AS SELECT 1 AS x; SELECT <|>a FROM v;",
+            op="definition",
+            out="""\
+target: 0:15..0:16
+""",
+        )

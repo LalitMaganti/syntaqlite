@@ -641,3 +641,26 @@ class IndexOnView(TestSuite):
             sql="CREATE VIEW v AS SELECT 1 AS a; DROP VIEW v; CREATE TABLE v (a); CREATE INDEX i ON v (a);",
             out="",
         )
+
+
+class CreateViewColumnList(TestSuite):
+    def test_declared_names_replace_select_names(self):
+        return DiffTestBlueprint(
+            sql="CREATE VIEW v (a) AS SELECT 1 AS x; SELECT v.a FROM v;",
+            strict_schema=True,
+            out="",
+        )
+
+    def test_select_name_hidden_by_declared_list(self):
+        return DiffTestBlueprint(
+            sql="CREATE VIEW v (a) AS SELECT 1 AS x; SELECT v.x FROM v;",
+            strict_schema=True,
+            out="""\
+            error: unknown column 'x' in table 'v'
+             --> <stdin>:1:46
+              |
+            1 | CREATE VIEW v (a) AS SELECT 1 AS x; SELECT v.x FROM v;
+              |                                              ^
+              = help: did you mean 'a'?
+            """,
+        )

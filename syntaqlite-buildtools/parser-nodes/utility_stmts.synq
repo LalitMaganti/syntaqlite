@@ -115,7 +115,7 @@ node CreateViewStmt {
   column_names: index ExprList
   select: index Select
 
-  semantic { define_view(name: view_name, select: select) }
+  semantic { define_view(name: view_name, columns: column_names, select: select) }
 
   fmt {
     group {
