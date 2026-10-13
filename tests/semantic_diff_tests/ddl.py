@@ -183,3 +183,46 @@ class CreateViewAsSelect(TestSuite):
               |                                     ^~~~~~~~
 """,
         )
+
+
+class CreateIndexTarget(TestSuite):
+    def test_known_table(self):
+        return DiffTestBlueprint(
+            sql="CREATE TABLE t (a INTEGER); CREATE INDEX i ON t (a);",
+            strict_schema=True,
+            out="",
+        )
+
+    def test_quoted_known_table(self):
+        return DiffTestBlueprint(
+            sql='CREATE TABLE t (a INTEGER); CREATE INDEX i ON "t" (a);',
+            strict_schema=True,
+            out="",
+        )
+
+    def test_unknown_table(self):
+        return DiffTestBlueprint(
+            sql="CREATE TABLE t (a INTEGER); CREATE INDEX i ON tt (a);",
+            strict_schema=True,
+            out="""\
+            error: unknown table 'tt'
+             --> <stdin>:1:47
+              |
+            1 | CREATE TABLE t (a INTEGER); CREATE INDEX i ON tt (a);
+              |                                               ^~
+              = help: did you mean 't'?
+""",
+        )
+
+    def test_table_defined_after_index(self):
+        return DiffTestBlueprint(
+            sql="CREATE INDEX i ON t (a); CREATE TABLE t (a INTEGER);",
+            strict_schema=True,
+            out="""\
+            error: unknown table 't'
+             --> <stdin>:1:19
+              |
+            1 | CREATE INDEX i ON t (a); CREATE TABLE t (a INTEGER);
+              |                   ^
+""",
+        )

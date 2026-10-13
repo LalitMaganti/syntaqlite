@@ -9989,7 +9989,8 @@ static YYACTIONTYPE yy_reduce(
                                           ? synq_span(pCtx, yymsp[-7].minor.yy0)
                                           : SYNQ_NO_SPAN;
       yymsp[-11].minor.yy277 = synq_parse_create_index_stmt(
-          pCtx, idx_name, idx_schema, synq_span(pCtx, yymsp[-4].minor.yy0),
+          pCtx, idx_name, idx_schema,
+          synq_span_dequote(pCtx, yymsp[-4].minor.yy0),
           (SyntaqliteBool)yymsp[-10].minor.yy320,
           (SyntaqliteBool)yymsp[-8].minor.yy320, yymsp[-2].minor.yy277,
           yymsp[0].minor.yy277);

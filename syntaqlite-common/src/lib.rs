@@ -300,6 +300,16 @@ pub mod roles {
             /// Field index of the added column definition (`FIELD_ABSENT` if absent).
             column: FieldIdx,
         } = 19,
+
+        /// CREATE INDEX statement: existence-checks the indexed table.
+        IndexScope {
+            /// Field index of the indexed table name.
+            table: FieldIdx,
+            /// Field index of the indexed-column list.
+            columns: FieldIdx,
+            /// Field index of the partial-index WHERE (`FIELD_ABSENT` if absent).
+            where_clause: FieldIdx,
+        } = 20,
     }
 
     /// Metadata for a node type that defines a template macro.
@@ -395,6 +405,14 @@ pub mod roles {
                     limit_clause: 0,
                 },
                 18,
+            );
+            check(
+                SemanticRole::IndexScope {
+                    table: 0,
+                    columns: 0,
+                    where_clause: 0,
+                },
+                20,
             );
         }
 

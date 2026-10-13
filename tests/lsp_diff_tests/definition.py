@@ -76,3 +76,12 @@ target: 0:32..0:36
             target: 0:9..0:10
 """,
         )
+
+    def test_create_index_table(self):
+        return LspDiffTestBlueprint(
+            sql="CREATE TABLE users (id INTEGER); CREATE INDEX idx ON <|>users (id);",
+            op="definition",
+            out="""\
+target: 0:13..0:18
+""",
+        )
