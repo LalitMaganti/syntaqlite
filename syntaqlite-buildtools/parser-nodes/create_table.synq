@@ -210,7 +210,7 @@ node TableConstraint {
   check_expr: index Expr
   fk_clause: index ForeignKeyClause
 
-  semantic { table_constraint(check: check_expr, columns: pk_columns) }
+  semantic { table_constraint(check: check_expr, columns: pk_columns, fk_columns: fk_columns) }
 
   fmt {
     switch(kind) {

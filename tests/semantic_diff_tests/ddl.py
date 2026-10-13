@@ -417,3 +417,38 @@ class CreateTableTableConstraints(TestSuite):
               |                                       ^~~~~
             """,
         )
+
+
+class CreateTableForeignKeyChildColumns(TestSuite):
+    def test_known_column(self):
+        return DiffTestBlueprint(
+            sql="CREATE TABLE t (a, FOREIGN KEY (a) REFERENCES p (x));",
+            strict_schema=True,
+            out="",
+        )
+
+    def test_unknown_column(self):
+        return DiffTestBlueprint(
+            sql="CREATE TABLE t (a, FOREIGN KEY (nope) REFERENCES p (x));",
+            strict_schema=True,
+            out="""\
+            error: unknown column 'nope'
+             --> <stdin>:1:33
+              |
+            1 | CREATE TABLE t (a, FOREIGN KEY (nope) REFERENCES p (x));
+              |                                 ^~~~
+            """,
+        )
+
+    def test_cannot_use_rowid(self):
+        return DiffTestBlueprint(
+            sql="CREATE TABLE t (a, FOREIGN KEY (rowid) REFERENCES p (x));",
+            strict_schema=True,
+            out="""\
+            error: unknown column 'rowid'
+             --> <stdin>:1:33
+              |
+            1 | CREATE TABLE t (a, FOREIGN KEY (rowid) REFERENCES p (x));
+              |                                 ^~~~~
+            """,
+        )

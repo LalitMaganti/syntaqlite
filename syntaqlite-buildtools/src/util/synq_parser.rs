@@ -154,6 +154,7 @@ pub(crate) enum SemanticRole {
     TableConstraint {
         check: Option<String>,
         columns: Option<String>,
+        fk_columns: Option<String>,
     },
 }
 
@@ -763,6 +764,7 @@ impl Parser {
             "table_constraint" => SemanticRole::TableConstraint {
                 check: get_param(&params, "check").map(str::to_string),
                 columns: get_param(&params, "columns").map(str::to_string),
+                fk_columns: get_param(&params, "fk_columns").map(str::to_string),
             },
             _ => {
                 return Err(format!(
