@@ -450,6 +450,21 @@ pub enum Severity {
 
 // ── JSON serialization (feature = "json") ────────────────────────────
 
+/// A map holding `kind` and the entries `fields` writes; `len` counts them.
+#[cfg(feature = "serde")]
+fn kind_with<S: serde::Serializer>(
+    serializer: S,
+    kind: &str,
+    len: usize,
+    fields: impl FnOnce(&mut S::SerializeMap) -> Result<(), S::Error>,
+) -> Result<S::Ok, S::Error> {
+    use serde::ser::SerializeMap;
+    let mut m = serializer.serialize_map(Some(len + 1))?;
+    m.serialize_entry("kind", kind)?;
+    fields(&mut m)?;
+    m.end()
+}
+
 #[cfg(feature = "serde")]
 fn kind_and_name<S: serde::Serializer>(
     serializer: S,
@@ -457,10 +472,7 @@ fn kind_and_name<S: serde::Serializer>(
     name: &str,
 ) -> Result<S::Ok, S::Error> {
     use serde::ser::SerializeMap;
-    let mut m = serializer.serialize_map(Some(2))?;
-    m.serialize_entry("kind", kind)?;
-    m.serialize_entry("name", name)?;
-    m.end()
+    kind_with(serializer, kind, 1, |m| m.serialize_entry("name", name))
 }
 
 #[cfg(feature = "serde")]
@@ -471,88 +483,70 @@ impl serde::Serialize for DiagnosticMessage {
             Self::ParseError(_) => serializer.serialize_none(),
             Self::UnknownTable { name } => kind_and_name(serializer, "unknown_table", name),
             Self::UnknownColumn { column, table } => {
-                let len = if table.is_some() { 3 } else { 2 };
-                let mut m = serializer.serialize_map(Some(len))?;
-                m.serialize_entry("kind", "unknown_column")?;
-                m.serialize_entry("column", column)?;
-                if let Some(t) = table {
-                    m.serialize_entry("table", t)?;
-                }
-                m.end()
+                let len = 1 + usize::from(table.is_some());
+                kind_with(serializer, "unknown_column", len, |m| {
+                    m.serialize_entry("column", column)?;
+                    table
+                        .as_ref()
+                        .map_or(Ok(()), |t| m.serialize_entry("table", t))
+                })
             }
             Self::UnknownFunction { name } => kind_and_name(serializer, "unknown_function", name),
             Self::CteColumnCountMismatch {
                 name,
                 declared,
                 actual,
-            } => {
-                let mut m = serializer.serialize_map(Some(4))?;
-                m.serialize_entry("kind", "cte_column_count_mismatch")?;
+            } => kind_with(serializer, "cte_column_count_mismatch", 3, |m| {
                 m.serialize_entry("name", name)?;
                 m.serialize_entry("declared", declared)?;
-                m.serialize_entry("actual", actual)?;
-                m.end()
-            }
+                m.serialize_entry("actual", actual)
+            }),
             Self::FunctionArity {
                 name,
                 expected,
                 got,
-            } => {
-                let mut m = serializer.serialize_map(Some(4))?;
-                m.serialize_entry("kind", "function_arity")?;
+            } => kind_with(serializer, "function_arity", 3, |m| {
                 m.serialize_entry("name", name)?;
                 m.serialize_entry("expected", expected)?;
-                m.serialize_entry("got", got)?;
-                m.end()
-            }
+                m.serialize_entry("got", got)
+            }),
             Self::QualifiedRef {
                 table,
                 column,
                 context,
-            } => {
-                let mut m = serializer.serialize_map(Some(4))?;
-                m.serialize_entry("kind", "qualified_ref")?;
+            } => kind_with(serializer, "qualified_ref", 3, |m| {
                 m.serialize_entry("table", table)?;
                 m.serialize_entry("column", column)?;
-                m.serialize_entry("context", context.as_str())?;
-                m.end()
-            }
+                m.serialize_entry("context", context.as_str())
+            }),
             Self::IndexOnView { name } => kind_and_name(serializer, "index_on_view", name),
             Self::DropWrongKind { name, is_view } => {
-                let mut m = serializer.serialize_map(Some(3))?;
-                m.serialize_entry("kind", "drop_wrong_kind")?;
-                m.serialize_entry("name", name)?;
-                m.serialize_entry("is_view", is_view)?;
-                m.end()
+                kind_with(serializer, "drop_wrong_kind", 2, |m| {
+                    m.serialize_entry("name", name)?;
+                    m.serialize_entry("is_view", is_view)
+                })
             }
             Self::BuiltinModify { name, change } => {
-                let mut m = serializer.serialize_map(Some(3))?;
-                m.serialize_entry("kind", "builtin_modify")?;
-                m.serialize_entry("name", name)?;
-                m.serialize_entry("change", change.as_str())?;
-                m.end()
+                kind_with(serializer, "builtin_modify", 2, |m| {
+                    m.serialize_entry("name", name)?;
+                    m.serialize_entry("change", change.as_str())
+                })
             }
             Self::CompoundColumns {
                 operator,
                 left,
                 right,
-            } => {
-                let mut m = serializer.serialize_map(Some(4))?;
-                m.serialize_entry("kind", "compound_columns")?;
+            } => kind_with(serializer, "compound_columns", 3, |m| {
                 m.serialize_entry("operator", operator)?;
                 m.serialize_entry("left", left)?;
-                m.serialize_entry("right", right)?;
-                m.end()
-            }
+                m.serialize_entry("right", right)
+            }),
             Self::UnknownWindow { name } => kind_and_name(serializer, "unknown_window", name),
             Self::OnClauseOrder { name } => kind_and_name(serializer, "on_clause_order", name),
-            Self::ValuesTerms { first, row } => {
-                let mut m = serializer.serialize_map(Some(3))?;
-                m.serialize_entry("kind", "values_terms")?;
+            Self::ValuesTerms { first, row } => kind_with(serializer, "values_terms", 2, |m| {
                 m.serialize_entry("first", first)?;
-                m.serialize_entry("row", row)?;
-                m.end()
-            }
+                m.serialize_entry("row", row)
+            }),
             Self::UnknownModule { name } => kind_and_name(serializer, "unknown_module", name),
         }
     }
