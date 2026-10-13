@@ -158,8 +158,10 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
             | SemanticRole::WindowDefinition { .. }
             | SemanticRole::CaseWhen { .. }
             | SemanticRole::Paren { .. }
-            | SemanticRole::RowValue { .. }
             | SemanticRole::Literal { .. } => self.walk_children(visitor, node_id),
+            SemanticRole::RowValue { items } => {
+                self.walk_row_value(visitor, node_id, fields, items);
+            }
             SemanticRole::WindowRef { .. } => self.walk_window_ref(visitor, node_id, fields, role),
             SemanticRole::Values { rows } => self.walk_values(visitor, node_id, fields, rows),
             SemanticRole::RowValueOperands { .. }

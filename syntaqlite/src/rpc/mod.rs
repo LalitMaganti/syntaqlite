@@ -771,6 +771,7 @@ const DIAG_CODE_ON_CLAUSE_ORDER: u32 = 13;
 const DIAG_CODE_VALUES_TERMS: u32 = 14;
 const DIAG_CODE_INSERT_VALUES: u32 = 15;
 const DIAG_CODE_SUBQUERY_COLUMNS: u32 = 16;
+const DIAG_CODE_ROW_VALUE: u32 = 17;
 
 fn diag_code(msg: &DiagnosticMessage) -> u32 {
     match msg {
@@ -791,5 +792,6 @@ fn diag_code(msg: &DiagnosticMessage) -> u32 {
         DiagnosticMessage::ValuesTerms { .. } => DIAG_CODE_VALUES_TERMS,
         DiagnosticMessage::InsertValues { .. } => DIAG_CODE_INSERT_VALUES,
         DiagnosticMessage::SubqueryColumns { .. } => DIAG_CODE_SUBQUERY_COLUMNS,
+        DiagnosticMessage::RowValue { .. } => DIAG_CODE_ROW_VALUE,
     }
 }

@@ -99,6 +99,7 @@ class DiagnosticCode(IntEnum):
     VALUES_TERMS = 14
     INSERT_VALUES = 15
     SUBQUERY_COLUMNS = 16
+    ROW_VALUE = 17
 
 
 class AnalysisOutput(StrEnum):

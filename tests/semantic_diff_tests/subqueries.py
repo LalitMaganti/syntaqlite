@@ -177,3 +177,129 @@ class SubqueryColumns(TestSuite):
             sql="SELECT 1 IN (), (1, 2) IN ();",
             out="",
         )
+
+
+class RowValue(TestSuite):
+    def test_row_value_as_a_value(self):
+        return DiffTestBlueprint(
+            sql="SELECT 1 + (1, 2);",
+            out="""\
+            error: row value of 2 values used where one value is expected
+             --> <stdin>:1:12
+              |
+            1 | SELECT 1 + (1, 2);
+              |            ^~~~~~
+            """,
+        )
+
+    def test_row_value_in_scalar_in_list(self):
+        return DiffTestBlueprint(
+            sql="SELECT 2 IN ((1, 2), 3);",
+            out="""\
+            error: row value of 2 values used where one value is expected
+             --> <stdin>:1:14
+              |
+            1 | SELECT 2 IN ((1, 2), 3);
+              |              ^~~~~~
+            """,
+        )
+
+    def test_nested_row_value(self):
+        return DiffTestBlueprint(
+            sql="SELECT ((1, 2), 3) < ((1, 2), 3);",
+            out="""\
+            error: row value of 2 values used where one value is expected
+             --> <stdin>:1:9
+              |
+            1 | SELECT ((1, 2), 3) < ((1, 2), 3);
+              |         ^~~~~~
+            error: row value of 2 values used where one value is expected
+             --> <stdin>:1:23
+              |
+            1 | SELECT ((1, 2), 3) < ((1, 2), 3);
+              |                       ^~~~~~
+            """,
+        )
+
+    def test_nested_row_values_compared_with_equals(self):
+        return DiffTestBlueprint(
+            sql="SELECT 1 WHERE (2, (2, 0)) IS (2, (2, 0)) AND (2, (2, 0)) = (2, (2, 0, 1));",
+            out="""\
+            error: comparing 2 values with 3 values
+             --> <stdin>:1:51
+              |
+            1 | SELECT 1 WHERE (2, (2, 0)) IS (2, (2, 0)) AND (2, (2, 0)) = (2, (2, 0, 1));
+              |                                                   ^~~~~~
+            """,
+        )
+
+    def test_comparison_widths_differ(self):
+        return DiffTestBlueprint(
+            sql="CREATE TABLE t (a, b); SELECT * FROM t WHERE (a, b) = (1, 2, 3);",
+            out="""\
+            error: comparing 2 values with 3 values
+             --> <stdin>:1:40
+              |
+            1 | CREATE TABLE t (a, b); SELECT * FROM t WHERE (a, b) = (1, 2, 3);
+              |                                        ^~~~~~~~~~~~~~~~~~~~~~~~
+            """,
+        )
+
+    def test_comparison_with_wide_subquery(self):
+        return DiffTestBlueprint(
+            sql="CREATE TABLE t (a, b); SELECT * FROM t WHERE a = (SELECT * FROM t);",
+            out="""\
+            error: comparing 1 value with 2 values
+             --> <stdin>:1:40
+              |
+            1 | CREATE TABLE t (a, b); SELECT * FROM t WHERE a = (SELECT * FROM t);
+              |                                        ^~~~~~~~~~~~~~~~~~~~~~~~~~~
+            """,
+        )
+
+    def test_between_widths_differ(self):
+        return DiffTestBlueprint(
+            sql="SELECT (1, 2) BETWEEN (1, 2) AND 3;",
+            out="""\
+            error: comparing 2 values with 1 value
+             --> <stdin>:1:8
+              |
+            1 | SELECT (1, 2) BETWEEN (1, 2) AND 3;
+              |        ^~~~~~~~~~~~~~~~~~~~~~~~~~~
+            """,
+        )
+
+    def test_case_when_width_differs(self):
+        return DiffTestBlueprint(
+            sql="SELECT CASE (1, 2) WHEN (1, 2) THEN 1 WHEN 3 THEN 2 END;",
+            out="""\
+            error: comparing 2 values with 1 value
+             --> <stdin>:1:44
+              |
+            1 | SELECT CASE (1, 2) WHEN (1, 2) THEN 1 WHEN 3 THEN 2 END;
+              |                                            ^
+            """,
+        )
+
+    def test_is_null_tests_one_value(self):
+        return DiffTestBlueprint(
+            sql="SELECT 1 WHERE (1, 2) IS NULL;",
+            out="""\
+            error: row value of 2 values used where one value is expected
+             --> <stdin>:1:16
+              |
+            1 | SELECT 1 WHERE (1, 2) IS NULL;
+              |                ^~~~~~
+            """,
+        )
+
+    def test_matching_row_values(self):
+        return DiffTestBlueprint(
+            sql=(
+            "CREATE TABLE t (a, b); "
+            "SELECT (a, b) = (1, 2), (a, b) IN ((1, 2), (3, 4)), ((a, b)) < (1, 2), "
+            "CASE (a, b) WHEN (1, 2) THEN 1 END FROM t; "
+            "UPDATE t SET (a, b) = (1, 2);"
+            ),
+            out="",
+        )
