@@ -11,6 +11,7 @@ use std::collections::{HashMap, HashSet};
 use syntaqlite_syntax::any::{AnyNodeId, AnyParsedStatement, FieldValue, NodeFields};
 
 use super::name_key::NameKey;
+use super::result_columns::ColumnResolver;
 use super::stmt_reader::StmtReader;
 use crate::dialect::AnyDialect;
 use crate::dialect::{FIELD_ABSENT, FunctionCategory as DialectFunctionCategory, SemanticRole};
@@ -925,7 +926,7 @@ impl Catalog {
                     return;
                 };
                 let normalized_name = name_val.into_owned();
-                let cols = reader.extract_columns(&fields, columns, select);
+                let cols = self.ddl_columns(stmt, dialect, &reader, &fields, columns, select);
                 let is_without_rowid = without_rowid.field != FIELD_ABSENT
                     && matches!(
                         fields[without_rowid.field as usize],
@@ -946,7 +947,7 @@ impl Catalog {
                     return;
                 };
                 let normalized_name = name_val.into_owned();
-                let cols = reader.extract_columns(&fields, columns, select);
+                let cols = self.ddl_columns(stmt, dialect, &reader, &fields, columns, select);
                 self.layers[target.index()].insert_view(ViewDef {
                     name: normalized_name,
                     columns: cols,
@@ -996,6 +997,24 @@ impl Catalog {
             // Non-DDL roles are irrelevant to catalog accumulation.
             _ => {}
         }
+    }
+
+    /// The columns a CREATE TABLE or CREATE VIEW defines: its column list,
+    /// or the columns of its SELECT.
+    fn ddl_columns(
+        &self,
+        stmt: &AnyParsedStatement<'_>,
+        dialect: &AnyDialect,
+        reader: &StmtReader<'_, '_>,
+        fields: &NodeFields,
+        columns: u8,
+        select: u8,
+    ) -> Option<Vec<Column>> {
+        reader.declared_columns(fields, columns).or_else(|| {
+            let select = fields.node_id_at(select)?;
+            let names = ColumnResolver::new(stmt, dialect.roles(), self).result_columns(select)?;
+            Some(names.into_iter().map(Column::from).collect())
+        })
     }
 
     /// Remove the relation a `DROP TABLE` / `DROP VIEW` names. `SQLite`
@@ -1237,6 +1256,30 @@ impl Catalog {
             }
         }
         (None, false)
+    }
+
+    /// The columns `SELECT *` expands a relation or table function to, in
+    /// order: every column but the hidden ones. `None` when the relation
+    /// or its columns are unknown.
+    pub(crate) fn star_columns(&self, key: &NameKey) -> Option<Vec<String>> {
+        for layer in self.all_layers_ordered() {
+            if layer.removed_relations.contains(key) {
+                return None;
+            }
+            if let Some(rel) = layer.relation(key) {
+                let cols = rel.columns.as_ref()?;
+                return Some(
+                    cols.iter()
+                        .filter(|c| c.kind != ColumnKind::Hidden)
+                        .map(|c| c.name.clone())
+                        .collect(),
+                );
+            }
+            if let Some(tf) = layer.table_function(key) {
+                return (!tf.output_columns.is_empty()).then(|| tf.output_columns.clone());
+            }
+        }
+        None
     }
 
     // ── Enumeration (for fuzzy suggestions and completions) ───────────────────

@@ -895,7 +895,12 @@ mod tests {
             self.events.push("enter_query".to_string());
         }
 
-        fn exit_query(&mut self, _stmt: &mut AnyParsedStatement<'_>, node_id: AnyNodeId) {
+        fn exit_query(
+            &mut self,
+            _stmt: &mut AnyParsedStatement<'_>,
+            _catalog: &Catalog,
+            node_id: AnyNodeId,
+        ) {
             self.query_exits.push(node_id);
             self.events.push("exit_query".to_string());
         }

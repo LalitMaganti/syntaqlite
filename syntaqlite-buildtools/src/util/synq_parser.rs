@@ -184,6 +184,7 @@ pub(crate) enum SemanticRole {
         left: String,
         right: String,
         on: Option<String>,
+        using: Option<String>,
     },
     Values {
         rows: String,
@@ -826,6 +827,7 @@ impl Parser {
                 left: require_param(&params, "left", node_name, "join")?,
                 right: require_param(&params, "right", node_name, "join")?,
                 on: get_param(&params, "on").map(str::to_string),
+                using: get_param(&params, "using").map(str::to_string),
             },
             "values" => SemanticRole::Values {
                 rows: require_param(&params, "rows", node_name, "values")?,

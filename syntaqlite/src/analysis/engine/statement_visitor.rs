@@ -13,7 +13,7 @@
 use syntaqlite_syntax::any::{AnyNodeId, AnyParseError, AnyParsedStatement};
 use syntaqlite_syntax::source::{DocRange, LayerRange};
 
-use crate::analysis::catalog::{ColumnResolution, FunctionCheckResult};
+use crate::analysis::catalog::{Catalog, ColumnResolution, FunctionCheckResult};
 use crate::analysis::diagnostics::fuzzy::best_suggestion;
 use crate::analysis::diagnostics::{Diagnostic, DiagnosticMessage, Help};
 use crate::analysis::lineage::LineageCapture;
@@ -548,9 +548,14 @@ impl<V: SemanticVisitor> SemanticVisitor for StatementVisitor<'_, V> {
         self.extra.enter_query(stmt, node_id);
     }
 
-    fn exit_query(&mut self, stmt: &mut AnyParsedStatement<'_>, node_id: AnyNodeId) {
-        self.lineage.exit_query(stmt, node_id);
-        self.extra.exit_query(stmt, node_id);
+    fn exit_query(
+        &mut self,
+        stmt: &mut AnyParsedStatement<'_>,
+        catalog: &Catalog,
+        node_id: AnyNodeId,
+    ) {
+        self.lineage.exit_query(stmt, catalog, node_id);
+        self.extra.exit_query(stmt, catalog, node_id);
     }
 
     fn on_parsed_statement(&mut self, stmt: &AnyParsedStatement<'_>) {

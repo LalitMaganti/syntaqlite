@@ -229,28 +229,16 @@ impl<'a, 'stmt> StmtReader<'a, 'stmt> {
         }
     }
 
-    /// Columns for a table or view DDL contribution.
-    ///
-    /// Tries the explicit column list first; falls back to inferring
-    /// names from the SELECT body. `None` means inference was impossible
-    /// (e.g. `SELECT *`) and the caller should accept any column reference.
-    pub(super) fn extract_columns(
+    /// The columns a CREATE TABLE or CREATE VIEW lists explicitly, or
+    /// `None` when it lists none and takes them from its SELECT instead.
+    pub(super) fn declared_columns(
         &self,
         fields: &NodeFields,
         columns_field: u8,
-        select_field: u8,
     ) -> Option<Vec<Column>> {
-        if let Some(col_list_id) = fields.node_id_at(columns_field) {
-            let mut columns = Vec::new();
-            self.columns_from_column_list(col_list_id, &mut columns);
-            if !columns.is_empty() {
-                return Some(columns);
-            }
-        }
-        let names = fields
-            .node_id_at(select_field)
-            .and_then(|id| self.columns_from_select(id))?;
-        Some(names.into_iter().map(Column::from).collect())
+        let mut columns = Vec::new();
+        self.columns_from_column_list(fields.node_id_at(columns_field)?, &mut columns);
+        (!columns.is_empty()).then_some(columns)
     }
 
     fn columns_from_column_list(&self, list_id: AnyNodeId, out: &mut Vec<Column>) {
@@ -321,48 +309,6 @@ impl<'a, 'stmt> StmtReader<'a, 'stmt> {
     }
 
     // ── SELECT-shaped column inference (analyzer + lineage) ─────────────
-
-    /// Names produced by a SELECT body.
-    ///
-    /// Returns `Some(names)` when every result column has an inferable
-    /// name (alias, bare column ref, or expression source text). Returns
-    /// `None` when any column is `*` or otherwise unnameable, telling
-    /// the caller to register the table conservatively.
-    pub(crate) fn columns_from_select(&self, select_id: AnyNodeId) -> Option<Vec<String>> {
-        let (
-            SemanticRole::Query {
-                columns: cols_idx, ..
-            },
-            select_fields,
-        ) = self.role_for_node(select_id)?
-        else {
-            return None;
-        };
-        let list_id = select_fields.node_id_at(cols_idx)?;
-        let mut out = Vec::new();
-        let mut bailed = false;
-        self.for_each_result_column(list_id, |fields, flags_idx, alias_idx, expr_idx| {
-            // STAR flag (bit 0) → wildcard: can't enumerate.
-            if let FieldValue::Flags(f) = fields[flags_idx as usize]
-                && f & 1 != 0
-            {
-                bailed = true;
-                return false;
-            }
-            if let Some(name) = self.infer_result_col_name(fields, alias_idx, expr_idx) {
-                out.push(name);
-                true
-            } else {
-                bailed = true;
-                false
-            }
-        });
-        if bailed || out.is_empty() {
-            None
-        } else {
-            Some(out)
-        }
-    }
 
     /// The output column name for a single result column.
     ///

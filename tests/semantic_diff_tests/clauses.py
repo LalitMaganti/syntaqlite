@@ -66,10 +66,16 @@ class CompoundColumns(TestSuite):
             out="",
         )
 
-    def test_star_arm_is_skipped(self):
+    def test_star_arm_is_expanded(self):
         return DiffTestBlueprint(
             sql="CREATE TABLE a (x, y); SELECT * FROM a EXCEPT SELECT x FROM a;",
-            out="",
+            out="""\
+            error: SELECTs to the left and right of EXCEPT have 2 and 1 result columns
+             --> <stdin>:1:47
+              |
+            1 | CREATE TABLE a (x, y); SELECT * FROM a EXCEPT SELECT x FROM a;
+              |                                               ^~~~~~~~~~~~~~~
+            """,
         )
 
     def test_values_arm(self):
