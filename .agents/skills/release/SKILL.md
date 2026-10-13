@@ -35,7 +35,20 @@ asks to "release", "bump version", "tag a release", or "publish".
    - CI/release pipeline plumbing
    - Changes to dev tooling or build scripts
 
-   Keep entries concise, with one line per change and no sub-bullets.
+   Write for a user skimming what's new, not for someone auditing PRs:
+   - Group related PRs into one entry per theme of work; never one entry
+     per PR. A release should have a handful of entries per section.
+   - Do not link PRs or issues.
+   - Use plain section headings without colons: `**Breaking: <what>**`
+     first, then areas such as `**Analyzer**`, `**Language server**`,
+     `**Formatter**`, `**Custom dialects**`, `**C library**`.
+   - Each entry is one short sentence or two in plain language, saying
+     what users can now do or what no longer goes wrong. Give a few
+     examples rather than an exhaustive list, and skip small fixes
+     unless users would notice them.
+   - For breaking changes, explain the change in a sentence and give a
+     Before/After migration table.
+   - No sub-bullets.
 
 4. **Commit on a release branch and open a PR.** `main` is protected and
    rejects direct pushes, so the bump must land via PR.
