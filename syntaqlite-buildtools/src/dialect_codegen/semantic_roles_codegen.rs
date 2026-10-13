@@ -364,27 +364,44 @@ fn role_to_bytes(
             bytes[2] = fi(columns);
             bytes[3] = opt(where_clause);
         }
-        SynqRole::ColumnConstraint { check, generated } => {
+        SynqRole::ColumnConstraint {
+            check,
+            generated,
+            references,
+        } => {
             bytes[0] = disc(SemanticRole::ColumnConstraint {
                 check: 0,
                 generated: 0,
+                references: 0,
             });
             bytes[1] = opt(check);
             bytes[2] = opt(generated);
+            bytes[3] = opt(references);
         }
         SynqRole::TableConstraint {
             check,
             columns,
             fk_columns,
+            references,
         } => {
             bytes[0] = disc(SemanticRole::TableConstraint {
                 check: 0,
                 columns: 0,
                 fk_columns: 0,
+                references: 0,
             });
             bytes[1] = opt(check);
             bytes[2] = opt(columns);
             bytes[3] = opt(fk_columns);
+            bytes[4] = opt(references);
+        }
+        SynqRole::ForeignKey { table, columns } => {
+            bytes[0] = disc(SemanticRole::ForeignKey {
+                table: 0,
+                columns: 0,
+            });
+            bytes[1] = fi(table);
+            bytes[2] = opt(columns);
         }
     }
 

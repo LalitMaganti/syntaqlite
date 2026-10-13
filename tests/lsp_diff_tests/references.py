@@ -111,3 +111,24 @@ class References(TestSuite):
             0:38..0:41
 """,
         )
+
+    def test_parent_column_in_references(self):
+        return LspDiffTestBlueprint(
+            sql="CREATE TABLE p (<|>id INT);\nCREATE TABLE c (pid INT REFERENCES p (id), FOREIGN KEY (pid) REFERENCES p (id));",
+            op="references",
+            include_declaration=False,
+            out="""\
+            1:38..1:40
+            1:75..1:77
+""",
+        )
+
+    def test_parent_table_in_references(self):
+        return LspDiffTestBlueprint(
+            sql="CREATE TABLE <|>p (id INT);\nCREATE TABLE c (pid INT REFERENCES p (id));",
+            op="references",
+            include_declaration=False,
+            out="""\
+            1:35..1:36
+""",
+        )

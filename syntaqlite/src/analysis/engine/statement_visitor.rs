@@ -54,11 +54,29 @@ enum AcceptedRef {
     /// `SQLite` defers view-body name resolution until the view is first
     /// used; a CREATE VIEW referencing unknown qualifiers still prepares.
     ViewBodyDeferredResolution,
+    /// `SQLite` doesn't check a foreign key's parent table or columns until
+    /// the key is enforced, so they may be missing or defined later.
+    ForeignKeyParentDeferred,
+}
+
+/// Decide whether an unresolved source ref is intentionally accepted.
+/// `None` means the failure deserves a diagnostic.
+fn accepted_source_ref(ev: &SourceRefEvent<'_>) -> Option<AcceptedRef> {
+    if ev.in_fk_parent {
+        Some(AcceptedRef::ForeignKeyParentDeferred)
+    } else if is_hole_placeholder(ev.name) {
+        Some(AcceptedRef::HolePlaceholder)
+    } else {
+        None
+    }
 }
 
 /// Decide whether an unresolved column ref is intentionally accepted.
 /// `None` means the failure deserves a diagnostic.
 fn accepted_ref(ev: &ColumnRefEvent<'_>) -> Option<AcceptedRef> {
+    if ev.in_fk_parent && !matches!(ev.resolution, ColumnResolution::Found { .. }) {
+        return Some(AcceptedRef::ForeignKeyParentDeferred);
+    }
     match ev.resolution {
         ColumnResolution::Found { .. } => None,
         ColumnResolution::TableNotFound => {
@@ -275,7 +293,7 @@ impl<V: SemanticVisitor> SemanticVisitor for StatementVisitor<'_, V> {
         cx: &mut WalkCtx<'_>,
         ev: SourceRefEvent<'_>,
     ) {
-        if !ev.resolved && !is_hole_placeholder(ev.name) {
+        if !ev.resolved && accepted_source_ref(&ev).is_none() {
             let mut candidates = cx.catalog.all_relation_names();
             candidates.extend(cx.catalog.all_table_function_names());
             let suggestion =

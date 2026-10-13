@@ -150,11 +150,17 @@ pub(crate) enum SemanticRole {
     ColumnConstraint {
         check: Option<String>,
         generated: Option<String>,
+        references: Option<String>,
     },
     TableConstraint {
         check: Option<String>,
         columns: Option<String>,
         fk_columns: Option<String>,
+        references: Option<String>,
+    },
+    ForeignKey {
+        table: String,
+        columns: Option<String>,
     },
 }
 
@@ -760,11 +766,17 @@ impl Parser {
             "column_constraint" => SemanticRole::ColumnConstraint {
                 check: get_param(&params, "check").map(str::to_string),
                 generated: get_param(&params, "generated").map(str::to_string),
+                references: get_param(&params, "references").map(str::to_string),
             },
             "table_constraint" => SemanticRole::TableConstraint {
                 check: get_param(&params, "check").map(str::to_string),
                 columns: get_param(&params, "columns").map(str::to_string),
                 fk_columns: get_param(&params, "fk_columns").map(str::to_string),
+                references: get_param(&params, "references").map(str::to_string),
+            },
+            "foreign_key" => SemanticRole::ForeignKey {
+                table: require_param(&params, "table", node_name, "foreign_key")?,
+                columns: get_param(&params, "columns").map(str::to_string),
             },
             _ => {
                 return Err(format!(

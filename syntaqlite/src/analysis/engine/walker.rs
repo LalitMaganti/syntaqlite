@@ -59,6 +59,9 @@ pub(crate) struct SourceRefEvent<'a> {
     /// was written — callers use `name` as the scope key in that case).
     pub(crate) alias: Option<&'a str>,
     pub(crate) resolved: bool,
+    /// The ref names a foreign key's parent, which `SQLite` doesn't check
+    /// until the key is enforced.
+    pub(crate) in_fk_parent: bool,
 }
 
 /// A column reference (qualified or bare) inside an expression.
@@ -75,6 +78,8 @@ pub(crate) struct ColumnRefEvent<'a> {
     /// The ref is inside a CREATE VIEW body, where `SQLite` defers name
     /// resolution until the view is first used.
     pub(crate) in_view_body: bool,
+    /// The ref is a foreign key's parent column.
+    pub(crate) in_fk_parent: bool,
     pub(crate) resolution: &'a ColumnResolution,
     /// `SQLite`'s double-quoted-string bug-compat: a `"foo"` identifier in
     /// expression position that doesn't resolve to a column is re-interpreted
@@ -237,6 +242,8 @@ pub(crate) struct SemanticWalker<'a, 'b> {
     view_body_depth: u32,
     /// The table whose CREATE TABLE column list is being walked.
     defining_table: Option<DefiningTable>,
+    /// A foreign key's parent columns are being walked.
+    in_fk_parent: bool,
     /// Reusable lookup key — catalog/scope probes share one allocation.
     key_scratch: NameKey,
 }
@@ -261,6 +268,7 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
             roles,
             view_body_depth: 0,
             defining_table: None,
+            in_fk_parent: false,
             key_scratch: NameKey::default(),
         }
     }
@@ -395,14 +403,12 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
             SemanticRole::IndexScope { table, .. } => {
                 self.walk_index_scope(visitor, node_id, fields, table);
             }
-            SemanticRole::ColumnConstraint { check, generated } => {
-                self.walk_constraint(visitor, fields, check, &[generated]);
+            SemanticRole::ColumnConstraint { .. } | SemanticRole::TableConstraint { .. } => {
+                self.walk_constraint(visitor, fields, role);
             }
-            SemanticRole::TableConstraint {
-                check,
-                columns,
-                fk_columns,
-            } => self.walk_constraint(visitor, fields, check, &[columns, fk_columns]),
+            SemanticRole::ForeignKey { table, columns } => {
+                self.walk_foreign_key(visitor, node_id, fields, table, columns);
+            }
         }
     }
 
@@ -557,6 +563,7 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
                 name,
                 alias,
                 resolved: is_known,
+                in_fk_parent: false,
             };
             let mut cx = WalkCtx {
                 catalog: self.catalog,
@@ -669,6 +676,7 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
                 resolution: &resolution,
                 dqs_candidate,
                 in_view_body: self.view_body_depth > 0,
+                in_fk_parent: self.in_fk_parent,
             };
             let mut cx = WalkCtx {
                 catalog: self.catalog,
@@ -750,6 +758,7 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
             name,
             alias: None,
             resolved,
+            in_fk_parent: false,
         };
         let mut cx = WalkCtx {
             catalog: self.catalog,
@@ -800,21 +809,34 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
     }
 
     /// Resolve a constraint's CHECK expression, and its GENERATED expression
-    /// or key columns, against the table being created. DEFAULT and
-    /// REFERENCES are not column scopes.
+    /// or key columns, against the table being created, then its REFERENCES
+    /// clause against the parent. DEFAULT is not a column scope.
     fn walk_constraint<V: SemanticVisitor>(
         &mut self,
         visitor: &mut V,
         fields: &NodeFields,
-        check_idx: u8,
-        no_rowid_idxs: &[u8],
+        role: SemanticRole,
     ) {
+        let (check_idx, no_rowid_idxs, references_idx) = match role {
+            SemanticRole::ColumnConstraint {
+                check,
+                generated,
+                references,
+            } => (check, [generated, FIELD_ABSENT], references),
+            SemanticRole::TableConstraint {
+                check,
+                columns,
+                fk_columns,
+                references,
+            } => (check, [columns, fk_columns], references),
+            _ => unreachable!("not a constraint role: {role:?}"),
+        };
         let Some(table) = self.defining_table.take() else {
             return;
         };
         self.walk_in_table_scope(visitor, fields.node_id_at(check_idx), &table, table.rowid);
         // Generated columns and key columns cannot reference rowid.
-        for &idx in no_rowid_idxs {
+        for idx in no_rowid_idxs {
             self.walk_in_table_scope(
                 visitor,
                 fields.node_id_at(idx),
@@ -822,7 +844,52 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
                 RowIdPolicy::WithoutRowId,
             );
         }
+        self.walk_opt(visitor, fields.node_id_at(references_idx));
         self.defining_table = Some(table);
+    }
+
+    /// Resolve a REFERENCES clause's parent table and columns. Failures are
+    /// reported with `in_fk_parent` so visitors can accept them.
+    fn walk_foreign_key<V: SemanticVisitor>(
+        &mut self,
+        visitor: &mut V,
+        node_id: AnyNodeId,
+        fields: &NodeFields,
+        table_idx: u8,
+        columns_idx: u8,
+    ) {
+        let Some((name, range)) = self.stmt.span_field_range(fields, table_idx) else {
+            return;
+        };
+        let name_ident = self
+            .stmt
+            .span_field_ident_text(fields, table_idx)
+            .unwrap_or(Cow::Borrowed(name));
+        self.key_scratch.set(&name_ident);
+        if V::WANTS_SOURCE_REF {
+            let ev = SourceRefEvent {
+                node_id,
+                name_idx: table_idx,
+                range,
+                name,
+                alias: None,
+                resolved: self.catalog.resolve_relation(&self.key_scratch),
+                in_fk_parent: true,
+            };
+            let mut cx = WalkCtx {
+                catalog: self.catalog,
+                scope: &mut self.scope,
+            };
+            visitor.on_source_ref(self.stmt, &mut cx, ev);
+        }
+        let (columns, without_rowid) = self.catalog.table_source_info(&self.key_scratch);
+        self.scope.push();
+        self.scope
+            .add_table(&name_ident, columns, without_rowid.into());
+        self.in_fk_parent = true;
+        self.walk_opt(visitor, fields.node_id_at(columns_idx));
+        self.in_fk_parent = false;
+        self.scope.pop();
     }
 
     fn walk_in_table_scope<V: SemanticVisitor>(
@@ -866,6 +933,7 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
                     name,
                     alias: None,
                     resolved: self.catalog.resolve_relation(&self.key_scratch),
+                    in_fk_parent: false,
                 };
                 let mut cx = WalkCtx {
                     catalog: self.catalog,

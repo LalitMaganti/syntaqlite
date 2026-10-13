@@ -452,3 +452,26 @@ class CreateTableForeignKeyChildColumns(TestSuite):
               |                                 ^~~~~
             """,
         )
+
+
+class CreateTableForeignKeyParent(TestSuite):
+    def test_unknown_parent_table_is_accepted(self):
+        return DiffTestBlueprint(
+            sql="CREATE TABLE c (x REFERENCES nosuch (id));",
+            strict_schema=True,
+            out="",
+        )
+
+    def test_unknown_parent_column_is_accepted(self):
+        return DiffTestBlueprint(
+            sql="CREATE TABLE p (id); CREATE TABLE c (x, FOREIGN KEY (x) REFERENCES p (nope));",
+            strict_schema=True,
+            out="",
+        )
+
+    def test_parent_defined_later_is_accepted(self):
+        return DiffTestBlueprint(
+            sql="CREATE TABLE c (x REFERENCES p (id)); CREATE TABLE p (id);",
+            strict_schema=True,
+            out="",
+        )
