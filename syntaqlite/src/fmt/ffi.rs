@@ -372,7 +372,7 @@ mod tests {
         let f = syntaqlite_formatter_create_sqlite();
         // SAFETY: FFI test — pointer obtained from `syntaqlite_formatter_create_sqlite`.
         let err = unsafe { format_err(f, "SELECT FROM") };
-        assert!(!err.is_empty());
+        assert_ne!(err, "");
 
         // output must be NULL on error.
         // SAFETY: FFI test — pointer obtained from `syntaqlite_formatter_create_sqlite`.

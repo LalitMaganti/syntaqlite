@@ -444,7 +444,7 @@ mod tests {
     #[cfg(feature = "sqlite")]
     fn dialect_has_roles() {
         let d = crate::sqlite::dialect::any_dialect();
-        assert!(!d.roles().is_empty());
+        assert_ne!(d.roles(), []);
     }
 
     #[test]

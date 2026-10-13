@@ -356,6 +356,6 @@ expr ::= INTEGER(A). { A }
         let ver2 = SqliteVersion::parse("3.25.0").unwrap();
         let diff = diff_summaries(&ver1, &v1, &ver2, &v2);
         assert_eq!(diff.rules_added, vec!["expr ::= expr PLUS expr"]);
-        assert!(diff.rules_removed.is_empty());
+        assert_eq!(diff.rules_removed, Vec::<String>::new());
     }
 }

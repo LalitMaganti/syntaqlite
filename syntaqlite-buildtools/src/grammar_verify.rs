@@ -325,7 +325,7 @@ expr(A) ::= ID(B). { A = B; }
 
         let err = verify_grammar(upstream, actions).unwrap_err();
         assert_eq!(err.rules_missing, vec!["expr ::= INTEGER"]);
-        assert!(err.rules_extra.is_empty());
+        assert_eq!(err.rules_extra, Vec::<String>::new());
     }
 
     #[test]
@@ -343,7 +343,7 @@ expr(A) ::= ID(B). { A = B; }
         )];
 
         let err = verify_grammar(upstream, actions).unwrap_err();
-        assert!(err.rules_missing.is_empty());
+        assert_eq!(err.rules_missing, Vec::<String>::new());
         assert_eq!(err.rules_extra, vec!["expr ::= ID"]);
     }
 
@@ -382,7 +382,7 @@ as ::= AS nm.
 
         let err = verify_grammar(upstream, actions).unwrap_err();
         assert_eq!(err.rules_missing, vec!["as ::= AS nm"]);
-        assert!(err.rules_extra.is_empty());
+        assert_eq!(err.rules_extra, Vec::<String>::new());
     }
 
     #[test]
