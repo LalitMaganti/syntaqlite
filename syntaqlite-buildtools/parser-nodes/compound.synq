@@ -13,7 +13,7 @@ node CompoundSelect {
   orderby: index OrderByList
   limit_clause: index LimitClause
 
-  semantic { compound_scope(left: left, right: right, orderby: orderby, limit_clause: limit_clause) }
+  semantic { compound_scope(left: left, right: right, orderby: orderby, limit_clause: limit_clause, op: op) }
 
   fmt {
     child(left) hardline

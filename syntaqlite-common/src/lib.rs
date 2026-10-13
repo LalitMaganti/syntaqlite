@@ -284,6 +284,8 @@ pub mod roles {
             orderby: FieldIdx,
             /// Field index of the hoisted LIMIT (`FIELD_ABSENT` if absent).
             limit_clause: FieldIdx,
+            /// Field index of the compound operator enum.
+            op: FieldIdx,
         } = 18,
 
         /// ALTER TABLE statement: existence-checks the target and mutates the
@@ -458,6 +460,7 @@ pub mod roles {
                     right: 0,
                     orderby: 0,
                     limit_clause: 0,
+                    op: 0,
                 },
                 18,
             );

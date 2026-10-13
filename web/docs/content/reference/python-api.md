@@ -358,6 +358,7 @@ syntaqlite.RenderOptions(*, source_name="")
 | `INDEX_ON_VIEW` | `8` |
 | `DROP_WRONG_KIND` | `9` |
 | `BUILTIN_MODIFY` | `10` |
+| `COMPOUND_COLUMNS` | `11` |
 
 ### `DefinedRelation`
 

@@ -102,6 +102,7 @@ pub fn syntaqlite::Catalog::new_connection(&mut self)
 pub fn syntaqlite::Catalog::new_database(&mut self)
 pub fn syntaqlite::Catalog::new_document(&mut self)
 pub fn syntaqlite::CheckConfig::builtin_modify(&self) -> syntaqlite::CheckLevel
+pub fn syntaqlite::CheckConfig::compound_columns(&self) -> syntaqlite::CheckLevel
 pub fn syntaqlite::CheckConfig::cte_columns(&self) -> syntaqlite::CheckLevel
 pub fn syntaqlite::CheckConfig::default() -> Self
 pub fn syntaqlite::CheckConfig::drop_wrong_kind(&self) -> syntaqlite::CheckLevel
@@ -115,6 +116,7 @@ pub fn syntaqlite::CheckConfig::unknown_function(&self) -> syntaqlite::CheckLeve
 pub fn syntaqlite::CheckConfig::unknown_table(&self) -> syntaqlite::CheckLevel
 pub fn syntaqlite::CheckConfig::with_all(self, syntaqlite::CheckLevel) -> Self
 pub fn syntaqlite::CheckConfig::with_builtin_modify(self, syntaqlite::CheckLevel) -> Self
+pub fn syntaqlite::CheckConfig::with_compound_columns(self, syntaqlite::CheckLevel) -> Self
 pub fn syntaqlite::CheckConfig::with_cte_columns(self, syntaqlite::CheckLevel) -> Self
 pub fn syntaqlite::CheckConfig::with_drop_wrong_kind(self, syntaqlite::CheckLevel) -> Self
 pub fn syntaqlite::CheckConfig::with_function_arity(self, syntaqlite::CheckLevel) -> Self
@@ -347,6 +349,10 @@ pub syntaqlite::analysis::DefinedRelation::name: alloc::string::String
 pub syntaqlite::analysis::DiagnosticMessage::BuiltinModify
 pub syntaqlite::analysis::DiagnosticMessage::BuiltinModify::change: syntaqlite::analysis::BuiltinChange
 pub syntaqlite::analysis::DiagnosticMessage::BuiltinModify::name: alloc::string::String
+pub syntaqlite::analysis::DiagnosticMessage::CompoundColumns
+pub syntaqlite::analysis::DiagnosticMessage::CompoundColumns::left: usize
+pub syntaqlite::analysis::DiagnosticMessage::CompoundColumns::operator: alloc::string::String
+pub syntaqlite::analysis::DiagnosticMessage::CompoundColumns::right: usize
 pub syntaqlite::analysis::DiagnosticMessage::CteColumnCountMismatch
 pub syntaqlite::analysis::DiagnosticMessage::CteColumnCountMismatch::actual: usize
 pub syntaqlite::analysis::DiagnosticMessage::CteColumnCountMismatch::declared: usize

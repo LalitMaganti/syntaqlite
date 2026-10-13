@@ -89,6 +89,7 @@ impl CheckLevel {
 /// | `index-on-view` | [`index_on_view`](Self::index_on_view) | `CREATE INDEX` on a view | `deny` |
 /// | `drop-wrong-kind` | [`drop_wrong_kind`](Self::drop_wrong_kind) | `DROP TABLE` on a view or `DROP VIEW` on a table | `deny` |
 /// | `builtin-modify` | [`builtin_modify`](Self::builtin_modify) | `DROP`, `ALTER`, `CREATE INDEX` or `CREATE TRIGGER` on a built-in table such as `sqlite_schema` | `deny` |
+/// | `compound-columns` | [`compound_columns`](Self::compound_columns) | Compound `SELECT` arms with different numbers of result columns | `deny` |
 ///
 /// The group name `schema` is a shorthand for `unknown-table`,
 /// `unknown-column`, `unknown-function`, and `function-arity`.
@@ -104,6 +105,7 @@ pub struct CheckConfig {
     pub(crate) index_on_view: CheckLevel,
     pub(crate) drop_wrong_kind: CheckLevel,
     pub(crate) builtin_modify: CheckLevel,
+    pub(crate) compound_columns: CheckLevel,
 }
 
 impl Default for CheckConfig {
@@ -119,6 +121,7 @@ impl Default for CheckConfig {
             index_on_view: CheckLevel::Deny,
             drop_wrong_kind: CheckLevel::Deny,
             builtin_modify: CheckLevel::Deny,
+            compound_columns: CheckLevel::Deny,
         }
     }
 }
@@ -165,6 +168,10 @@ impl CheckConfig {
     /// Level for DDL that changes a built-in table.
     pub fn builtin_modify(&self) -> CheckLevel {
         self.builtin_modify
+    }
+    /// Level for compound SELECT arms with different column counts.
+    pub fn compound_columns(&self) -> CheckLevel {
+        self.compound_columns
     }
 
     // ── Builders ─────────────────────────────────────────────────────────
@@ -229,6 +236,12 @@ impl CheckConfig {
         self.builtin_modify = level;
         self
     }
+    /// Set the level for compound SELECT arms with different column counts.
+    #[must_use]
+    pub fn with_compound_columns(mut self, level: CheckLevel) -> Self {
+        self.compound_columns = level;
+        self
+    }
     /// Set all schema checks (`unknown-table`, `unknown-column`,
     /// `unknown-function`, `function-arity`).
     #[must_use]
@@ -252,6 +265,7 @@ impl CheckConfig {
         self.index_on_view = level;
         self.drop_wrong_kind = level;
         self.builtin_modify = level;
+        self.compound_columns = level;
         self
     }
 
@@ -269,6 +283,7 @@ impl CheckConfig {
         "index-on-view",
         "drop-wrong-kind",
         "builtin-modify",
+        "compound-columns",
     ];
 
     /// Group names that expand to multiple categories.
@@ -291,6 +306,7 @@ impl CheckConfig {
             "index-on-view" => self.index_on_view = level,
             "drop-wrong-kind" => self.drop_wrong_kind = level,
             "builtin-modify" => self.builtin_modify = level,
+            "compound-columns" => self.compound_columns = level,
             "schema" => self = self.with_schema(level),
             "all" => self = self.with_all(level),
             _ => return Err(format!("unknown check category: {name}")),
@@ -408,6 +424,7 @@ mod tests {
         assert_eq!(c.index_on_view(), CheckLevel::Deny);
         assert_eq!(c.drop_wrong_kind(), CheckLevel::Deny);
         assert_eq!(c.builtin_modify(), CheckLevel::Deny);
+        assert_eq!(c.compound_columns(), CheckLevel::Deny);
     }
 
     #[test]

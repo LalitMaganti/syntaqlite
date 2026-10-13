@@ -1053,6 +1053,13 @@ fn kind_code_builtin_modify() {
 }
 
 #[test]
+fn kind_code_compound_columns() {
+    let v = Validator::new();
+    v.analyze("SELECT 1 UNION SELECT 1, 2");
+    assert!(v.has_code(DIAG_CODE_COMPOUND_COLUMNS));
+}
+
+#[test]
 fn kind_code_per_statement_matches_aggregate() {
     let v = Validator::new();
     v.analyze("SELECT id FROM no_such_table");
@@ -1078,6 +1085,7 @@ fn diagnostic_code_to_c_covers_all_variants() {
     check(M::IndexOnView { name: "v".into() }, DIAG_CODE_INDEX_ON_VIEW);
     check(M::DropWrongKind { name: "v".into(), is_view: true }, DIAG_CODE_DROP_WRONG_KIND);
     check(M::BuiltinModify { name: "sqlite_schema".into(), change: super::super::BuiltinChange::Drop }, DIAG_CODE_BUILTIN_MODIFY);
+    check(M::CompoundColumns { operator: "UNION".into(), left: 1, right: 2 }, DIAG_CODE_COMPOUND_COLUMNS);
 }
 
 // ── Custom function / table-function registration ────────────────────

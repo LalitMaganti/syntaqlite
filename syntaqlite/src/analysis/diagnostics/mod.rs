@@ -153,7 +153,7 @@ impl Diagnostic {
 ///             println!("parse error: {msg}");
 ///         }
 ///         other => {
-///             // FunctionArity, UnknownColumn, CteColumnCountMismatch, QualifiedRef, IndexOnView, DropWrongKind, BuiltinModify
+///             // Every other variant.
 ///             println!("{other}");
 ///         }
 ///     }
@@ -224,6 +224,15 @@ pub enum DiagnosticMessage {
         name: String,
         /// What the statement tried to do.
         change: BuiltinChange,
+    },
+    /// The arms of a compound SELECT have different numbers of columns.
+    CompoundColumns {
+        /// The compound operator as written, such as `UNION ALL`.
+        operator: String,
+        /// Columns in the left arm.
+        left: usize,
+        /// Columns in the right arm.
+        right: usize,
     },
     /// Module import could not be resolved.
     UnknownModule {
@@ -296,6 +305,14 @@ impl std::fmt::Display for DiagnosticMessage {
                     write!(f, "cannot create a trigger on built-in table '{name}'")
                 }
             },
+            Self::CompoundColumns {
+                operator,
+                left,
+                right,
+            } => write!(
+                f,
+                "SELECTs to the left and right of {operator} have {left} and {right} result columns"
+            ),
             Self::UnknownModule { name } => write!(f, "unknown module '{name}'"),
             Self::ParseError(msg) => f.write_str(msg),
         }
@@ -486,6 +503,18 @@ impl serde::Serialize for DiagnosticMessage {
                 m.serialize_entry("kind", "builtin_modify")?;
                 m.serialize_entry("name", name)?;
                 m.serialize_entry("change", change.as_str())?;
+                m.end()
+            }
+            Self::CompoundColumns {
+                operator,
+                left,
+                right,
+            } => {
+                let mut m = serializer.serialize_map(Some(4))?;
+                m.serialize_entry("kind", "compound_columns")?;
+                m.serialize_entry("operator", operator)?;
+                m.serialize_entry("left", left)?;
+                m.serialize_entry("right", right)?;
                 m.end()
             }
             Self::UnknownModule { name } => {

@@ -93,6 +93,7 @@ static const char* code_str(uint32_t code) {
     case SYNTAQLITE_DIAG_INDEX_ON_VIEW:             return "INDEX_ON_VIEW";
     case SYNTAQLITE_DIAG_DROP_WRONG_KIND:           return "DROP_WRONG_KIND";
     case SYNTAQLITE_DIAG_BUILTIN_MODIFY:            return "BUILTIN_MODIFY";
+    case SYNTAQLITE_DIAG_COMPOUND_COLUMNS:          return "COMPOUND_COLUMNS";
     default:                                         return "?";
   }
 }
