@@ -403,6 +403,21 @@ pub mod roles {
             /// Field index of the row list.
             rows: FieldIdx,
         } = 29,
+
+        /// INSERT statement: a DML scope whose values must fill the target's
+        /// columns.
+        InsertScope {
+            /// Field index of the RECURSIVE flag (`FIELD_ABSENT` if absent).
+            with_recursive: FieldIdx,
+            /// Field index of the CTE binding list (`FIELD_ABSENT` if absent).
+            with_ctes: FieldIdx,
+            /// Field index of the target table.
+            table: FieldIdx,
+            /// Field index of the column list (`FIELD_ABSENT` if absent).
+            columns: FieldIdx,
+            /// Field index of the VALUES or SELECT source.
+            source: FieldIdx,
+        } = 30,
     }
 
     /// Metadata for a node type that defines a template macro.

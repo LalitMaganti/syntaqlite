@@ -399,7 +399,7 @@ impl Default for Analyzer {
 
 #[cfg(test)]
 mod tests {
-    use super::super::catalog::{ColumnResolution, TableDef};
+    use super::super::catalog::{Column, ColumnResolution, TableDef};
     use super::query_scope::{QueryScope, RowIdPolicy};
     use super::*;
 
@@ -632,6 +632,29 @@ mod tests {
             diag_messages(&model),
             vec!["unknown table: excluded".to_string()],
         );
+    }
+
+    #[test]
+    fn insert_skips_declared_generated_and_hidden_columns() {
+        let mut analyzer = sqlite_analyzer();
+        let mut catalog = sqlite_catalog();
+        catalog
+            .layer_mut(CatalogLayer::Database)
+            .insert_table(TableDef::new("ft").columns([
+                Column::from("body"),
+                Column::generated("len"),
+                Column::hidden("rank"),
+            ]));
+        let mut ctx = AnalysisContext::new(&mut catalog);
+        let mut mismatches = |sql| {
+            analyzer
+                .analyze(sql, &mut ctx)
+                .diagnostics()
+                .filter(|d| matches!(d.message(), DiagnosticMessage::InsertValues { .. }))
+                .count()
+        };
+        assert_eq!(mismatches("INSERT INTO ft VALUES(1)"), 0);
+        assert_eq!(mismatches("INSERT INTO ft VALUES(1, 2)"), 1);
     }
 
     #[test]

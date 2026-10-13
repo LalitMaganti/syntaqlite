@@ -149,6 +149,16 @@ pub(crate) struct ValuesTermsEvent {
     pub(crate) row: usize,
 }
 
+/// An INSERT supplying a different number of values than it has columns.
+#[derive(Copy, Clone)]
+pub(crate) struct InsertValuesEvent<'a> {
+    pub(crate) table: &'a str,
+    pub(crate) range: DocRange,
+    pub(crate) column_list: bool,
+    pub(crate) columns: usize,
+    pub(crate) values: usize,
+}
+
 /// A compound SELECT whose arms have different numbers of columns.
 #[derive(Copy, Clone)]
 pub(crate) struct CompoundColumnsEvent<'a> {
@@ -223,6 +233,7 @@ pub(crate) trait SemanticVisitor {
     const WANTS_UNKNOWN_WINDOW: bool = false;
     const WANTS_ON_CLAUSE_ORDER: bool = false;
     const WANTS_VALUES_TERMS: bool = false;
+    const WANTS_INSERT_VALUES: bool = false;
     const WANTS_CTE_BINDING: bool = false;
     const WANTS_SCOPED_SOURCE: bool = false;
     /// Return true to receive [`enter_query`](Self::enter_query) /
@@ -307,6 +318,9 @@ pub(crate) trait SemanticVisitor {
     }
 
     fn on_values_terms(&mut self, _stmt: &mut AnyParsedStatement<'_>, _ev: ValuesTermsEvent) {}
+
+    fn on_insert_values(&mut self, _stmt: &mut AnyParsedStatement<'_>, _ev: InsertValuesEvent<'_>) {
+    }
 
     /// Called once per CTE binding, BEFORE its body is walked. The body
     /// will observe the binding's own name as a resolved catalog source
@@ -501,6 +515,7 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
                 with_recursive: _,
                 with_ctes,
             } => self.walk_dml_scope(visitor, fields, with_ctes),
+            SemanticRole::InsertScope { .. } => self.walk_insert_scope(visitor, fields, role),
             SemanticRole::UpsertScope {
                 columns,
                 target_where,
@@ -611,6 +626,7 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
             | SemanticRole::CompoundScope { .. }
             | SemanticRole::CteScope { .. }
             | SemanticRole::DmlScope { .. }
+            | SemanticRole::InsertScope { .. }
             | SemanticRole::TriggerScope { .. }
             | SemanticRole::UpsertScope { .. }
             | SemanticRole::DefineTable { .. }
@@ -1646,6 +1662,96 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
         if has_ctes {
             self.catalog.pop_query_scope();
         }
+    }
+
+    fn walk_insert_scope<V: SemanticVisitor>(
+        &mut self,
+        visitor: &mut V,
+        fields: &NodeFields,
+        role: SemanticRole,
+    ) {
+        let SemanticRole::InsertScope {
+            with_ctes,
+            table,
+            columns,
+            source,
+            ..
+        } = role
+        else {
+            unreachable!("not an insert role: {role:?}");
+        };
+        self.walk_dml_scope(visitor, fields, with_ctes);
+        // `DEFAULT VALUES` has no source.
+        if V::WANTS_INSERT_VALUES
+            && let Some(source) = fields.node_id_at(source)
+        {
+            let table = fields.node_id_at(table).expect("an INSERT names its table");
+            self.check_insert_values(visitor, table, fields.node_id_at(columns), source);
+        }
+    }
+
+    /// Report an INSERT whose source supplies a different number of values
+    /// than its column list, or than the table has when the list is omitted.
+    fn check_insert_values<V: SemanticVisitor>(
+        &mut self,
+        visitor: &mut V,
+        table: AnyNodeId,
+        columns: Option<AnyNodeId>,
+        source: AnyNodeId,
+    ) {
+        let Some(values) = self.result_column_count(source) else {
+            return;
+        };
+        let reader = StmtReader::new(self.stmt, self.roles);
+        let Some((SemanticRole::SourceRef { name, .. }, table_fields)) =
+            reader.role_for_node(table)
+        else {
+            unreachable!("an INSERT target is a source reference");
+        };
+        let (table_name, _) = self
+            .stmt
+            .span_field_range(&table_fields, name)
+            .expect("an INSERT target has a name");
+        let expected = if let Some(list) = columns {
+            self.stmt
+                .list_children(list)
+                .expect("an INSERT column list is a list")
+                .len()
+        } else {
+            let ident = self
+                .stmt
+                .span_field_ident_text(&table_fields, name)
+                .expect("an INSERT target has a name");
+            let target = NameKey::new(&ident);
+            // SQLite copies `SELECT * FROM other` between tables of the same
+            // width without counting values, generated columns included.
+            if let Some(other) = reader.bare_star_source(source)
+                && other != target
+                && self.catalog.column_count(&other).is_some()
+                && self.catalog.column_count(&other) == self.catalog.column_count(&target)
+            {
+                return;
+            }
+            let Some(count) = self.catalog.insert_column_count(&target) else {
+                return;
+            };
+            count
+        };
+        if values == expected {
+            return;
+        }
+        let range = self
+            .stmt
+            .node_range(source)
+            .expect("an INSERT source spans source");
+        let ev = InsertValuesEvent {
+            table: table_name,
+            range,
+            column_list: columns.is_some(),
+            columns: expected,
+            values,
+        };
+        visitor.on_insert_values(self.stmt, ev);
     }
 
     fn walk_dml_children_except_ctes<V: SemanticVisitor>(

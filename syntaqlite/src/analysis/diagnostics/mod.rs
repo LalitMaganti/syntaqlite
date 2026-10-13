@@ -245,6 +245,19 @@ pub enum DiagnosticMessage {
         /// The later table, as named in the query.
         name: String,
     },
+    /// An INSERT supplies a different number of values than the columns it
+    /// fills.
+    InsertValues {
+        /// The target table, as named in the statement.
+        table: String,
+        /// Whether the INSERT lists its columns. Without a list it fills
+        /// every normal column.
+        column_list: bool,
+        /// Columns the INSERT fills.
+        columns: usize,
+        /// Values each row supplies.
+        values: usize,
+    },
     /// A VALUES row has a different number of terms than the first row.
     ValuesTerms {
         /// Terms in the first row.
@@ -337,6 +350,21 @@ impl std::fmt::Display for DiagnosticMessage {
                     f,
                     "ON clause references '{name}', which is joined to its right"
                 )
+            }
+            Self::InsertValues {
+                table,
+                column_list,
+                columns,
+                values,
+            } => {
+                if *column_list {
+                    write!(f, "{values} values for {columns} columns")
+                } else {
+                    write!(
+                        f,
+                        "table '{table}' has {columns} columns but {values} values were supplied"
+                    )
+                }
             }
             Self::ValuesTerms { first, row } => write!(
                 f,
@@ -543,6 +571,17 @@ impl serde::Serialize for DiagnosticMessage {
             }),
             Self::UnknownWindow { name } => kind_and_name(serializer, "unknown_window", name),
             Self::OnClauseOrder { name } => kind_and_name(serializer, "on_clause_order", name),
+            Self::InsertValues {
+                table,
+                column_list,
+                columns,
+                values,
+            } => kind_with(serializer, "insert_values", 4, |m| {
+                m.serialize_entry("table", table)?;
+                m.serialize_entry("column_list", column_list)?;
+                m.serialize_entry("columns", columns)?;
+                m.serialize_entry("values", values)
+            }),
             Self::ValuesTerms { first, row } => kind_with(serializer, "values_terms", 2, |m| {
                 m.serialize_entry("first", first)?;
                 m.serialize_entry("row", row)

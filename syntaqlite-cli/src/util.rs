@@ -296,6 +296,9 @@ pub(crate) fn build_check_config(
         if let Some(ref v) = opts.values_terms {
             checks = checks.with_values_terms(CheckLevel::parse(v)?);
         }
+        if let Some(ref v) = opts.insert_values {
+            checks = checks.with_insert_values(CheckLevel::parse(v)?);
+        }
     }
 
     // CLI flags win (last-spec-wins per category).

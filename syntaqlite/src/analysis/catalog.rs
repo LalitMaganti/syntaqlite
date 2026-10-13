@@ -1203,6 +1203,24 @@ impl Catalog {
     }
 
     /// Returns `true` if `key` is a view in any layer.
+    /// How many columns a relation has, of every kind. `None` when the
+    /// relation or its columns are unknown.
+    pub(crate) fn column_count(&self, key: &NameKey) -> Option<usize> {
+        Some(self.visible_relation(key)?.columns.as_ref()?.len())
+    }
+
+    /// Values an INSERT without a column list must supply: one per normal
+    /// column. `None` when the relation or its columns are unknown.
+    pub(crate) fn insert_column_count(&self, key: &NameKey) -> Option<usize> {
+        let columns = self.visible_relation(key)?.columns.as_ref()?;
+        Some(
+            columns
+                .iter()
+                .filter(|c| c.kind == ColumnKind::Normal)
+                .count(),
+        )
+    }
+
     pub(crate) fn is_view(&self, key: &NameKey) -> bool {
         self.visible_relation(key).is_some_and(|r| r.is_view)
     }

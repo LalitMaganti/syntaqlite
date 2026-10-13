@@ -467,6 +467,26 @@ fn role_to_bytes(
             bytes[0] = disc(SemanticRole::Values { rows: 0 });
             bytes[1] = fi(rows);
         }
+        SynqRole::InsertScope {
+            with_recursive,
+            with_ctes,
+            table,
+            columns,
+            source,
+        } => {
+            bytes[0] = disc(SemanticRole::InsertScope {
+                with_recursive: 0,
+                with_ctes: 0,
+                table: 0,
+                columns: 0,
+                source: 0,
+            });
+            bytes[1] = opt(with_recursive);
+            bytes[2] = opt(with_ctes);
+            bytes[3] = fi(table);
+            bytes[4] = opt(columns);
+            bytes[5] = fi(source);
+        }
     }
 
     bytes
