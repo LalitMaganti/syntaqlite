@@ -293,6 +293,9 @@ pub(crate) fn build_check_config(
         if let Some(ref v) = opts.on_clause_order {
             checks = checks.with_on_clause_order(CheckLevel::parse(v)?);
         }
+        if let Some(ref v) = opts.values_terms {
+            checks = checks.with_values_terms(CheckLevel::parse(v)?);
+        }
     }
 
     // CLI flags win (last-spec-wins per category).

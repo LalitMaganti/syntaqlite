@@ -245,6 +245,13 @@ pub enum DiagnosticMessage {
         /// The later table, as named in the query.
         name: String,
     },
+    /// A VALUES row has a different number of terms than the first row.
+    ValuesTerms {
+        /// Terms in the first row.
+        first: usize,
+        /// Terms in this row.
+        row: usize,
+    },
     /// Module import could not be resolved.
     UnknownModule {
         /// The unresolved module path (e.g. `slices.flow`).
@@ -331,6 +338,10 @@ impl std::fmt::Display for DiagnosticMessage {
                     "ON clause references '{name}', which is joined to its right"
                 )
             }
+            Self::ValuesTerms { first, row } => write!(
+                f,
+                "VALUES row has {row} terms, but the first row has {first}"
+            ),
             Self::UnknownModule { name } => write!(f, "unknown module '{name}'"),
             Self::ParseError(msg) => f.write_str(msg),
         }
@@ -535,6 +546,13 @@ impl serde::Serialize for DiagnosticMessage {
             }
             Self::UnknownWindow { name } => kind_and_name(serializer, "unknown_window", name),
             Self::OnClauseOrder { name } => kind_and_name(serializer, "on_clause_order", name),
+            Self::ValuesTerms { first, row } => {
+                let mut m = serializer.serialize_map(Some(3))?;
+                m.serialize_entry("kind", "values_terms")?;
+                m.serialize_entry("first", first)?;
+                m.serialize_entry("row", row)?;
+                m.end()
+            }
             Self::UnknownModule { name } => kind_and_name(serializer, "unknown_module", name),
         }
     }

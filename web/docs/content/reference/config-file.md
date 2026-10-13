@@ -56,6 +56,7 @@ builtin-modify = "deny"
 compound-columns = "deny"
 unknown-window = "deny"
 on-clause-order = "deny"
+values-terms = "deny"
 # schema = "deny"           # shorthand for all 4 schema checks
 ```
 
@@ -150,6 +151,7 @@ Each field sets a diagnostic category to `"allow"` (suppress), `"warn"`, or
 | `compound-columns` | string | `"deny"` | Compound `SELECT` arms with different numbers of result columns |
 | `unknown-window` | string | `"deny"` | `OVER` naming a window the query doesn't define |
 | `on-clause-order` | string | `"deny"` | An outer join's `ON` clause referencing a table joined to its right |
+| `values-terms` | string | `"deny"` | `VALUES` rows with a different number of terms than the first row |
 | `schema` | string | N/A | Shorthand for `unknown-table`, `unknown-column`, `unknown-function`, `function-arity` |
 | `all` | string | N/A | Shorthand for all categories |
 

@@ -72,6 +72,74 @@ class CompoundColumns(TestSuite):
             out="",
         )
 
+    def test_values_arm(self):
+        return DiffTestBlueprint(
+            sql="VALUES(1, 2) UNION SELECT 1;",
+            out="""\
+            error: SELECTs to the left and right of UNION have 2 and 1 result columns
+             --> <stdin>:1:20
+              |
+            1 | VALUES(1, 2) UNION SELECT 1;
+              |                    ^~~~~~~~
+            """,
+        )
+
+    def test_values_arm_with_uneven_rows_is_skipped(self):
+        return DiffTestBlueprint(
+            sql="SELECT 1 UNION ALL VALUES(1, 2), (3);",
+            out="""\
+            error: VALUES row has 1 terms, but the first row has 2
+             --> <stdin>:1:35
+              |
+            1 | SELECT 1 UNION ALL VALUES(1, 2), (3);
+              |                                   ^
+            """,
+        )
+
+
+class ValuesTerms(TestSuite):
+    def test_uneven_rows(self):
+        return DiffTestBlueprint(
+            sql="VALUES(1, 2), (3, 4), (5);",
+            out="""\
+            error: VALUES row has 1 terms, but the first row has 2
+             --> <stdin>:1:24
+              |
+            1 | VALUES(1, 2), (3, 4), (5);
+              |                        ^
+            """,
+        )
+
+    def test_reports_the_first_uneven_row(self):
+        return DiffTestBlueprint(
+            sql="VALUES(1), (2, 3), (4, 5, 6);",
+            out="""\
+            error: VALUES row has 2 terms, but the first row has 1
+             --> <stdin>:1:13
+              |
+            1 | VALUES(1), (2, 3), (4, 5, 6);
+              |             ^~~~
+            """,
+        )
+
+    def test_even_rows(self):
+        return DiffTestBlueprint(
+            sql="VALUES(1, 2), (3, 4);",
+            out="",
+        )
+
+    def test_in_subquery(self):
+        return DiffTestBlueprint(
+            sql="SELECT * FROM (VALUES(1, 2), (3));",
+            out="""\
+            error: VALUES row has 1 terms, but the first row has 2
+             --> <stdin>:1:31
+              |
+            1 | SELECT * FROM (VALUES(1, 2), (3));
+              |                               ^
+            """,
+        )
+
 
 class OnClauseOrder(TestSuite):
     def test_left_join_on_references_later_table(self):

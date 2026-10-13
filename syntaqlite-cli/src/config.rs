@@ -53,6 +53,7 @@ pub(crate) struct CheckOptions {
     pub compound_columns: Option<String>,
     pub unknown_window: Option<String>,
     pub on_clause_order: Option<String>,
+    pub values_terms: Option<String>,
     /// Shorthand: sets all schema checks.
     pub schema: Option<String>,
     /// Shorthand: sets all checks.

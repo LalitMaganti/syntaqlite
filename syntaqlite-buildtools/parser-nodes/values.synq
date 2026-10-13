@@ -8,6 +8,8 @@ list ValuesRowList {
 node ValuesClause {
   rows: index ValuesRowList
 
+  semantic { values(rows: rows) }
+
   fmt {
     group {
       "VALUES" nest { line child(rows) }

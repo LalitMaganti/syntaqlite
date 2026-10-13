@@ -23,7 +23,8 @@ use crate::dialect::SemanticRole;
 use super::walker::{
     BuiltinModifyEvent, CallEvent, ColumnRefEvent, CompoundColumnsEvent, CteBindingEvent,
     CteColumnCountMismatchEvent, DropWrongKindEvent, IndexOnViewEvent, OnClauseOrderEvent,
-    ScopedSourceEvent, SemanticVisitor, SourceRefEvent, UncheckedRef, UnknownWindowEvent, WalkCtx,
+    ScopedSourceEvent, SemanticVisitor, SourceRefEvent, UncheckedRef, UnknownWindowEvent,
+    ValuesTermsEvent, WalkCtx,
 };
 
 /// Whether `name` is an embedded-SQL interpolation placeholder: an identifier of
@@ -148,6 +149,7 @@ impl CheckConfig {
             DiagnosticMessage::CompoundColumns { .. } => self.compound_columns,
             DiagnosticMessage::UnknownWindow { .. } => self.unknown_window,
             DiagnosticMessage::OnClauseOrder { .. } => self.on_clause_order,
+            DiagnosticMessage::ValuesTerms { .. } => self.values_terms,
             DiagnosticMessage::ParseError(_) => self.parse_errors,
         }
     }
@@ -310,6 +312,7 @@ impl<V: SemanticVisitor> SemanticVisitor for StatementVisitor<'_, V> {
     const WANTS_COMPOUND_COLUMNS: bool = true;
     const WANTS_UNKNOWN_WINDOW: bool = true;
     const WANTS_ON_CLAUSE_ORDER: bool = true;
+    const WANTS_VALUES_TERMS: bool = true;
     // LineageCapture wants source refs, scoped sources, CTE bindings,
     // and enter/exit — all forwarded below.
     const WANTS_CTE_BINDING: bool = true;
@@ -516,6 +519,18 @@ impl<V: SemanticVisitor> SemanticVisitor for StatementVisitor<'_, V> {
             None,
         );
         self.extra.on_on_clause_order(stmt, ev);
+    }
+
+    fn on_values_terms(&mut self, stmt: &mut AnyParsedStatement<'_>, ev: ValuesTermsEvent) {
+        self.emit_at(
+            ev.range,
+            DiagnosticMessage::ValuesTerms {
+                first: ev.first,
+                row: ev.row,
+            },
+            None,
+        );
+        self.extra.on_values_terms(stmt, ev);
     }
 
     fn on_cte_binding(&mut self, stmt: &mut AnyParsedStatement<'_>, ev: CteBindingEvent<'_>) {
