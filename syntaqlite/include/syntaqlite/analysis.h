@@ -178,10 +178,8 @@ SYNTAQLITE_API void syntaqlite_analyzer_set_mode(SyntaqliteAnalyzer* v,
 
 // Set the severity level for a check category.
 //
-// Category names: "parse-errors", "unknown-table", "unknown-column",
-// "unknown-function", "function-arity", "cte-columns", "qualified-ref",
-// "index-on-view", "drop-wrong-kind", "builtin-modify", plus the groups
-// "schema" (schema-related categories) and "all" (every category).
+// `name` is a check name from the `[checks]` section of syntaqlite.toml, or
+// one of the groups "schema" (schema-related checks) and "all" (every check).
 //
 // Returns 0 on success, or -1 when `name` is unknown or `level` is out
 // of range.

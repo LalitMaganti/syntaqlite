@@ -65,10 +65,9 @@ syntaqlite analyze [OPTIONS] [FILES...]
 | `--sqlite-version <VER>` | `latest` | Target SQLite version |
 | `--sqlite-cflag <FLAG>` | | Enable a compile-time flag (repeatable) |
 
-Check categories: `parse-errors`, `unknown-table`, `unknown-column`,
-`unknown-function`, `function-arity`, `cte-columns`, `qualified-ref`,
-`index-on-view`, `drop-wrong-kind`, `builtin-modify`. Groups: `schema` (all 4
-schema checks), `all`.
+Check names are listed in the
+[config file reference](@/reference/config-file.md#checks). The groups
+`schema` (all 4 schema checks) and `all` are also accepted.
 
 When `--schema` is provided, the analyzer loads `CREATE TABLE` / `CREATE VIEW`
 statements from the schema files and checks the remaining input files against
