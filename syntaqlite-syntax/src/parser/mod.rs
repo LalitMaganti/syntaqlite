@@ -1028,6 +1028,40 @@ impl<'a> AnyParsedStatement<'a> {
         unsafe { self.raw.as_ref().node_token_range(id.0) }
     }
 
+    /// Document range of AST node `id`, or `None` when the node spans no
+    /// source, such as an empty production.
+    ///
+    /// Requires [`ParserConfig::with_collect_node_extents`].
+    ///
+    /// # Panics
+    /// If the node's text is longer than `u32::MAX` bytes, which offsets
+    /// cannot address.
+    pub fn node_range(&self, id: AnyNodeId) -> Option<DocRange> {
+        let (text, offset) = self.node_text(id)?;
+        let len = u32::try_from(text.len()).expect("statement text fits in u32 offsets");
+        Some(DocRange::from_offset_len(
+            offset.to_doc(self.statement_base()),
+            DocLen::from_raw(len),
+        ))
+    }
+
+    /// The dialect's name for the value of enum field `field` on node `id`,
+    /// such as `UNION_ALL`.
+    ///
+    /// # Panics
+    /// If `id` is null, or `field` is not an enum field of the node.
+    pub fn enum_name(&self, id: AnyNodeId, field: u8) -> &'static str {
+        let (tag, fields) = self.extract_fields(id).expect("enum_name on a null node");
+        let crate::ast::FieldValue::Enum(value) = fields[usize::from(field)] else {
+            panic!("field {field} of node tag {} is not an enum", tag.0);
+        };
+        self.dialect
+            .field_meta(tag)
+            .nth(usize::from(field))
+            .and_then(|meta| meta.display_name(value as usize))
+            .expect("the dialect names every enum value")
+    }
+
     /// Comments attached to the first token of AST node `id`.  Thin
     /// wrapper over [`Self::node_token_range`] +
     /// [`Self::leading_comments`].  Returns an empty iterator when

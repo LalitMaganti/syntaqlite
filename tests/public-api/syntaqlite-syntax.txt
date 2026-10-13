@@ -1200,6 +1200,7 @@ pub fn syntaqlite_syntax::any::AnyNodeTag::from_raw(u32) -> Self
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::child_node_ids(&self, syntaqlite_syntax::any::AnyNodeId) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::any::AnyNodeId> + use<>
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::comment_spans(&self) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::CommentSpan> + use<'_>
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::comments(&self) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::Comment<'a>> + use<'_, 'a>
+pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::enum_name(&self, syntaqlite_syntax::any::AnyNodeId, u8) -> &'static str
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::expanded_text(&self) -> &'a str
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::extract_fields(&self, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<(syntaqlite_syntax::any::AnyNodeTag, syntaqlite_syntax::any::NodeFields)>
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::extract_fields_into(&self, syntaqlite_syntax::any::AnyNodeId, &mut syntaqlite_syntax::any::NodeFields) -> core::option::Option<syntaqlite_syntax::any::AnyNodeTag>
@@ -1214,6 +1215,7 @@ pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::name_text(&self, core::op
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::node_expanded_text(&self, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<&'a str>
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::node_is_macro_free(&self, syntaqlite_syntax::any::AnyNodeId) -> bool
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::node_leading_comments(&self, syntaqlite_syntax::any::AnyNodeId) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::Comment<'a>> + use<'_, 'a>
+pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::node_range(&self, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<syntaqlite_syntax::source::DocRange>
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::node_text(&self, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<(&'a str, syntaqlite_syntax::source::StmtOffset)>
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::node_token_range(&self, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<(syntaqlite_syntax::source::TokenIdx, syntaqlite_syntax::source::TokenIdx)>
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::node_trailing_comments(&self, syntaqlite_syntax::any::AnyNodeId) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::Comment<'a>> + use<'_, 'a>
