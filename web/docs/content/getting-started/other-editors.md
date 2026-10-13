@@ -121,3 +121,6 @@ suggestion.
 
 See [project setup](@/guides/project-setup.md) for the full configuration
 reference.
+
+See [LSP features](@/reference/lsp-features.md) for what each feature of the
+language server covers.

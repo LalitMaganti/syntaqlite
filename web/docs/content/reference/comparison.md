@@ -203,7 +203,7 @@ syntaqlite and sql-language-server work offline.
 | Feature                |    syntaqlite   |     sqls ¹    | sql-language-server |
 | ---------------------- | :-------------: | :-----------: | :-----------------: |
 | Completion             | Yes (129 items) | Yes (6 items) |   Yes (11 items)    |
-| Hover                  |       No        |      Yes      |         No          |
+| Hover                  |       Yes       |      Yes      |         No          |
 | Go to definition       |       Yes       |      Yes      |         No          |
 | Find references        |       Yes       |      No       |         No          |
 | Diagnostics: syntax    |       Yes       |      No       |         Yes         |

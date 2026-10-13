@@ -102,6 +102,8 @@ relying on auto-discovery:
 
 ## Next steps
 
+- [LSP features](@/reference/lsp-features.md): what diagnostics,
+  completion, hover and navigation cover
 - [Formatting options](@/reference/formatting-options.md): line width,
   keyword casing, semicolons
 - [Config file reference](@/reference/config-file.md): glob-based schema
