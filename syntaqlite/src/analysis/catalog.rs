@@ -821,15 +821,19 @@ impl Catalog {
                 old_name,
                 column,
             } => {
+                let op_name = stmt.enum_name(root, op);
                 self.accumulate_alter_table(
-                    target, stmt, &reader, &fields, op, target_idx, new_name, old_name, column,
+                    target, stmt, &reader, &fields, op_name, target_idx, new_name, old_name, column,
                 );
             }
             SemanticRole::DropObject {
                 kind,
                 target: target_idx,
                 ..
-            } => self.accumulate_drop(target, stmt, &fields, kind, target_idx),
+            } => {
+                let kind_name = stmt.enum_name(root, kind);
+                self.accumulate_drop(target, stmt, &fields, kind_name, target_idx);
+            }
             // Non-DDL roles are irrelevant to catalog accumulation.
             _ => {}
         }
@@ -843,10 +847,10 @@ impl Catalog {
         target: CatalogLayer,
         stmt: &AnyParsedStatement<'_>,
         fields: &NodeFields,
-        kind: u8,
+        kind_name: &str,
         target_idx: u8,
     ) {
-        let Some(drops_view) = drop_kind_is_view(fields, kind) else {
+        let Some(drops_view) = drop_kind_is_view(kind_name) else {
             return;
         };
         let Some(name) = alter_qualified_name(stmt, fields, target_idx) else {
@@ -878,7 +882,7 @@ impl Catalog {
         stmt: &AnyParsedStatement<'_>,
         reader: &StmtReader<'_, '_>,
         fields: &NodeFields,
-        op: u8,
+        op_name: &str,
         target_idx: u8,
         new_name: u8,
         old_name: u8,
@@ -893,15 +897,12 @@ impl Catalog {
         if self.visible_relation_is_dialect_builtin(&table_key) {
             return;
         }
-        let FieldValue::Enum(op_val) = fields[op as usize] else {
-            return;
-        };
         let Some(mut entry) = self.visible_relation(&table_key).cloned() else {
             return;
         };
         let layer = target.index();
-        match AlterOp::from_discriminant(op_val) {
-            Some(AlterOp::AddColumn) => {
+        match op_name {
+            "ADD_COLUMN" => {
                 let added = fields
                     .node_id_at(column)
                     .and_then(|id| reader.column_def_name(id))
@@ -911,7 +912,7 @@ impl Catalog {
                 }
                 self.layers[layer].insert_entry(&table_name, entry);
             }
-            Some(AlterOp::DropColumn) => {
+            "DROP_COLUMN" => {
                 if let (Some(cols), Some(col)) =
                     (entry.columns.as_mut(), alter_name(stmt, fields, old_name))
                 {
@@ -919,7 +920,7 @@ impl Catalog {
                 }
                 self.layers[layer].insert_entry(&table_name, entry);
             }
-            Some(AlterOp::RenameColumn) => {
+            "RENAME_COLUMN" => {
                 if let (Some(cols), Some(from), Some(to)) = (
                     entry.columns.as_mut(),
                     alter_name(stmt, fields, old_name),
@@ -933,7 +934,7 @@ impl Catalog {
                 }
                 self.layers[layer].insert_entry(&table_name, entry);
             }
-            Some(AlterOp::RenameTable) => {
+            "RENAME_TABLE" => {
                 let Some(new) = alter_name(stmt, fields, new_name) else {
                     return;
                 };
@@ -942,7 +943,8 @@ impl Catalog {
                 self.layers[layer].remove_relation(&table_name);
                 self.retired_by_statement.insert(table_key.clone());
             }
-            None => {}
+            // Operations a dialect adds that the catalog doesn't model.
+            _ => {}
         }
     }
 
@@ -1160,59 +1162,14 @@ impl Catalog {
 
 // ── ALTER TABLE helpers ────────────────────────────────────────────────────────
 
-/// The `ALTER TABLE` operation, mirroring the `AlterOp` enum ordering in
-/// `parser-nodes/schema_ops.synq`. Reordering that enum requires updating the
-/// discriminant mapping below.
-enum AlterOp {
-    RenameTable,
-    RenameColumn,
-    DropColumn,
-    AddColumn,
-}
-
-impl AlterOp {
-    fn from_discriminant(v: u32) -> Option<Self> {
-        match v {
-            0 => Some(Self::RenameTable),
-            1 => Some(Self::RenameColumn),
-            2 => Some(Self::DropColumn),
-            3 => Some(Self::AddColumn),
-            _ => None,
-        }
-    }
-}
-
-/// The object type of a `DROP`, mirroring the `DropObjectType` enum ordering
-/// in `parser-nodes/schema_ops.synq`.
-enum DropObjectType {
-    Table,
-    Index,
-    View,
-    Trigger,
-}
-
-impl DropObjectType {
-    fn from_discriminant(v: u32) -> Option<Self> {
-        match v {
-            0 => Some(Self::Table),
-            1 => Some(Self::Index),
-            2 => Some(Self::View),
-            3 => Some(Self::Trigger),
-            _ => None,
-        }
-    }
-}
-
 /// For a `DROP` of a table (`Some(false)`) or view (`Some(true)`), which kind
-/// it drops. `None` for indexes and triggers, which the catalog doesn't track.
-pub(crate) fn drop_kind_is_view(fields: &NodeFields, kind: u8) -> Option<bool> {
-    let FieldValue::Enum(v) = fields[kind as usize] else {
-        return None;
-    };
-    match DropObjectType::from_discriminant(v)? {
-        DropObjectType::Table => Some(false),
-        DropObjectType::View => Some(true),
-        DropObjectType::Index | DropObjectType::Trigger => None,
+/// it drops, from the dialect's name for the drop's object type. `None` for
+/// indexes, triggers and anything else the catalog doesn't track.
+pub(crate) fn drop_kind_is_view(kind_name: &str) -> Option<bool> {
+    match kind_name {
+        "TABLE" => Some(false),
+        "VIEW" => Some(true),
+        _ => None,
     }
 }
 

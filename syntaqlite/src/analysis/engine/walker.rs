@@ -1093,7 +1093,7 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
         else {
             unreachable!("not a drop role: {role:?}");
         };
-        let Some(drops_view) = drop_kind_is_view(fields, kind) else {
+        let Some(drops_view) = drop_kind_is_view(self.stmt.enum_name(node_id, kind)) else {
             return;
         };
         if matches!(fields[if_exists as usize], FieldValue::Bool(true)) {
