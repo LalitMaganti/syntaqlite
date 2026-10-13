@@ -67,7 +67,9 @@ pub(crate) mod stmt_reader;
 
 #[doc(inline)]
 #[cfg(feature = "analysis")]
-pub use catalog::{AritySpec, Catalog, CatalogLayer, CatalogLayerContents, FunctionCategory};
+pub use catalog::{
+    AritySpec, Catalog, CatalogLayer, CatalogLayerContents, Column, ColumnKind, FunctionCategory,
+};
 #[doc(inline)]
 #[cfg(feature = "analysis")]
 pub use config::{AnalysisConfig, AnalysisMode, CheckConfig, CheckLevel};

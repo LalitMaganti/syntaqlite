@@ -1,4 +1,6 @@
 #[repr(u32)] pub enum syntaqlite::util::SqliteFlag
+impl core::convert::From<&str> for syntaqlite::analysis::Column
+impl core::convert::From<alloc::string::String> for syntaqlite::analysis::Column
 impl core::convert::From<syntaqlite::Dialect> for syntaqlite::any::AnyDialect
 impl core::convert::From<syntaqlite::util::SqliteFlags> for syntaqlite_syntax::util::SqliteSyntaxFlags
 impl core::convert::From<syntaqlite_syntax::util::SqliteSyntaxFlags> for syntaqlite::util::SqliteFlags
@@ -34,6 +36,7 @@ impl syntaqlite::Dialect
 impl syntaqlite::Formatter
 impl syntaqlite::analysis::Analysis
 impl syntaqlite::analysis::CatalogLayerContents
+impl syntaqlite::analysis::Column
 impl syntaqlite::analysis::DiagnosticMessage
 impl syntaqlite::analysis::DirectoryModuleResolver
 impl syntaqlite::analysis::ModuleResolver for syntaqlite::analysis::DirectoryModuleResolver
@@ -55,6 +58,7 @@ impl syntaqlite::util::SqliteFlag
 impl syntaqlite::util::SqliteFlags
 impl<'a> syntaqlite::AnalysisContext<'a>
 impl<'a> syntaqlite::util::DiagnosticRenderer<'a>
+impl<'de> serde_core::de::Deserialize<'de> for syntaqlite::analysis::Column
 impl<T> syntaqlite::analysis::LineageResult<T>
 pub const syntaqlite::CheckConfig::CATEGORY_NAMES: &[&str]
 pub const syntaqlite::CheckConfig::GROUP_NAMES: &[&str]
@@ -65,6 +69,7 @@ pub enum syntaqlite::analysis::AritySpec
 pub enum syntaqlite::analysis::BuiltinChange
 pub enum syntaqlite::analysis::CatalogLayer
 pub enum syntaqlite::analysis::CheckLevel
+pub enum syntaqlite::analysis::ColumnKind
 pub enum syntaqlite::analysis::DiagnosticMessage
 pub enum syntaqlite::analysis::FunctionCategory
 pub enum syntaqlite::analysis::Help
@@ -164,10 +169,18 @@ pub fn syntaqlite::analysis::Analysis::lineage(&self) -> core::option::Option<sy
 pub fn syntaqlite::analysis::Analysis::source(&self) -> &str
 pub fn syntaqlite::analysis::Analysis::statements(&self) -> &[syntaqlite::analysis::StatementAnalysis]
 pub fn syntaqlite::analysis::CatalogLayerContents::insert_function_overload(&mut self, impl core::convert::Into<alloc::string::String>, syntaqlite::analysis::FunctionCategory, syntaqlite::analysis::AritySpec)
-pub fn syntaqlite::analysis::CatalogLayerContents::insert_table(&mut self, impl core::convert::Into<alloc::string::String>, core::option::Option<alloc::vec::Vec<alloc::string::String>>, bool)
+pub fn syntaqlite::analysis::CatalogLayerContents::insert_table(&mut self, impl core::convert::Into<alloc::string::String>, core::option::Option<alloc::vec::Vec<syntaqlite::analysis::Column>>, bool)
 pub fn syntaqlite::analysis::CatalogLayerContents::insert_table_function(&mut self, impl core::convert::Into<alloc::string::String>, syntaqlite::analysis::AritySpec, alloc::vec::Vec<alloc::string::String>)
 pub fn syntaqlite::analysis::CatalogLayerContents::insert_view(&mut self, impl core::convert::Into<alloc::string::String>, core::option::Option<alloc::vec::Vec<alloc::string::String>>)
 pub fn syntaqlite::analysis::CatalogLayerContents::relation_names(&self) -> impl core::iter::traits::iterator::Iterator<Item = &str>
+pub fn syntaqlite::analysis::Column::deserialize<D: serde_core::de::Deserializer<'de>>(D) -> core::result::Result<Self, <D as serde_core::de::Deserializer>::Error>
+pub fn syntaqlite::analysis::Column::from(&str) -> Self
+pub fn syntaqlite::analysis::Column::from(alloc::string::String) -> Self
+pub fn syntaqlite::analysis::Column::generated(impl core::convert::Into<alloc::string::String>) -> Self
+pub fn syntaqlite::analysis::Column::hidden(impl core::convert::Into<alloc::string::String>) -> Self
+pub fn syntaqlite::analysis::Column::kind(&self) -> syntaqlite::analysis::ColumnKind
+pub fn syntaqlite::analysis::Column::name(&self) -> &str
+pub fn syntaqlite::analysis::Column::new(impl core::convert::Into<alloc::string::String>, syntaqlite::analysis::ColumnKind) -> Self
 pub fn syntaqlite::analysis::DiagnosticMessage::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn syntaqlite::analysis::DiagnosticMessage::is_parse_error(&self) -> bool
 pub fn syntaqlite::analysis::DiagnosticMessage::serialize<S: serde_core::ser::Serializer>(&self, S) -> core::result::Result<<S as serde_core::ser::Serializer>::Ok, <S as serde_core::ser::Serializer>::Error>
@@ -301,6 +314,7 @@ pub struct syntaqlite::analysis::Analyzer
 pub struct syntaqlite::analysis::Catalog
 pub struct syntaqlite::analysis::CatalogLayerContents
 pub struct syntaqlite::analysis::CheckConfig
+pub struct syntaqlite::analysis::Column
 pub struct syntaqlite::analysis::ColumnLineage
 pub struct syntaqlite::analysis::ColumnOrigin
 pub struct syntaqlite::analysis::DefinedRelation
@@ -343,6 +357,9 @@ pub syntaqlite::analysis::CatalogLayer::Document
 pub syntaqlite::analysis::CheckLevel::Allow
 pub syntaqlite::analysis::CheckLevel::Deny
 pub syntaqlite::analysis::CheckLevel::Warn
+pub syntaqlite::analysis::ColumnKind::Generated
+pub syntaqlite::analysis::ColumnKind::Hidden
+pub syntaqlite::analysis::ColumnKind::Normal
 pub syntaqlite::analysis::ColumnLineage::index: u32
 pub syntaqlite::analysis::ColumnLineage::name: alloc::string::String
 pub syntaqlite::analysis::ColumnLineage::origin: core::option::Option<syntaqlite::analysis::ColumnOrigin>

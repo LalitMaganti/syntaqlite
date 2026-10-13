@@ -243,7 +243,26 @@ syntaqlite.Table(name, columns=None)
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `name` | `str` | Table name |
-| `columns` | `list[str] \| None` | Column names. When `None`, any column reference is accepted. |
+| `columns` | `list[str \| Column] \| None` | Column names, or [`Column`](#syntaqlite-column) values for generated and hidden columns. When `None`, any column reference is accepted. |
+
+### `syntaqlite.Column`
+
+```python
+syntaqlite.Column(name, kind=syntaqlite.ColumnKind.NORMAL)
+```
+
+A table column with its [`ColumnKind`](#syntaqlite-columnkind).
+
+### `syntaqlite.ColumnKind`
+
+How a table column takes part in `SELECT *` and in an `INSERT` without a
+column list. Every column can be referenced by name.
+
+| Member | Value | Meaning |
+|--------|-------|---------|
+| `NORMAL` | `"normal"` | An ordinary column |
+| `GENERATED` | `"generated"` | Included in `SELECT *`, but not filled by an `INSERT` without a column list |
+| `HIDDEN` | `"hidden"` | A hidden virtual-table column, in neither |
 
 ### `syntaqlite.View`
 
@@ -251,7 +270,10 @@ syntaqlite.Table(name, columns=None)
 syntaqlite.View(name, columns=None)
 ```
 
-Same fields as [`Table`](#syntaqlite-table).
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `name` | `str` | View name |
+| `columns` | `list[str] \| None` | Column names. When `None`, any column reference is accepted. |
 
 ## Result types
 

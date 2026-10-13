@@ -91,12 +91,115 @@ impl From<DialectFunctionCategory> for FunctionCategory {
     }
 }
 
+/// How a table column takes part in `SELECT *` and in an `INSERT` without a
+/// column list. Every column can be referenced by name.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde::Deserialize),
+    serde(rename_all = "lowercase")
+)]
+pub enum ColumnKind {
+    /// An ordinary column.
+    #[default]
+    Normal,
+    /// A generated column: included in `SELECT *`, but not filled by an
+    /// `INSERT` without a column list.
+    Generated,
+    /// A hidden virtual-table column: in neither `SELECT *` nor an `INSERT`
+    /// without a column list.
+    Hidden,
+}
+
+/// A table column registered in a [`CatalogLayerContents`].
+///
+/// Converts from a name for an ordinary column.
+///
+/// ```
+/// # use syntaqlite::analysis::{Column, ColumnKind};
+/// let plain: Column = "id".into();
+/// assert_eq!(plain.kind(), ColumnKind::Normal);
+/// assert_eq!(Column::generated("total").kind(), ColumnKind::Generated);
+/// ```
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Column {
+    name: String,
+    kind: ColumnKind,
+}
+
+impl Column {
+    /// A column of the given kind.
+    pub fn new(name: impl Into<String>, kind: ColumnKind) -> Self {
+        Column {
+            name: name.into(),
+            kind,
+        }
+    }
+
+    /// A generated column.
+    pub fn generated(name: impl Into<String>) -> Self {
+        Self::new(name, ColumnKind::Generated)
+    }
+
+    /// A hidden virtual-table column.
+    pub fn hidden(name: impl Into<String>) -> Self {
+        Self::new(name, ColumnKind::Hidden)
+    }
+
+    /// The column name.
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    /// How the column takes part in `SELECT *` and `INSERT`.
+    pub fn kind(&self) -> ColumnKind {
+        self.kind
+    }
+}
+
+impl From<&str> for Column {
+    fn from(name: &str) -> Self {
+        Self::new(name, ColumnKind::Normal)
+    }
+}
+
+impl From<String> for Column {
+    fn from(name: String) -> Self {
+        Self::new(name, ColumnKind::Normal)
+    }
+}
+
+/// Deserializes from a name, or from `{"name": ..., "kind": ...}` where
+/// `kind` is `"normal"` (the default), `"generated"` or `"hidden"`.
+#[cfg(feature = "serde")]
+impl<'de> serde::Deserialize<'de> for Column {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        #[derive(serde::Deserialize)]
+        #[serde(untagged, expecting = "a column name or {\"name\", \"kind\"}")]
+        enum Repr {
+            Name(String),
+            Def(Def),
+        }
+        #[derive(serde::Deserialize)]
+        #[serde(deny_unknown_fields)]
+        struct Def {
+            name: String,
+            #[serde(default)]
+            kind: ColumnKind,
+        }
+        Ok(match Repr::deserialize(deserializer)? {
+            Repr::Name(name) => name.into(),
+            Repr::Def(def) => Column::new(def.name, def.kind),
+        })
+    }
+}
+
 #[derive(Debug, Clone)]
 struct RelationEntry {
     name: String,
     /// `None` = table is known to exist but column list is not tracked.
     /// Column references against it are conservatively accepted.
-    columns: Option<Vec<String>>,
+    columns: Option<Vec<Column>>,
     /// `true` for WITHOUT ROWID tables — no implicit rowid/oid/_rowid_ columns.
     without_rowid: bool,
     /// `true` if this relation is a view (not a physical table).
@@ -218,7 +321,7 @@ impl CatalogLayerContents {
     /// # Example
     ///
     /// ```
-    /// # use syntaqlite::analysis::CatalogLayer;
+    /// # use syntaqlite::analysis::{CatalogLayer, Column};
     /// # use syntaqlite::Catalog;
     /// let mut catalog = Catalog::new(syntaqlite::sqlite_dialect());
     /// let db = catalog.layer_mut(CatalogLayer::Database);
@@ -226,13 +329,20 @@ impl CatalogLayerContents {
     /// // Known columns — misspelled column names will produce diagnostics.
     /// db.insert_table("users", Some(vec!["id".into(), "name".into()]), false);
     ///
+    /// // Generated and hidden columns are declared by kind.
+    /// db.insert_table(
+    ///     "orders",
+    ///     Some(vec!["price".into(), "qty".into(), Column::generated("total")]),
+    ///     false,
+    /// );
+    ///
     /// // Unknown columns — any column reference is accepted.
     /// db.insert_table("external_data", None, false);
     /// ```
     pub fn insert_table(
         &mut self,
         name: impl Into<String>,
-        columns: Option<Vec<String>>,
+        columns: Option<Vec<Column>>,
         without_rowid: bool,
     ) {
         let name = name.into();
@@ -273,7 +383,7 @@ impl CatalogLayerContents {
             key,
             RelationEntry {
                 name,
-                columns,
+                columns: columns.map(|cols| cols.into_iter().map(Column::from).collect()),
                 without_rowid: true, // views have no rowid
                 is_view: true,
             },
@@ -439,7 +549,7 @@ mod dialect_builtins {
             }
             layer.insert_table(
                 entry.info.name,
-                Some(entry.info.columns.iter().map(ToString::to_string).collect()),
+                Some(entry.info.columns.iter().map(|&c| c.into()).collect()),
                 entry.info.without_rowid,
             );
         }
@@ -688,12 +798,18 @@ impl Catalog {
             #[serde(default)]
             tables: Vec<TableInput>,
             #[serde(default)]
-            views: Vec<TableInput>,
+            views: Vec<ViewInput>,
             #[serde(default)]
             functions: Vec<FunctionInput>,
         }
         #[derive(serde::Deserialize)]
         struct TableInput {
+            name: String,
+            #[serde(default)]
+            columns: Vec<Column>,
+        }
+        #[derive(serde::Deserialize)]
+        struct ViewInput {
             name: String,
             #[serde(default)]
             columns: Vec<String>,
@@ -716,7 +832,12 @@ impl Catalog {
             let cols = if t.columns.is_empty() {
                 None
             } else {
-                Some(t.columns.iter().map(|c| c.to_ascii_lowercase()).collect())
+                Some(
+                    t.columns
+                        .into_iter()
+                        .map(|c| Column::new(c.name.to_ascii_lowercase(), c.kind))
+                        .collect(),
+                )
             };
             db.insert_table(t.name, cols, false);
         }
@@ -791,7 +912,8 @@ impl Catalog {
                 };
                 let normalized_name = name_val.into_owned();
                 let cols = reader.extract_columns(&fields, columns, select);
-                self.layers[target.index()].insert_view(normalized_name, cols);
+                let names = cols.map(|cols| cols.into_iter().map(|c| c.name).collect());
+                self.layers[target.index()].insert_view(normalized_name, names);
             }
             SemanticRole::DefineFunction {
                 name,
@@ -899,12 +1021,13 @@ impl Catalog {
         let layer = target.index();
         match op_name {
             "ADD_COLUMN" => {
-                let added = fields
-                    .node_id_at(column)
+                let def = fields.node_id_at(column);
+                let added = def
                     .and_then(|id| reader.column_def_name(id))
                     .or_else(|| alter_name(stmt, fields, old_name));
                 if let (Some(cols), Some(col)) = (entry.columns.as_mut(), added) {
-                    cols.push(col.to_ascii_lowercase());
+                    let kind = def.map_or(ColumnKind::Normal, |id| reader.column_def_kind(id));
+                    cols.push(Column::new(col.to_ascii_lowercase(), kind));
                 }
                 self.layers[layer].insert_entry(&table_name, entry);
             }
@@ -912,7 +1035,7 @@ impl Catalog {
                 if let (Some(cols), Some(col)) =
                     (entry.columns.as_mut(), alter_name(stmt, fields, old_name))
                 {
-                    cols.retain(|c| !c.eq_ignore_ascii_case(&col));
+                    cols.retain(|c| !c.name.eq_ignore_ascii_case(&col));
                 }
                 self.layers[layer].insert_entry(&table_name, entry);
             }
@@ -923,8 +1046,8 @@ impl Catalog {
                     alter_name(stmt, fields, new_name),
                 ) {
                     for c in cols.iter_mut() {
-                        if c.eq_ignore_ascii_case(&from) {
-                            *c = to.to_ascii_lowercase();
+                        if c.name.eq_ignore_ascii_case(&from) {
+                            c.name = to.to_ascii_lowercase();
                         }
                     }
                 }
@@ -963,6 +1086,7 @@ impl Catalog {
     /// column references against it are conservatively accepted.
     pub(crate) fn add_query_table(&mut self, name: &str, columns: Option<Vec<String>>) {
         if let Some(frame) = self.layers[FIXED_LAYER_COUNT..].last_mut() {
+            let columns = columns.map(|cols| cols.into_iter().map(Column::from).collect());
             frame.insert_table(name, columns, false);
         }
     }
@@ -1057,7 +1181,11 @@ impl Catalog {
                 return (None, false);
             }
             if let Some(rel) = layer.relation(key) {
-                return (rel.columns.clone(), rel.without_rowid);
+                let names = rel
+                    .columns
+                    .as_ref()
+                    .map(|cols| cols.iter().map(|c| c.name.clone()).collect());
+                return (names, rel.without_rowid);
             }
             if let Some(tf) = layer.table_function(key) {
                 let cols = if tf.output_columns.is_empty() {
@@ -1093,7 +1221,7 @@ impl Catalog {
                 if table.is_none_or(|t| rel.name.eq_ignore_ascii_case(t))
                     && let Some(cols) = &rel.columns
                 {
-                    names.extend(cols.iter().map(|c| c.to_ascii_lowercase()));
+                    names.extend(cols.iter().map(|c| c.name.to_ascii_lowercase()));
                 }
             }
         }
@@ -1211,7 +1339,7 @@ mod tests {
         let mut cat = sqlite_catalog();
         cat.layer_mut(CatalogLayer::Database).insert_table(
             "users",
-            Some(vec!["id".to_string(), "name".to_string()]),
+            Some(vec!["id".into(), "name".into()]),
             false,
         );
         assert!(cat.resolve_relation(&NameKey::new("users")));
@@ -1364,6 +1492,96 @@ mod tests {
         }
     }
 
+    /// The columns `cat` resolves `table` to, as `(name, kind)` pairs.
+    fn column_kinds(cat: &Catalog, table: &str) -> Vec<(String, ColumnKind)> {
+        let rel = cat
+            .visible_relation(&NameKey::new(table))
+            .expect("table exists");
+        let cols = rel.columns.as_ref().expect("columns are known");
+        cols.iter().map(|c| (c.name.clone(), c.kind)).collect()
+    }
+
+    #[test]
+    fn ddl_records_generated_columns() {
+        let dialect = crate::sqlite::dialect::dialect();
+        let cat = Catalog::from_ddl(
+            dialect,
+            &["CREATE TABLE t(a, b AS (a * 2), c GENERATED ALWAYS AS (a) STORED);"],
+        )
+        .0;
+        assert_eq!(
+            column_kinds(&cat, "t"),
+            [
+                ("a".into(), ColumnKind::Normal),
+                ("b".into(), ColumnKind::Generated),
+                ("c".into(), ColumnKind::Generated),
+            ]
+        );
+    }
+
+    #[test]
+    fn alter_keeps_column_kinds() {
+        let dialect = crate::sqlite::dialect::dialect();
+        let cat = Catalog::from_ddl(
+            dialect,
+            &["CREATE TABLE t(a, b AS (a)); \
+               ALTER TABLE t ADD COLUMN c AS (a); \
+               ALTER TABLE t RENAME COLUMN b TO bb; \
+               ALTER TABLE t ADD COLUMN d; \
+               ALTER TABLE t DROP COLUMN a;"],
+        )
+        .0;
+        assert_eq!(
+            column_kinds(&cat, "t"),
+            [
+                ("bb".into(), ColumnKind::Generated),
+                ("c".into(), ColumnKind::Generated),
+                ("d".into(), ColumnKind::Normal),
+            ]
+        );
+    }
+
+    #[test]
+    fn json_columns_carry_kinds() {
+        let dialect = crate::sqlite::dialect::dialect();
+        let cat = Catalog::from_json(
+            dialect,
+            r#"{"tables": [{"name": "ft", "columns": [
+                "body",
+                {"name": "len", "kind": "generated"},
+                {"name": "rank", "kind": "hidden"},
+                {"name": "id"}
+            ]}]}"#,
+        )
+        .unwrap();
+        assert_eq!(
+            column_kinds(&cat, "ft"),
+            [
+                ("body".into(), ColumnKind::Normal),
+                ("len".into(), ColumnKind::Generated),
+                ("rank".into(), ColumnKind::Hidden),
+                ("id".into(), ColumnKind::Normal),
+            ]
+        );
+    }
+
+    #[test]
+    fn json_rejects_malformed_columns() {
+        let dialect = crate::sqlite::dialect::dialect();
+        for column in [
+            r#"{"name": "a", "generated": true}"#,
+            r#"{"name": "a", "kind": "virtual"}"#,
+        ] {
+            let json = format!(r#"{{"tables": [{{"name": "t", "columns": [{column}]}}]}}"#);
+            assert!(
+                Catalog::from_json(dialect.clone(), &json).is_err(),
+                "{column} should be rejected"
+            );
+        }
+        let view = r#"{"views": [{"name": "v", "columns": [{"name": "a"}]}]}"#;
+        assert!(Catalog::from_json(dialect, view).is_err());
+    }
+
     #[test]
     fn alter_add_column_registers_column() {
         let dialect = crate::sqlite::dialect::dialect();
@@ -1439,11 +1657,8 @@ mod tests {
         let dialect = crate::sqlite::dialect::dialect();
         let mut cat = Catalog::new(dialect.clone());
         // Simulate a table established by an earlier (already promoted) pass.
-        cat.layer_mut(CatalogLayer::Connection).insert_table(
-            "t3",
-            Some(vec!["a".to_string()]),
-            false,
-        );
+        cat.layer_mut(CatalogLayer::Connection)
+            .insert_table("t3", Some(vec!["a".into()]), false);
         accumulate_into(
             &mut cat,
             &dialect,
@@ -1490,11 +1705,8 @@ mod tests {
     #[test]
     fn clear_database() {
         let mut cat = sqlite_catalog();
-        cat.layer_mut(CatalogLayer::Database).insert_table(
-            "tmp",
-            Some(vec!["id".to_string()]),
-            false,
-        );
+        cat.layer_mut(CatalogLayer::Database)
+            .insert_table("tmp", Some(vec!["id".into()]), false);
         assert!(cat.resolve_relation(&NameKey::new("tmp")));
         cat.new_database();
         assert!(!cat.resolve_relation(&NameKey::new("tmp")));
@@ -1505,7 +1717,7 @@ mod tests {
         let mut cat = sqlite_catalog();
         cat.layer_mut(CatalogLayer::Connection).insert_table(
             "conn_tbl",
-            Some(vec!["id".to_string()]),
+            Some(vec!["id".into()]),
             false,
         );
         cat.new_connection();
@@ -1517,7 +1729,7 @@ mod tests {
         let mut cat = sqlite_catalog();
         cat.layer_mut(CatalogLayer::Connection).insert_table(
             "conn_tbl",
-            Some(vec!["id".to_string()]),
+            Some(vec!["id".into()]),
             false,
         );
         assert!(cat.resolve_relation(&NameKey::new("conn_tbl")));

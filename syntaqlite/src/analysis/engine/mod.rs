@@ -653,7 +653,7 @@ mod tests {
         for (name, cols) in [("t1", vec!["a", "b"]), ("t2", vec!["x", "y"])] {
             catalog.layer_mut(CatalogLayer::Database).insert_table(
                 name,
-                Some(cols.into_iter().map(String::from).collect()),
+                Some(cols.into_iter().map(Into::into).collect()),
                 false,
             );
         }

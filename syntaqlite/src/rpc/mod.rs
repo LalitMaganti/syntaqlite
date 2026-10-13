@@ -37,7 +37,7 @@ use serde_json::Value;
 use syntaqlite_syntax::any::{AnyParser, AnyTokenizer, ParseOutcome};
 
 use crate::analysis::{
-    Analysis, CatalogLayer, DiagnosticMessage, Help, ModuleResolver, RelationKind,
+    Analysis, CatalogLayer, Column, DiagnosticMessage, Help, ModuleResolver, RelationKind,
     Severity as SemSeverity, StatementAnalysis,
 };
 use crate::any::AnyDialect;
@@ -382,7 +382,7 @@ fn token_category_name(c: syntaqlite_syntax::any::TokenCategory) -> &'static str
 #[derive(Deserialize)]
 struct TableRec {
     name: String,
-    columns: Option<Vec<String>>,
+    columns: Option<Vec<Column>>,
 }
 
 #[derive(Deserialize)]

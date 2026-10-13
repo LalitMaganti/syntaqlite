@@ -78,6 +78,11 @@
       "SYNTAQLITE_COLUMN_CONSTRAINT_TYPE_REFERENCES": 5,
       "SYNTAQLITE_COLUMN_CONSTRAINT_TYPE_UNIQUE": 3
     },
+    "SyntaqliteColumnKind": {
+      "SYNTAQLITE_COLUMN_GENERATED": 1,
+      "SYNTAQLITE_COLUMN_HIDDEN": 2,
+      "SYNTAQLITE_COLUMN_NORMAL": 0
+    },
     "SyntaqliteCompoundOp": {
       "SYNTAQLITE_COMPOUND_OP_EXCEPT": 3,
       "SYNTAQLITE_COMPOUND_OP_INTERSECT": 2,
@@ -377,7 +382,7 @@
     },
     "syntaqlite_analyzer_add_tables": {
       "linkage": "external",
-      "type": "void (SyntaqliteAnalyzer *, const SyntaqliteRelationDef *, uint32_t)"
+      "type": "void (SyntaqliteAnalyzer *, const SyntaqliteTableDef *, uint32_t)"
     },
     "syntaqlite_analyzer_add_views": {
       "linkage": "external",
@@ -1157,6 +1162,9 @@
       "SyntaqliteColumnConstraintType": {
         "size": 4
       },
+      "SyntaqliteColumnKind": {
+        "size": 4
+      },
       "SyntaqliteCompoundOp": {
         "size": 4
       },
@@ -1436,14 +1444,12 @@
         "size": 8
       },
       "SyntaqliteColumnDef": {
-        "align": 4,
+        "align": 8,
         "fields": {
-          "column_name": 4,
-          "constraints": 24,
-          "tag": 0,
-          "type_name": 8
+          "kind": 8,
+          "name": 0
         },
-        "size": 28
+        "size": 16
       },
       "SyntaqliteColumnDefList": {
         "align": 4,
@@ -2392,6 +2398,15 @@
           "tag": 0
         },
         "size": 8
+      },
+      "SyntaqliteTableDef": {
+        "align": 8,
+        "fields": {
+          "column_count": 16,
+          "columns": 8,
+          "name": 0
+        },
+        "size": 24
       },
       "SyntaqliteTableRef": {
         "align": 4,
@@ -3356,20 +3371,12 @@
     "SyntaqliteColumnDef": {
       "fields": [
         {
-          "name": "tag",
-          "type": "SyntaqliteNodeTag"
+          "name": "name",
+          "type": "const char *"
         },
         {
-          "name": "column_name",
-          "type": "uint32_t"
-        },
-        {
-          "name": "type_name",
-          "type": "SyntaqliteTextSpan"
-        },
-        {
-          "name": "constraints",
-          "type": "uint32_t"
+          "name": "kind",
+          "type": "SyntaqliteColumnKind"
         }
       ],
       "kind": "struct"
@@ -5703,6 +5710,23 @@
       ],
       "kind": "struct"
     },
+    "SyntaqliteTableDef": {
+      "fields": [
+        {
+          "name": "name",
+          "type": "const char *"
+        },
+        {
+          "name": "columns",
+          "type": "const SyntaqliteColumnDef *"
+        },
+        {
+          "name": "column_count",
+          "type": "uint32_t"
+        }
+      ],
+      "kind": "struct"
+    },
     "SyntaqliteTableRef": {
       "fields": [
         {
@@ -6167,6 +6191,7 @@
     "SyntaqliteColumnConstraintType": "enum SyntaqliteColumnConstraintType",
     "SyntaqliteColumnDef": "struct SyntaqliteColumnDef",
     "SyntaqliteColumnDefList": "struct SyntaqliteColumnDefList",
+    "SyntaqliteColumnKind": "enum SyntaqliteColumnKind",
     "SyntaqliteColumnLineage": "struct SyntaqliteColumnLineage",
     "SyntaqliteColumnNumber": "uint32_t",
     "SyntaqliteColumnOrigin": "struct SyntaqliteColumnOrigin",
@@ -6291,6 +6316,7 @@
     "SyntaqliteTableConstraint": "struct SyntaqliteTableConstraint",
     "SyntaqliteTableConstraintList": "struct SyntaqliteTableConstraintList",
     "SyntaqliteTableConstraintType": "enum SyntaqliteTableConstraintType",
+    "SyntaqliteTableDef": "struct SyntaqliteTableDef",
     "SyntaqliteTableRef": "struct SyntaqliteTableRef",
     "SyntaqliteTableSource": "union SyntaqliteTableSource",
     "SyntaqliteTextSpan": "struct SyntaqliteTextSpan",

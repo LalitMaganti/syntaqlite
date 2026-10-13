@@ -276,17 +276,55 @@ class Analysis:
         return f"Analysis({', '.join(parts)})"
 
 
+class ColumnKind(StrEnum):
+    """How a table column takes part in ``SELECT *`` and in an ``INSERT``
+    without a column list. Every column can be referenced by name.
+
+    - :attr:`NORMAL` — an ordinary column.
+    - :attr:`GENERATED` — included in ``SELECT *``, but not filled by an
+      ``INSERT`` without a column list.
+    - :attr:`HIDDEN` — a hidden virtual-table column, in neither.
+    """
+
+    NORMAL = "normal"
+    GENERATED = "generated"
+    HIDDEN = "hidden"
+
+
+class Column:
+    """A table column with a :class:`ColumnKind`, for :class:`Table`."""
+
+    __slots__ = ("name", "kind")
+
+    def __init__(self, name: str, kind: ColumnKind = ColumnKind.NORMAL):
+        self.name = name
+        self.kind = ColumnKind(kind)
+
+    def _to_dict(self) -> dict:
+        return {"name": self.name, "kind": self.kind.value}
+
+    def __repr__(self):
+        return f"Column({self.name!r}, {self.kind!s})"
+
+
 class Table:
-    """A table definition for schema registration."""
+    """A table definition for schema registration.
+
+    Columns are names, or :class:`Column` values for generated and hidden
+    columns.
+    """
 
     __slots__ = ("name", "columns")
 
-    def __init__(self, name: str, columns: list[str] | None = None):
+    def __init__(self, name: str, columns: list[str | Column] | None = None):
         self.name = name
         self.columns = columns
 
     def _to_dict(self) -> dict:
-        return {"name": self.name, "columns": self.columns}
+        columns = None
+        if self.columns is not None:
+            columns = [c._to_dict() if isinstance(c, Column) else c for c in self.columns]
+        return {"name": self.name, "columns": columns}
 
     def __repr__(self):
         return f"Table({self.name!r}, {self.columns!r})" if self.columns else f"Table({self.name!r})"

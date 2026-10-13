@@ -9,8 +9,10 @@ use std::ffi::{CStr, c_char};
 use crate::analysis::AnalysisConfig;
 use crate::analysis::catalog::{Catalog, CatalogLayer};
 
-use super::codes::{arity_spec_from_c, function_category_from_c};
+use super::codes::{arity_spec_from_c, column_kind_from_c, function_category_from_c};
+use super::types::SyntaqliteTableDef;
 use super::{SyntaqliteAnalyzer, SyntaqliteRelationDef};
+use crate::analysis::catalog::Column;
 
 /// Clear accumulated DDL from the catalog.
 ///
@@ -26,19 +28,21 @@ pub unsafe extern "C" fn syntaqlite_analyzer_reset_catalog(v: *mut SyntaqliteAna
     state.analysis_config = AnalysisConfig::default();
 }
 
-/// Add tables to the database layer of the catalog.
+/// Add tables to the database layer of the catalog. A table with an
+/// out-of-range column kind is not added.
 ///
 /// # Safety
 ///
 /// - `v` must be a valid pointer from `syntaqlite_analyzer_create_sqlite`.
-/// - `tables` must point to `count` valid `SyntaqliteRelationDef` entries.
+/// - `tables` must point to `count` valid `SyntaqliteTableDef` entries.
 /// - Each `name` must be a valid NUL-terminated C string.
 /// - Each `columns` may be NULL. If non-NULL, must point to `column_count`
-///   valid NUL-terminated C string pointers.
+///   valid `SyntaqliteColumnDef` entries whose names are valid NUL-terminated
+///   C strings.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn syntaqlite_analyzer_add_tables(
     v: *mut SyntaqliteAnalyzer,
-    tables: *const SyntaqliteRelationDef,
+    tables: *const SyntaqliteTableDef,
     count: u32,
 ) {
     // SAFETY: caller guarantees `v` is valid.
@@ -58,15 +62,16 @@ pub unsafe extern "C" fn syntaqlite_analyzer_add_tables(
         let columns = if def.columns.is_null() {
             None
         } else {
-            let cols: Vec<String> = (0..def.column_count as usize)
+            let cols: Option<Vec<Column>> = (0..def.column_count as usize)
                 .map(|j| {
                     // SAFETY: caller guarantees `columns[j]` is valid.
-                    unsafe { CStr::from_ptr(*def.columns.add(j)) }
-                        .to_str()
-                        .unwrap_or("")
-                        .to_owned()
+                    let col = unsafe { &*def.columns.add(j) };
+                    // SAFETY: caller guarantees `name` is a valid NUL-terminated C string.
+                    let col_name = unsafe { CStr::from_ptr(col.name) }.to_str().unwrap_or("");
+                    Some(Column::new(col_name, column_kind_from_c(col.kind)?))
                 })
                 .collect();
+            let Some(cols) = cols else { continue };
             Some(cols)
         };
 
