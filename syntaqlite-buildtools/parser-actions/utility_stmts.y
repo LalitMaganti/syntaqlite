@@ -238,8 +238,8 @@ ifnotexists(A) ::= IF NOT EXISTS. {
 // ============ CREATE VIEW ============
 
 cmd(A) ::= createkw temp(T) VIEW ifnotexists(E) nm(Y) dbnm(Z) eidlist_opt(C) AS select(S). {
-    SyntaqliteTextSpan view_name = Z.z ? synq_span(pCtx, Z) : synq_span(pCtx, Y);
-    SyntaqliteTextSpan view_schema = Z.z ? synq_span(pCtx, Y) : SYNQ_NO_SPAN;
+    SyntaqliteTextSpan view_name = Z.z ? synq_span_dequote(pCtx, Z) : synq_span_dequote(pCtx, Y);
+    SyntaqliteTextSpan view_schema = Z.z ? synq_span_dequote(pCtx, Y) : SYNQ_NO_SPAN;
     A = synq_parse_create_view_stmt(pCtx,
         view_name,
         view_schema,

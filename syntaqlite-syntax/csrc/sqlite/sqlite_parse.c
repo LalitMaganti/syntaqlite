@@ -9998,11 +9998,11 @@ static YYACTIONTYPE yy_reduce(
     case 362: /* cmd ::= createkw temp VIEW ifnotexists nm dbnm eidlist_opt AS
                  select */
     {
-      SyntaqliteTextSpan view_name = yymsp[-3].minor.yy0.z
-                                         ? synq_span(pCtx, yymsp[-3].minor.yy0)
-                                         : synq_span(pCtx, yymsp[-4].minor.yy0);
+      SyntaqliteTextSpan view_name =
+          yymsp[-3].minor.yy0.z ? synq_span_dequote(pCtx, yymsp[-3].minor.yy0)
+                                : synq_span_dequote(pCtx, yymsp[-4].minor.yy0);
       SyntaqliteTextSpan view_schema =
-          yymsp[-3].minor.yy0.z ? synq_span(pCtx, yymsp[-4].minor.yy0)
+          yymsp[-3].minor.yy0.z ? synq_span_dequote(pCtx, yymsp[-4].minor.yy0)
                                 : SYNQ_NO_SPAN;
       yymsp[-8].minor.yy277 = synq_parse_create_view_stmt(
           pCtx, view_name, view_schema, yymsp[-7].minor.yy300,
