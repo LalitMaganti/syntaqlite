@@ -205,6 +205,25 @@ class Completion(TestSuite):
 """,
         )
 
+    def test_unknown_source_offers_every_column(self):
+        return LspDiffTestBlueprint(
+            sql="CREATE TABLE a (ax INT);\nCREATE TABLE b (bx INT);\nSELECT x<|> FROM nosuch;",
+            op="completion",
+            out="""\
+            column: ax
+            column: bx
+            keyword: EXISTS
+            keyword: INDEXED
+            function: hex
+            function: json_extract
+            function: jsonb_extract
+            function: load_extension
+            function: max
+            function: unhex
+            function: unixepoch
+""",
+        )
+
     def test_tables_after_from(self):
         return LspDiffTestBlueprint(
             sql="CREATE TABLE users (id INTEGER);\nCREATE TABLE orders (id INTEGER);\nSELECT * FROM <|>",

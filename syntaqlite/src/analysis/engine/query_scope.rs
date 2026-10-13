@@ -230,6 +230,14 @@ impl QueryScope {
         names
     }
 
+    /// Whether any source in scope has an unknown column list.
+    pub(crate) fn has_unknown_columns(&self) -> bool {
+        self.frames.iter().any(|f| {
+            f.named.values().any(|t| t.columns.is_none())
+                || f.anonymous.iter().any(|t| t.columns.is_none())
+        })
+    }
+
     /// Collect all known column names (for fuzzy suggestions).
     pub(crate) fn all_column_names(&self, table: Option<&str>) -> Vec<String> {
         let mut names: Vec<String> = Vec::new();
