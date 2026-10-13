@@ -275,15 +275,22 @@ fn role_to_bytes(
             bytes[2] = fi(bindings);
             bytes[3] = fi(body);
         }
-        SynqRole::TriggerScope { target, when, body } => {
+        SynqRole::TriggerScope {
+            target,
+            when,
+            body,
+            event,
+        } => {
             bytes[0] = disc(SemanticRole::TriggerScope {
                 target: 0,
                 when: 0,
                 body: 0,
+                event: 0,
             });
             bytes[1] = fi(target);
             bytes[2] = fi(when);
             bytes[3] = fi(body);
+            bytes[4] = opt(event);
         }
         SynqRole::DmlScope {
             with_recursive,
@@ -416,6 +423,10 @@ fn role_to_bytes(
             bytes[1] = fi(kind);
             bytes[2] = fi(target);
             bytes[3] = fi(if_exists);
+        }
+        SynqRole::TriggerUpdateOf { columns } => {
+            bytes[0] = disc(SemanticRole::TriggerUpdateOf { columns: 0 });
+            bytes[1] = opt(columns);
         }
     }
 

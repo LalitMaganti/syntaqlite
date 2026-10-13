@@ -236,6 +236,8 @@ pub mod roles {
             when: FieldIdx,
             /// Field index of the trigger body.
             body: FieldIdx,
+            /// Field index of the trigger event (`FIELD_ABSENT` if absent).
+            event: FieldIdx,
         } = 14,
 
         /// DML statement (INSERT/UPDATE/DELETE): push a query scope, then
@@ -356,6 +358,13 @@ pub mod roles {
             /// Field index of the IF EXISTS flag.
             if_exists: FieldIdx,
         } = 24,
+
+        /// Trigger `UPDATE OF` column list: resolves against the trigger's
+        /// target. `SQLite` never checks these names.
+        TriggerUpdateOf {
+            /// Field index of the column list (`FIELD_ABSENT` if absent).
+            columns: FieldIdx,
+        } = 25,
     }
 
     /// Metadata for a node type that defines a template macro.
@@ -492,6 +501,7 @@ pub mod roles {
                 },
                 24,
             );
+            check(SemanticRole::TriggerUpdateOf { columns: 0 }, 25);
         }
 
         #[test]

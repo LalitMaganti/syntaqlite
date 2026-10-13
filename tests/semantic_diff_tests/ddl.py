@@ -664,3 +664,52 @@ class CreateViewColumnList(TestSuite):
               = help: did you mean 'a'?
             """,
         )
+
+
+class CreateTrigger(TestSuite):
+    def test_unknown_target(self):
+        return DiffTestBlueprint(
+            sql="CREATE TRIGGER trg AFTER INSERT ON nosuch BEGIN SELECT 1; END;",
+            strict_schema=True,
+            out="""\
+            error: unknown table 'nosuch'
+             --> <stdin>:1:36
+              |
+            1 | CREATE TRIGGER trg AFTER INSERT ON nosuch BEGIN SELECT 1; END;
+              |                                    ^~~~~~
+            """,
+        )
+
+    def test_new_and_old_have_target_columns(self):
+        return DiffTestBlueprint(
+            sql="CREATE TABLE t (a); CREATE TRIGGER trg AFTER UPDATE ON t WHEN OLD.a <> NEW.a BEGIN SELECT NEW.a; END;",
+            strict_schema=True,
+            out="",
+        )
+
+    def test_new_unknown_column(self):
+        return DiffTestBlueprint(
+            sql="CREATE TABLE t (a); CREATE TRIGGER trg AFTER INSERT ON t BEGIN SELECT NEW.nope; END;",
+            strict_schema=True,
+            out="""\
+            error: unknown column 'nope' in table 'NEW'
+             --> <stdin>:1:75
+              |
+            1 | CREATE TABLE t (a); CREATE TRIGGER trg AFTER INSERT ON t BEGIN SELECT NEW.nope; END;
+              |                                                                           ^~~~
+            """,
+        )
+
+    def test_update_of_unknown_column_is_accepted(self):
+        return DiffTestBlueprint(
+            sql="CREATE TABLE t (a); CREATE TRIGGER trg AFTER UPDATE OF nope ON t BEGIN SELECT 1; END;",
+            strict_schema=True,
+            out="",
+        )
+
+    def test_instead_of_trigger_on_view(self):
+        return DiffTestBlueprint(
+            sql="CREATE VIEW v AS SELECT 1 AS x; CREATE TRIGGER trg INSTEAD OF INSERT ON v BEGIN SELECT NEW.x; END;",
+            strict_schema=True,
+            out="",
+        )

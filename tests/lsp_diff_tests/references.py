@@ -155,3 +155,26 @@ class References(TestSuite):
             1:9..1:11
 """,
         )
+
+    def test_table_and_column_in_trigger(self):
+        return LspDiffTestBlueprint(
+            sql="CREATE TABLE t (<|>qty INT);\nCREATE TRIGGER trg AFTER UPDATE OF qty ON t WHEN OLD.qty <> NEW.qty BEGIN SELECT NEW.qty; END;",
+            op="references",
+            include_declaration=False,
+            out="""\
+            1:35..1:38
+            1:53..1:56
+            1:64..1:67
+            1:85..1:88
+""",
+        )
+
+    def test_trigger_target_table(self):
+        return LspDiffTestBlueprint(
+            sql="CREATE TABLE <|>t (qty INT);\nCREATE TRIGGER trg AFTER INSERT ON t BEGIN SELECT 1; END;",
+            op="references",
+            include_declaration=False,
+            out="""\
+            1:35..1:36
+""",
+        )
