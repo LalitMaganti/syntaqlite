@@ -478,6 +478,33 @@ class CreateTableForeignKeyParent(TestSuite):
 
 
 class DropTable(TestSuite):
+    def test_drop_already_dropped_table(self):
+        return DiffTestBlueprint(
+            sql="CREATE TABLE t (a); DROP TABLE t; DROP TABLE t;",
+            strict_schema=True,
+            out="""\
+            error: unknown table 't'
+             --> <stdin>:1:46
+              |
+            1 | CREATE TABLE t (a); DROP TABLE t; DROP TABLE t;
+              |                                              ^
+            """,
+        )
+
+    def test_rename_already_renamed_table(self):
+        return DiffTestBlueprint(
+            sql="CREATE TABLE t (a); ALTER TABLE t RENAME TO u; ALTER TABLE t RENAME TO v;",
+            strict_schema=True,
+            out="""\
+            error: unknown table 't'
+             --> <stdin>:1:60
+              |
+            1 | CREATE TABLE t (a); ALTER TABLE t RENAME TO u; ALTER TABLE t RENAME TO v;
+              |                                                            ^
+              = help: did you mean 'u'?
+            """,
+        )
+
     def test_select_after_drop_table(self):
         return DiffTestBlueprint(
             sql="CREATE TABLE t (a); DROP TABLE t; SELECT a FROM t;",
