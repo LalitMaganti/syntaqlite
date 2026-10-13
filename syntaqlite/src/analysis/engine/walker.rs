@@ -22,6 +22,7 @@ use syntaqlite_syntax::any::{
 };
 use syntaqlite_syntax::source::DocRange;
 
+use crate::analysis::QualifiedRefContext;
 use crate::analysis::catalog::{Catalog, ColumnResolution, FunctionCheckResult, drop_kind_is_view};
 use crate::analysis::name_key::NameKey;
 use crate::analysis::stmt_reader::StmtReader;
@@ -80,6 +81,8 @@ pub(crate) struct ColumnRefEvent<'a> {
     pub(crate) in_view_body: bool,
     /// The ref is a foreign key's parent column.
     pub(crate) in_fk_parent: bool,
+    /// The ref is where `SQLite` forbids qualified names.
+    pub(crate) unqualified_only: Option<QualifiedRefContext>,
     pub(crate) resolution: &'a ColumnResolution,
     /// `SQLite`'s double-quoted-string bug-compat: a `"foo"` identifier in
     /// expression position that doesn't resolve to a column is re-interpreted
@@ -244,6 +247,8 @@ pub(crate) struct SemanticWalker<'a, 'b> {
     defining_table: Option<DefiningTable>,
     /// A foreign key's parent columns are being walked.
     in_fk_parent: bool,
+    /// Expressions are being walked where `SQLite` forbids qualified names.
+    unqualified_only: Option<QualifiedRefContext>,
     /// Reusable lookup key — catalog/scope probes share one allocation.
     key_scratch: NameKey,
 }
@@ -269,6 +274,7 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
             view_body_depth: 0,
             defining_table: None,
             in_fk_parent: false,
+            unqualified_only: None,
             key_scratch: NameKey::default(),
         }
     }
@@ -400,8 +406,8 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
             SemanticRole::AlterTable { target, .. } => {
                 self.walk_schema_target(visitor, node_id, fields, target);
             }
-            SemanticRole::IndexScope { table, .. } => {
-                self.walk_index_scope(visitor, node_id, fields, table);
+            SemanticRole::IndexScope { .. } => {
+                self.walk_index_scope(visitor, node_id, fields, role);
             }
             SemanticRole::ColumnConstraint { .. } | SemanticRole::TableConstraint { .. } => {
                 self.walk_constraint(visitor, fields, role);
@@ -678,6 +684,7 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
                 dqs_candidate,
                 in_view_body: self.view_body_depth > 0,
                 in_fk_parent: self.in_fk_parent,
+                unqualified_only: self.unqualified_only,
             };
             let mut cx = WalkCtx {
                 catalog: self.catalog,
@@ -823,13 +830,27 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
                 check,
                 generated,
                 references,
-            } => (check, [generated, FIELD_ABSENT], references),
+            } => (
+                check,
+                [
+                    (generated, Some(QualifiedRefContext::GeneratedColumn)),
+                    (FIELD_ABSENT, None),
+                ],
+                references,
+            ),
             SemanticRole::TableConstraint {
                 check,
                 columns,
                 fk_columns,
                 references,
-            } => (check, [columns, fk_columns], references),
+            } => (
+                check,
+                [
+                    (columns, Some(QualifiedRefContext::IndexExpression)),
+                    (fk_columns, None),
+                ],
+                references,
+            ),
             _ => unreachable!("not a constraint role: {role:?}"),
         };
         let Some(table) = self.defining_table.take() else {
@@ -837,7 +858,8 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
         };
         self.walk_in_table_scope(visitor, fields.node_id_at(check_idx), &table, table.rowid);
         // Generated columns and key columns cannot reference rowid.
-        for idx in no_rowid_idxs {
+        for (idx, unqualified_only) in no_rowid_idxs {
+            self.unqualified_only = unqualified_only;
             self.walk_in_table_scope(
                 visitor,
                 fields.node_id_at(idx),
@@ -845,6 +867,7 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
                 RowIdPolicy::WithoutRowId,
             );
         }
+        self.unqualified_only = None;
         self.walk_opt(visitor, fields.node_id_at(references_idx));
         self.defining_table = Some(table);
     }
@@ -917,8 +940,16 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
         visitor: &mut V,
         node_id: AnyNodeId,
         fields: &NodeFields,
-        table_idx: u8,
+        role: SemanticRole,
     ) {
+        let SemanticRole::IndexScope {
+            table: table_idx,
+            columns,
+            where_clause,
+        } = role
+        else {
+            unreachable!("not an index role: {role:?}");
+        };
         self.scope.push();
         if let Some((name, range)) = self.stmt.span_field_range(fields, table_idx) {
             let name_ident = self
@@ -947,7 +978,10 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
             self.scope
                 .add_table(&name_ident, columns, RowIdPolicy::WithoutRowId);
         }
-        self.walk_children(visitor, node_id);
+        self.unqualified_only = Some(QualifiedRefContext::IndexExpression);
+        self.walk_opt(visitor, fields.node_id_at(columns));
+        self.unqualified_only = None;
+        self.walk_opt(visitor, fields.node_id_at(where_clause));
         self.scope.pop();
     }
 

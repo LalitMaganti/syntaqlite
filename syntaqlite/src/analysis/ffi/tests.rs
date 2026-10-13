@@ -1025,6 +1025,13 @@ fn kind_code_cte_column_count_mismatch() {
 }
 
 #[test]
+fn kind_code_qualified_ref() {
+    let v = Validator::new();
+    v.analyze("CREATE TABLE t(a); CREATE INDEX i ON t(t.a)");
+    assert!(v.has_code(DIAG_CODE_QUALIFIED_REF));
+}
+
+#[test]
 fn kind_code_per_statement_matches_aggregate() {
     let v = Validator::new();
     v.analyze("SELECT id FROM no_such_table");
@@ -1046,6 +1053,7 @@ fn diagnostic_code_to_c_covers_all_variants() {
     check(M::UnknownModule { name: "m".into() }, DIAG_CODE_UNKNOWN_MODULE);
     check(M::FunctionArity { name: "f".into(), expected: vec![1], got: 0 }, DIAG_CODE_FUNCTION_ARITY);
     check(M::CteColumnCountMismatch { name: "c".into(), declared: 1, actual: 2 }, DIAG_CODE_CTE_COLUMN_COUNT_MISMATCH);
+    check(M::QualifiedRef { table: "t".into(), column: "c".into(), context: super::super::QualifiedRefContext::IndexExpression }, DIAG_CODE_QUALIFIED_REF);
 }
 
 // ── Custom function / table-function registration ────────────────────

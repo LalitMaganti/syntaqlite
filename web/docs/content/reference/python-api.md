@@ -354,6 +354,7 @@ syntaqlite.RenderOptions(*, source_name="")
 | `UNKNOWN_MODULE` | `4` |
 | `FUNCTION_ARITY` | `5` |
 | `CTE_COLUMN_COUNT_MISMATCH` | `6` |
+| `QUALIFIED_REF` | `7` |
 
 ### `DefinedRelation`
 

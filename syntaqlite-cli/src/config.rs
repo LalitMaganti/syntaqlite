@@ -46,6 +46,7 @@ pub(crate) struct CheckOptions {
     pub unknown_function: Option<String>,
     pub function_arity: Option<String>,
     pub cte_columns: Option<String>,
+    pub qualified_ref: Option<String>,
     /// Shorthand: sets all schema checks.
     pub schema: Option<String>,
     /// Shorthand: sets all checks.

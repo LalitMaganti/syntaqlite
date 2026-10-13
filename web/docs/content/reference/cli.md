@@ -66,8 +66,8 @@ syntaqlite analyze [OPTIONS] [FILES...]
 | `--sqlite-cflag <FLAG>` | | Enable a compile-time flag (repeatable) |
 
 Check categories: `parse-errors`, `unknown-table`, `unknown-column`,
-`unknown-function`, `function-arity`, `cte-columns`. Groups: `schema` (all 4
-schema checks), `all`.
+`unknown-function`, `function-arity`, `cte-columns`, `qualified-ref`. Groups:
+`schema` (all 4 schema checks), `all`.
 
 When `--schema` is provided, the analyzer loads `CREATE TABLE` / `CREATE VIEW`
 statements from the schema files and checks the remaining input files against
