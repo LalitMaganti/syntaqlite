@@ -10,6 +10,8 @@
 
 use std::collections::HashSet;
 
+use syntaqlite_syntax::TokenType;
+use syntaqlite_syntax::any::AnyTokenType;
 use syntaqlite_syntax::util::is_suggestable_keyword;
 
 use crate::analysis::Catalog;
@@ -54,6 +56,13 @@ pub(crate) fn build_completion_items(
                 items.push(CompletionEntry::new(name, CompletionKind::Column));
             }
         }
+        return items;
+    }
+
+    // Names are only valid where the parser accepts an identifier.
+    let id = u32::from(AnyTokenType::from(TokenType::Id));
+    if !info.tokens.is_empty() && !expected_set.contains(&id) {
+        items.sort_by_key(|a| a.kind().sort_priority());
         return items;
     }
 
