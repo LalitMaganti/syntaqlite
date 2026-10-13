@@ -972,9 +972,12 @@ def collect_lsp():
     with open(sqls_config, "w") as f:
         f.write(f"lowercaseKeywords: false\nconnections:\n  - alias: test\n    driver: sqlite3\n    dataSourceName: {test_db}\n")
 
-    schema_sql = os.path.join(lsp_dir, "schema.sql")
+    synq_config = os.path.join(lsp_dir, "syntaqlite.toml")
+    with open(synq_config, "w") as f:
+        f.write('schema = ["schema.sql"]\n')
+
     lsp_servers = [
-        ("syntaqlite", [SYNQ, "lsp"], ["--schema", schema_sql]),
+        ("syntaqlite", [SYNQ, "--config", synq_config, "lsp"], []),
         ("sqls", [SQLS, "-c", sqls_config], ["--db", test_db]),
         ("sql-language-server", ["npx", "sql-language-server", "up", "--method", "stdio"], []),
     ]
