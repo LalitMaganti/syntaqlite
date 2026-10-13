@@ -234,6 +234,7 @@ pub fn syntaqlite::lsp::LspHost::clear_session_context(&mut self)
 pub fn syntaqlite::lsp::LspHost::completion_items(&mut self, &str, syntaqlite_syntax::source::DocOffset) -> alloc::vec::Vec<syntaqlite::lsp::CompletionEntry>
 pub fn syntaqlite::lsp::LspHost::default() -> Self
 pub fn syntaqlite::lsp::LspHost::new() -> Self
+pub fn syntaqlite::lsp::LspHost::record_schema_definitions(&mut self, &str, &str)
 pub fn syntaqlite::lsp::LspHost::semantic_tokens_encoded(&mut self, &str, core::option::Option<syntaqlite_syntax::source::DocRange>) -> alloc::vec::Vec<u32>
 pub fn syntaqlite::lsp::LspHost::set_analysis_config(&mut self, syntaqlite::AnalysisConfig)
 pub fn syntaqlite::lsp::LspHost::set_format_config(&mut self, syntaqlite::fmt::FormatConfig)
@@ -388,6 +389,7 @@ pub syntaqlite::lsp::LspConfig::analysis_config: core::option::Option<syntaqlite
 pub syntaqlite::lsp::LspConfig::format_config: core::option::Option<syntaqlite::fmt::FormatConfig>
 pub syntaqlite::lsp::LspConfig::schema_catalog: core::option::Option<syntaqlite::Catalog>
 pub syntaqlite::lsp::LspConfig::schema_map: core::option::Option<syntaqlite::lsp::SchemaMap>
+pub syntaqlite::lsp::LspConfig::schema_sources: alloc::vec::Vec<(alloc::string::String, alloc::string::String)>
 pub syntaqlite::util::SqliteFlag::EnableBytecodeVtab = 27
 pub syntaqlite::util::SqliteFlag::EnableCarray = 28
 pub syntaqlite::util::SqliteFlag::EnableDbpageVtab = 29

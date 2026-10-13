@@ -76,6 +76,8 @@ pub struct LspConfig {
     pub analysis_config: Option<AnalysisConfig>,
     /// Per-file schema resolution from `[schemas]` globs.
     pub schema_map: Option<SchemaMap>,
+    /// Schema files as `(file URI, DDL)`, so navigation can jump into them.
+    pub schema_sources: Vec<(String, String)>,
 }
 
 // ── LspDispatcher ─────────────────────────────────────────────────────────
@@ -143,6 +145,9 @@ impl LspDispatcher {
         let mut host = LspHost::with_dialect(dialect.into());
 
         let has_analysis_config = config.analysis_config.is_some();
+        for (uri, ddl) in &config.schema_sources {
+            host.record_schema_definitions(ddl, uri);
+        }
         if let Some(fmt) = config.format_config {
             host.set_format_config(fmt);
         }
