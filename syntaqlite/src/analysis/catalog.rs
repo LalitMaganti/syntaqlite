@@ -817,8 +817,42 @@ impl Catalog {
                     target, stmt, &reader, &fields, op, target_idx, new_name, old_name, column,
                 );
             }
+            SemanticRole::DropObject {
+                kind,
+                target: target_idx,
+                ..
+            } => self.accumulate_drop(target, stmt, &fields, kind, target_idx),
             // Non-DDL roles are irrelevant to catalog accumulation.
             _ => {}
+        }
+    }
+
+    /// Remove the relation a `DROP TABLE` / `DROP VIEW` names. `SQLite`
+    /// rejects dropping a builtin or the wrong kind of relation, so those
+    /// leave the catalog unchanged.
+    fn accumulate_drop(
+        &mut self,
+        target: CatalogLayer,
+        stmt: &AnyParsedStatement<'_>,
+        fields: &NodeFields,
+        kind: u8,
+        target_idx: u8,
+    ) {
+        let Some(drops_view) = drop_kind_is_view(fields, kind) else {
+            return;
+        };
+        let Some(name) = alter_qualified_name(stmt, fields, target_idx) else {
+            return;
+        };
+        let key = NameKey::new(&name);
+        if self.visible_relation_is_dialect_builtin(&key) {
+            return;
+        }
+        if self
+            .visible_relation(&key)
+            .is_some_and(|r| r.is_view == drops_view)
+        {
+            self.layers[target.index()].remove_relation(&name);
         }
     }
 
@@ -1139,6 +1173,40 @@ impl AlterOp {
             3 => Some(Self::AddColumn),
             _ => None,
         }
+    }
+}
+
+/// The object type of a `DROP`, mirroring the `DropObjectType` enum ordering
+/// in `parser-nodes/schema_ops.synq`.
+enum DropObjectType {
+    Table,
+    Index,
+    View,
+    Trigger,
+}
+
+impl DropObjectType {
+    fn from_discriminant(v: u32) -> Option<Self> {
+        match v {
+            0 => Some(Self::Table),
+            1 => Some(Self::Index),
+            2 => Some(Self::View),
+            3 => Some(Self::Trigger),
+            _ => None,
+        }
+    }
+}
+
+/// For a `DROP` of a table (`Some(false)`) or view (`Some(true)`), which kind
+/// it drops. `None` for indexes and triggers, which the catalog doesn't track.
+pub(crate) fn drop_kind_is_view(fields: &NodeFields, kind: u8) -> Option<bool> {
+    let FieldValue::Enum(v) = fields[kind as usize] else {
+        return None;
+    };
+    match DropObjectType::from_discriminant(v)? {
+        DropObjectType::Table => Some(false),
+        DropObjectType::View => Some(true),
+        DropObjectType::Index | DropObjectType::Trigger => None,
     }
 }
 

@@ -475,3 +475,85 @@ class CreateTableForeignKeyParent(TestSuite):
             strict_schema=True,
             out="",
         )
+
+
+class DropTable(TestSuite):
+    def test_select_after_drop_table(self):
+        return DiffTestBlueprint(
+            sql="CREATE TABLE t (a); DROP TABLE t; SELECT a FROM t;",
+            strict_schema=True,
+            out="""\
+            error: unknown table 't'
+             --> <stdin>:1:49
+              |
+            1 | CREATE TABLE t (a); DROP TABLE t; SELECT a FROM t;
+              |                                                 ^
+            """,
+        )
+
+    def test_create_index_after_drop_table(self):
+        return DiffTestBlueprint(
+            sql="CREATE TABLE t (a); DROP TABLE t; CREATE INDEX i ON t (a);",
+            strict_schema=True,
+            out="""\
+            error: unknown table 't'
+             --> <stdin>:1:53
+              |
+            1 | CREATE TABLE t (a); DROP TABLE t; CREATE INDEX i ON t (a);
+              |                                                     ^
+            """,
+        )
+
+    def test_drop_view(self):
+        return DiffTestBlueprint(
+            sql="CREATE VIEW v AS SELECT 1; DROP VIEW v; SELECT * FROM v;",
+            strict_schema=True,
+            out="""\
+            error: unknown table 'v'
+             --> <stdin>:1:55
+              |
+            1 | CREATE VIEW v AS SELECT 1; DROP VIEW v; SELECT * FROM v;
+              |                                                       ^
+            """,
+        )
+
+    def test_recreate_after_drop(self):
+        return DiffTestBlueprint(
+            sql="CREATE TABLE t (a); DROP TABLE t; CREATE TABLE t (b); SELECT b FROM t;",
+            strict_schema=True,
+            out="",
+        )
+
+    def test_drop_unknown_table(self):
+        return DiffTestBlueprint(
+            sql="DROP TABLE nosuch;",
+            strict_schema=True,
+            out="""\
+            error: unknown table 'nosuch'
+             --> <stdin>:1:12
+              |
+            1 | DROP TABLE nosuch;
+              |            ^~~~~~
+            """,
+        )
+
+    def test_drop_if_exists_unknown_table(self):
+        return DiffTestBlueprint(
+            sql="DROP TABLE IF EXISTS nosuch;",
+            strict_schema=True,
+            out="",
+        )
+
+    def test_drop_table_on_view_keeps_view(self):
+        return DiffTestBlueprint(
+            sql="CREATE VIEW v AS SELECT 1 AS x; DROP TABLE v; SELECT x FROM v;",
+            strict_schema=True,
+            out="",
+        )
+
+    def test_builtin_table_survives_drop(self):
+        return DiffTestBlueprint(
+            sql="DROP TABLE sqlite_master; SELECT name FROM sqlite_master;",
+            strict_schema=True,
+            out="",
+        )

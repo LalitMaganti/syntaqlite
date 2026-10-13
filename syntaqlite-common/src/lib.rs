@@ -344,6 +344,18 @@ pub mod roles {
             /// Field index of the parent column list (`FIELD_ABSENT` if absent).
             columns: FieldIdx,
         } = 23,
+
+        /// DROP statement: existence-checks the target and removes a dropped
+        /// table or view from the catalog. The runtime interprets `kind`'s
+        /// enum discriminant against the dialect's drop-object ordering.
+        DropObject {
+            /// Field index of the drop-object-type enum discriminant.
+            kind: FieldIdx,
+            /// Field index of the target (a qualified-name node).
+            target: FieldIdx,
+            /// Field index of the IF EXISTS flag.
+            if_exists: FieldIdx,
+        } = 24,
     }
 
     /// Metadata for a node type that defines a template macro.
@@ -471,6 +483,14 @@ pub mod roles {
                     columns: 0,
                 },
                 23,
+            );
+            check(
+                SemanticRole::DropObject {
+                    kind: 0,
+                    target: 0,
+                    if_exists: 0,
+                },
+                24,
             );
         }
 

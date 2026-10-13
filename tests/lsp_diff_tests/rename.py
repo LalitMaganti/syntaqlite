@@ -102,3 +102,14 @@ class Rename(TestSuite):
             1:35..1:36 -> "parent"
 """,
         )
+
+    def test_rename_table_renames_drop_target(self):
+        return LspDiffTestBlueprint(
+            sql="CREATE TABLE <|>t (a INT);\nDROP TABLE t;",
+            op="rename",
+            new_name="u",
+            out="""\
+            0:13..0:14 -> "u"
+            1:11..1:12 -> "u"
+""",
+        )

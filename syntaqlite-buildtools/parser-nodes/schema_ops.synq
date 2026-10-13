@@ -19,6 +19,8 @@ node DropStmt {
   if_exists: inline Bool
   target: index QualifiedName
 
+  semantic { drop_object(kind: object_type, target: target, if_exists: if_exists) }
+
   fmt {
     "DROP" space
     enum_display(object_type, {

@@ -22,7 +22,7 @@ use syntaqlite_syntax::any::{
 };
 use syntaqlite_syntax::source::DocRange;
 
-use crate::analysis::catalog::{Catalog, ColumnResolution, FunctionCheckResult};
+use crate::analysis::catalog::{Catalog, ColumnResolution, FunctionCheckResult, drop_kind_is_view};
 use crate::analysis::name_key::NameKey;
 use crate::analysis::stmt_reader::StmtReader;
 use crate::dialect::{FIELD_ABSENT, SemanticRole};
@@ -398,7 +398,7 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
                 self.walk_compound_scope(visitor, fields, left, right, orderby, limit_clause);
             }
             SemanticRole::AlterTable { target, .. } => {
-                self.walk_alter_table(visitor, node_id, fields, target);
+                self.walk_schema_target(visitor, node_id, fields, target);
             }
             SemanticRole::IndexScope { table, .. } => {
                 self.walk_index_scope(visitor, node_id, fields, table);
@@ -406,6 +406,7 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
             SemanticRole::ColumnConstraint { .. } | SemanticRole::TableConstraint { .. } => {
                 self.walk_constraint(visitor, fields, role);
             }
+            SemanticRole::DropObject { .. } => self.walk_drop(visitor, node_id, fields, role),
             SemanticRole::ForeignKey { table, columns } => {
                 self.walk_foreign_key(visitor, node_id, fields, table, columns);
             }
@@ -717,12 +718,12 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
         }
     }
 
-    /// Existence-check an `ALTER TABLE` target. Mirrors the DML target check:
-    /// fire a source-ref event so the diagnostic visitor reports an unknown
-    /// table (with suggestions). Resolution ignores tombstones so a `RENAME TO`
-    /// — which the catalog already applied for this statement, retiring the old
-    /// name — doesn't flag its own target as missing.
-    fn walk_alter_table<V: SemanticVisitor>(
+    /// Existence-check an `ALTER TABLE` or `DROP` target. Mirrors the DML
+    /// target check: fire a source-ref event so the diagnostic visitor reports
+    /// an unknown table (with suggestions). Resolution ignores tombstones so a
+    /// `RENAME TO` or `DROP` — which the catalog already applied for this
+    /// statement, retiring the name — doesn't flag its own target as missing.
+    fn walk_schema_target<V: SemanticVisitor>(
         &mut self,
         visitor: &mut V,
         node_id: AnyNodeId,
@@ -948,6 +949,31 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
         }
         self.walk_children(visitor, node_id);
         self.scope.pop();
+    }
+
+    /// Existence-check a `DROP TABLE` / `DROP VIEW` target unless it says
+    /// `IF EXISTS`. Indexes and triggers aren't tracked, so aren't checked.
+    fn walk_drop<V: SemanticVisitor>(
+        &mut self,
+        visitor: &mut V,
+        node_id: AnyNodeId,
+        fields: &NodeFields,
+        role: SemanticRole,
+    ) {
+        let SemanticRole::DropObject {
+            kind,
+            target,
+            if_exists,
+        } = role
+        else {
+            unreachable!("not a drop role: {role:?}");
+        };
+        if matches!(fields[if_exists as usize], FieldValue::Bool(true))
+            || drop_kind_is_view(fields, kind).is_none()
+        {
+            return;
+        }
+        self.walk_schema_target(visitor, node_id, fields, target);
     }
 
     #[expect(clippy::too_many_arguments)]

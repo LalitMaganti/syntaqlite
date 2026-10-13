@@ -403,6 +403,20 @@ fn role_to_bytes(
             bytes[1] = fi(table);
             bytes[2] = opt(columns);
         }
+        SynqRole::DropObject {
+            kind,
+            target,
+            if_exists,
+        } => {
+            bytes[0] = disc(SemanticRole::DropObject {
+                kind: 0,
+                target: 0,
+                if_exists: 0,
+            });
+            bytes[1] = fi(kind);
+            bytes[2] = fi(target);
+            bytes[3] = fi(if_exists);
+        }
     }
 
     bytes
