@@ -159,6 +159,15 @@ pub(crate) struct InsertValuesEvent<'a> {
     pub(crate) values: usize,
 }
 
+/// A subquery returning a different number of columns than its position
+/// takes.
+#[derive(Copy, Clone)]
+pub(crate) struct SubqueryColumnsEvent {
+    pub(crate) range: DocRange,
+    pub(crate) got: usize,
+    pub(crate) expected: usize,
+}
+
 /// A compound SELECT whose arms have different numbers of columns.
 #[derive(Copy, Clone)]
 pub(crate) struct CompoundColumnsEvent<'a> {
@@ -234,6 +243,7 @@ pub(crate) trait SemanticVisitor {
     const WANTS_ON_CLAUSE_ORDER: bool = false;
     const WANTS_VALUES_TERMS: bool = false;
     const WANTS_INSERT_VALUES: bool = false;
+    const WANTS_SUBQUERY_COLUMNS: bool = false;
     const WANTS_CTE_BINDING: bool = false;
     const WANTS_SCOPED_SOURCE: bool = false;
     /// Return true to receive [`enter_query`](Self::enter_query) /
@@ -322,6 +332,13 @@ pub(crate) trait SemanticVisitor {
     fn on_insert_values(&mut self, _stmt: &mut AnyParsedStatement<'_>, _ev: InsertValuesEvent<'_>) {
     }
 
+    fn on_subquery_columns(
+        &mut self,
+        _stmt: &mut AnyParsedStatement<'_>,
+        _ev: SubqueryColumnsEvent,
+    ) {
+    }
+
     /// Called once per CTE binding, BEFORE its body is walked. The body
     /// will observe the binding's own name as a resolved catalog source
     /// (`SQLite` allows any CTE to self-reference, with or without the
@@ -386,6 +403,9 @@ pub(crate) struct SemanticWalker<'a, 'b> {
     right_join_in_from: bool,
     /// Sources an ON clause being walked may not reference.
     on_clause: Option<OnClauseLimit>,
+    /// Expressions in positions that accept a row value, such as a
+    /// comparison's operands.
+    row_value_positions: HashSet<AnyNodeId>,
     /// Expressions are being walked where `SQLite` forbids qualified names.
     unqualified_only: Option<QualifiedRefContext>,
     /// Reusable lookup key — catalog/scope probes share one allocation.
@@ -423,6 +443,7 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
             windows: Vec::new(),
             right_join_in_from: false,
             on_clause: None,
+            row_value_positions: HashSet::new(),
             unqualified_only: None,
             key_scratch: NameKey::default(),
         }
@@ -482,9 +503,22 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
             | SemanticRole::ColumnDef { .. }
             | SemanticRole::ResultColumn { .. }
             | SemanticRole::CteBinding { .. }
-            | SemanticRole::WindowDefinition { .. } => self.walk_children(visitor, node_id),
+            | SemanticRole::WindowDefinition { .. }
+            | SemanticRole::CaseWhen { .. }
+            | SemanticRole::Paren { .. }
+            | SemanticRole::RowValue { .. }
+            | SemanticRole::Literal { .. } => self.walk_children(visitor, node_id),
             SemanticRole::WindowRef { .. } => self.walk_window_ref(visitor, node_id, fields, role),
             SemanticRole::Values { rows } => self.walk_values(visitor, node_id, fields, rows),
+            SemanticRole::RowValueOperands { .. }
+            | SemanticRole::Case { .. }
+            | SemanticRole::In { .. }
+            | SemanticRole::Assignment { .. } => {
+                self.walk_row_value_context(visitor, node_id, fields, role);
+            }
+            SemanticRole::ScalarSubquery { select } => {
+                self.walk_scalar_subquery(visitor, node_id, fields, select);
+            }
             SemanticRole::Join { .. } => self.walk_join(visitor, node_id, fields, role),
 
             SemanticRole::Call { name, args } => {
@@ -1902,6 +1936,208 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
         })
     }
 
+    /// Walk an expression whose operands may be row values, after noting
+    /// which ones may be.
+    fn walk_row_value_context<V: SemanticVisitor>(
+        &mut self,
+        visitor: &mut V,
+        node_id: AnyNodeId,
+        fields: &NodeFields,
+        role: SemanticRole,
+    ) {
+        match role {
+            SemanticRole::RowValueOperands {
+                op,
+                first,
+                second,
+                third,
+            } => {
+                let operands = [first, second, third].map(|idx| fields.node_id_at(idx));
+                let compares = op == FIELD_ABSENT || {
+                    let op = self.stmt.enum_name(node_id, op);
+                    // SQLite reads `x IS NULL` and its variants as a test of
+                    // one value, not a comparison.
+                    is_comparison(op)
+                        && !(op.starts_with("IS")
+                            && operands
+                                .into_iter()
+                                .flatten()
+                                .any(|e| self.is_null_literal(e)))
+                };
+                if compares {
+                    for operand in operands {
+                        self.allow_row_value(operand);
+                    }
+                }
+            }
+            SemanticRole::Case { operand, whens } => {
+                if fields.node_id_at(operand).is_some() {
+                    self.allow_row_value(fields.node_id_at(operand));
+                    self.allow_row_value_whens(fields, whens);
+                }
+            }
+            SemanticRole::In { operand, source } => {
+                let operand = fields.node_id_at(operand).expect("IN has an operand");
+                self.allow_row_value(Some(operand));
+                // `IN ()` has no source.
+                if let Some(source) = fields.node_id_at(source) {
+                    self.check_in_source(visitor, operand, source);
+                }
+            }
+            SemanticRole::Assignment { columns, value } => {
+                if fields.node_id_at(columns).is_some() {
+                    self.allow_row_value(fields.node_id_at(value));
+                }
+            }
+            _ => unreachable!("not a row value context: {role:?}"),
+        }
+        self.walk_children(visitor, node_id);
+    }
+
+    /// A CASE with an operand compares it to each WHEN value.
+    fn allow_row_value_whens(&mut self, fields: &NodeFields, whens: u8) {
+        let whens = fields
+            .node_id_at(whens)
+            .and_then(|id| self.stmt.list_children(id))
+            .expect("a CASE has WHEN branches");
+        for &branch in whens {
+            let reader = StmtReader::new(self.stmt, self.roles);
+            let Some((SemanticRole::CaseWhen { when }, branch_fields)) =
+                reader.role_for_node(branch)
+            else {
+                unreachable!("a CASE holds WHEN branches");
+            };
+            self.allow_row_value(branch_fields.node_id_at(when));
+        }
+    }
+
+    /// Note that `expr`, or the expression it parenthesises, may be a row
+    /// value.
+    fn allow_row_value(&mut self, expr: Option<AnyNodeId>) {
+        if let Some(expr) = expr {
+            let expr = self.unparen(expr);
+            self.row_value_positions.insert(expr);
+        }
+    }
+
+    fn is_null_literal(&self, expr: AnyNodeId) -> bool {
+        let expr = self.unparen(expr);
+        let reader = StmtReader::new(self.stmt, self.roles);
+        matches!(
+            reader.role_for_node(expr),
+            Some((SemanticRole::Literal { kind, .. }, _)) if self.stmt.enum_name(expr, kind) == "NULL"
+        )
+    }
+
+    fn unparen(&self, mut expr: AnyNodeId) -> AnyNodeId {
+        let reader = StmtReader::new(self.stmt, self.roles);
+        while let Some((SemanticRole::Paren { expr: inner }, fields)) = reader.role_for_node(expr) {
+            expr = fields
+                .node_id_at(inner)
+                .expect("a parenthesised expression has an inner one");
+        }
+        expr
+    }
+
+    /// How many values `expr` produces: a row value's items, a subquery's
+    /// columns, or 1. `None` when a subquery's columns are unknown.
+    fn expr_width(&self, expr: AnyNodeId) -> Option<usize> {
+        let expr = self.unparen(expr);
+        let reader = StmtReader::new(self.stmt, self.roles);
+        match reader.role_for_node(expr) {
+            Some((SemanticRole::ScalarSubquery { select }, fields)) => {
+                let select = fields.node_id_at(select).expect("a subquery has a SELECT");
+                self.result_column_count(select)
+            }
+            Some((SemanticRole::RowValue { items }, fields)) => Some(
+                fields
+                    .node_id_at(items)
+                    .and_then(|id| self.stmt.list_children(id))
+                    .expect("a row value has items")
+                    .len(),
+            ),
+            _ => Some(1),
+        }
+    }
+
+    /// Report an IN subquery or table whose width differs from the
+    /// operand's. A value list's entries are checked as values instead.
+    fn check_in_source<V: SemanticVisitor>(
+        &mut self,
+        visitor: &mut V,
+        operand: AnyNodeId,
+        source: AnyNodeId,
+    ) {
+        let Some(expected) = self.expr_width(operand) else {
+            return;
+        };
+        if let Some(values) = self.stmt.list_children(source) {
+            if expected > 1 {
+                for &value in values {
+                    self.allow_row_value(Some(value));
+                }
+            }
+            return;
+        }
+        let reader = StmtReader::new(self.stmt, self.roles);
+        let got = match reader.role_for_node(source) {
+            Some((SemanticRole::SourceRef { name, .. }, fields)) => {
+                let table = self
+                    .stmt
+                    .span_field_ident_text(&fields, name)
+                    .expect("an IN table has a name");
+                self.key_scratch.set(&table);
+                self.catalog
+                    .star_columns(&self.key_scratch)
+                    .map(|cols| cols.len())
+            }
+            _ => self.result_column_count(source),
+        };
+        if V::WANTS_SUBQUERY_COLUMNS
+            && let Some(got) = got
+            && got != expected
+        {
+            self.report_subquery_columns(visitor, source, got, expected);
+        }
+    }
+
+    /// Walk a subquery used as a value, which must produce one column unless
+    /// its position takes a row value.
+    fn walk_scalar_subquery<V: SemanticVisitor>(
+        &mut self,
+        visitor: &mut V,
+        node_id: AnyNodeId,
+        fields: &NodeFields,
+        select: u8,
+    ) {
+        self.walk_children(visitor, node_id);
+        if self.row_value_positions.remove(&node_id) || !V::WANTS_SUBQUERY_COLUMNS {
+            return;
+        }
+        let select = fields.node_id_at(select).expect("a subquery has a SELECT");
+        if let Some(got) = self.result_column_count(select)
+            && got != 1
+        {
+            self.report_subquery_columns(visitor, node_id, got, 1);
+        }
+    }
+
+    fn report_subquery_columns<V: SemanticVisitor>(
+        &mut self,
+        visitor: &mut V,
+        node: AnyNodeId,
+        got: usize,
+        expected: usize,
+    ) {
+        let range = self.stmt.node_range(node).expect("a subquery spans source");
+        let ev = SubqueryColumnsEvent {
+            range,
+            got,
+            expected,
+        };
+        visitor.on_subquery_columns(self.stmt, ev);
+    }
+
     /// Walk a VALUES clause, reporting the first row whose width differs
     /// from the first row's.
     fn walk_values<V: SemanticVisitor>(
@@ -2030,6 +2266,25 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
             true
         });
     }
+}
+
+/// Whether the dialect's name for an operator is a comparison, whose
+/// operands may be row values.
+fn is_comparison(name: &str) -> bool {
+    matches!(
+        name,
+        "EQ" | "EQ_DOUBLE"
+            | "NE"
+            | "NE_ANGLE"
+            | "LT"
+            | "LE"
+            | "GT"
+            | "GE"
+            | "IS"
+            | "IS_NOT"
+            | "IS_DISTINCT"
+            | "IS_NOT_DISTINCT"
+    )
 }
 
 /// What a join's kind implies for ON clause ordering.

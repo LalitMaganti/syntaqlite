@@ -258,6 +258,14 @@ pub enum DiagnosticMessage {
         /// Values each row supplies.
         values: usize,
     },
+    /// A subquery returns a different number of columns than its position
+    /// takes: one for a value, or as many as the operand of an IN.
+    SubqueryColumns {
+        /// Columns the subquery returns.
+        got: usize,
+        /// Columns its position takes.
+        expected: usize,
+    },
     /// A VALUES row has a different number of terms than the first row.
     ValuesTerms {
         /// Terms in the first row.
@@ -365,6 +373,9 @@ impl std::fmt::Display for DiagnosticMessage {
                         "table '{table}' has {columns} columns but {values} values were supplied"
                     )
                 }
+            }
+            Self::SubqueryColumns { got, expected } => {
+                write!(f, "subquery returns {got} columns; expected {expected}")
             }
             Self::ValuesTerms { first, row } => write!(
                 f,
@@ -582,6 +593,12 @@ impl serde::Serialize for DiagnosticMessage {
                 m.serialize_entry("columns", columns)?;
                 m.serialize_entry("values", values)
             }),
+            Self::SubqueryColumns { got, expected } => {
+                kind_with(serializer, "subquery_columns", 2, |m| {
+                    m.serialize_entry("got", got)?;
+                    m.serialize_entry("expected", expected)
+                })
+            }
             Self::ValuesTerms { first, row } => kind_with(serializer, "values_terms", 2, |m| {
                 m.serialize_entry("first", first)?;
                 m.serialize_entry("row", row)

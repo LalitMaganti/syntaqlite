@@ -120,6 +120,7 @@ pub fn syntaqlite::CheckConfig::on_clause_order(&self) -> syntaqlite::CheckLevel
 pub fn syntaqlite::CheckConfig::parse_errors(&self) -> syntaqlite::CheckLevel
 pub fn syntaqlite::CheckConfig::qualified_ref(&self) -> syntaqlite::CheckLevel
 pub fn syntaqlite::CheckConfig::set_by_name(self, &str, syntaqlite::CheckLevel) -> core::result::Result<Self, alloc::string::String>
+pub fn syntaqlite::CheckConfig::subquery_columns(&self) -> syntaqlite::CheckLevel
 pub fn syntaqlite::CheckConfig::unknown_column(&self) -> syntaqlite::CheckLevel
 pub fn syntaqlite::CheckConfig::unknown_function(&self) -> syntaqlite::CheckLevel
 pub fn syntaqlite::CheckConfig::unknown_table(&self) -> syntaqlite::CheckLevel
@@ -137,6 +138,7 @@ pub fn syntaqlite::CheckConfig::with_on_clause_order(self, syntaqlite::CheckLeve
 pub fn syntaqlite::CheckConfig::with_parse_errors(self, syntaqlite::CheckLevel) -> Self
 pub fn syntaqlite::CheckConfig::with_qualified_ref(self, syntaqlite::CheckLevel) -> Self
 pub fn syntaqlite::CheckConfig::with_schema(self, syntaqlite::CheckLevel) -> Self
+pub fn syntaqlite::CheckConfig::with_subquery_columns(self, syntaqlite::CheckLevel) -> Self
 pub fn syntaqlite::CheckConfig::with_unknown_column(self, syntaqlite::CheckLevel) -> Self
 pub fn syntaqlite::CheckConfig::with_unknown_function(self, syntaqlite::CheckLevel) -> Self
 pub fn syntaqlite::CheckConfig::with_unknown_table(self, syntaqlite::CheckLevel) -> Self
@@ -412,6 +414,9 @@ pub syntaqlite::analysis::DiagnosticMessage::QualifiedRef
 pub syntaqlite::analysis::DiagnosticMessage::QualifiedRef::column: alloc::string::String
 pub syntaqlite::analysis::DiagnosticMessage::QualifiedRef::context: syntaqlite::analysis::QualifiedRefContext
 pub syntaqlite::analysis::DiagnosticMessage::QualifiedRef::table: alloc::string::String
+pub syntaqlite::analysis::DiagnosticMessage::SubqueryColumns
+pub syntaqlite::analysis::DiagnosticMessage::SubqueryColumns::expected: usize
+pub syntaqlite::analysis::DiagnosticMessage::SubqueryColumns::got: usize
 pub syntaqlite::analysis::DiagnosticMessage::UnknownColumn
 pub syntaqlite::analysis::DiagnosticMessage::UnknownColumn::column: alloc::string::String
 pub syntaqlite::analysis::DiagnosticMessage::UnknownColumn::table: core::option::Option<alloc::string::String>

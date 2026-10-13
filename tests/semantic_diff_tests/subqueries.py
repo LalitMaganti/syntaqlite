@@ -91,3 +91,89 @@ class AliasedSubqueries(TestSuite):
             strict_schema=True,
             out="",
         )
+
+
+class SubqueryColumns(TestSuite):
+    def test_scalar_subquery_returns_two_columns(self):
+        return DiffTestBlueprint(
+            sql="SELECT 1 + (SELECT 1, 2);",
+            out="""\
+            error: subquery returns 2 columns; expected 1
+             --> <stdin>:1:12
+              |
+            1 | SELECT 1 + (SELECT 1, 2);
+              |            ^~~~~~~~~~~~~
+            """,
+        )
+
+    def test_in_subquery_narrower_than_row_value(self):
+        return DiffTestBlueprint(
+            sql="CREATE TABLE t (a, b); SELECT 1 WHERE (1, 2) IN (SELECT a FROM t);",
+            out="""\
+            error: subquery returns 1 columns; expected 2
+             --> <stdin>:1:50
+              |
+            1 | CREATE TABLE t (a, b); SELECT 1 WHERE (1, 2) IN (SELECT a FROM t);
+              |                                                  ^~~~~~~~~~~~~~~
+            """,
+        )
+
+    def test_in_table_counts_its_columns(self):
+        return DiffTestBlueprint(
+            sql="CREATE TABLE t (a, b); SELECT 1 WHERE 1 IN t;",
+            out="""\
+            error: subquery returns 2 columns; expected 1
+             --> <stdin>:1:39
+              |
+            1 | CREATE TABLE t (a, b); SELECT 1 WHERE 1 IN t;
+              |                                       ^~~~~~
+            """,
+        )
+
+    def test_in_star_subquery(self):
+        return DiffTestBlueprint(
+            sql="CREATE TABLE t (a, b); SELECT 1 WHERE 1 IN (SELECT * FROM t);",
+            out="""\
+            error: subquery returns 2 columns; expected 1
+             --> <stdin>:1:45
+              |
+            1 | CREATE TABLE t (a, b); SELECT 1 WHERE 1 IN (SELECT * FROM t);
+              |                                             ^~~~~~~~~~~~~~~
+            """,
+        )
+
+    def test_row_value_positions_take_wide_subqueries(self):
+        return DiffTestBlueprint(
+            sql=(
+            "CREATE TABLE t (a, b); "
+            "SELECT (SELECT 1, 2) = (1, 2), (1, 2) IN (SELECT a, b FROM t), "
+            "CASE (SELECT 1, 2) WHEN (1, 2) THEN 1 END, "
+            "(1, 2) BETWEEN (SELECT 1, 2) AND (3, 4); "
+            "UPDATE t SET (a, b) = (SELECT 1, 2);"
+            ),
+            out="",
+        )
+
+    def test_is_null_tests_one_value(self):
+        return DiffTestBlueprint(
+            sql="SELECT 1 WHERE (SELECT 1, 2) IS NULL;",
+            out="""\
+            error: subquery returns 2 columns; expected 1
+             --> <stdin>:1:16
+              |
+            1 | SELECT 1 WHERE (SELECT 1, 2) IS NULL;
+              |                ^~~~~~~~~~~~~
+            """,
+        )
+
+    def test_exists_takes_any_width(self):
+        return DiffTestBlueprint(
+            sql="SELECT EXISTS (SELECT 1, 2);",
+            out="",
+        )
+
+    def test_empty_in_list(self):
+        return DiffTestBlueprint(
+            sql="SELECT 1 IN (), (1, 2) IN ();",
+            out="",
+        )

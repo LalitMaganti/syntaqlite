@@ -40,6 +40,8 @@ node CompoundSelect {
 node SubqueryExpr {
   select: index Select
 
+  semantic { scalar_subquery(select: select) }
+
   fmt { group { "(" nest { softline child(select) } softline ")" } }
 }
 
@@ -58,6 +60,8 @@ node InExpr {
   bare_source: inline Bool
   operand: index Expr
   source: index InExprSource
+
+  semantic { in(operand: operand, source: source) }
 
   fmt_precedence(3)
   fmt_group(0)

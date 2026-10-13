@@ -23,8 +23,8 @@ use crate::dialect::SemanticRole;
 use super::walker::{
     BuiltinModifyEvent, CallEvent, ColumnRefEvent, CompoundColumnsEvent, CteBindingEvent,
     CteColumnCountMismatchEvent, DropWrongKindEvent, IndexOnViewEvent, InsertValuesEvent,
-    OnClauseOrderEvent, ScopedSourceEvent, SemanticVisitor, SourceRefEvent, UncheckedRef,
-    UnknownWindowEvent, ValuesTermsEvent, WalkCtx,
+    OnClauseOrderEvent, ScopedSourceEvent, SemanticVisitor, SourceRefEvent, SubqueryColumnsEvent,
+    UncheckedRef, UnknownWindowEvent, ValuesTermsEvent, WalkCtx,
 };
 
 /// Whether `name` is an embedded-SQL interpolation placeholder: an identifier of
@@ -151,6 +151,7 @@ impl CheckConfig {
             DiagnosticMessage::OnClauseOrder { .. } => self.on_clause_order,
             DiagnosticMessage::ValuesTerms { .. } => self.values_terms,
             DiagnosticMessage::InsertValues { .. } => self.insert_values,
+            DiagnosticMessage::SubqueryColumns { .. } => self.subquery_columns,
             DiagnosticMessage::ParseError(_) => self.parse_errors,
         }
     }
@@ -315,6 +316,7 @@ impl<V: SemanticVisitor> SemanticVisitor for StatementVisitor<'_, V> {
     const WANTS_ON_CLAUSE_ORDER: bool = true;
     const WANTS_VALUES_TERMS: bool = true;
     const WANTS_INSERT_VALUES: bool = true;
+    const WANTS_SUBQUERY_COLUMNS: bool = true;
     // LineageCapture wants source refs, scoped sources, CTE bindings,
     // and enter/exit — all forwarded below.
     const WANTS_CTE_BINDING: bool = true;
@@ -547,6 +549,18 @@ impl<V: SemanticVisitor> SemanticVisitor for StatementVisitor<'_, V> {
             None,
         );
         self.extra.on_insert_values(stmt, ev);
+    }
+
+    fn on_subquery_columns(&mut self, stmt: &mut AnyParsedStatement<'_>, ev: SubqueryColumnsEvent) {
+        self.emit_at(
+            ev.range,
+            DiagnosticMessage::SubqueryColumns {
+                got: ev.got,
+                expected: ev.expected,
+            },
+            None,
+        );
+        self.extra.on_subquery_columns(stmt, ev);
     }
 
     fn on_cte_binding(&mut self, stmt: &mut AnyParsedStatement<'_>, ev: CteBindingEvent<'_>) {

@@ -58,6 +58,7 @@ unknown-window = "deny"
 on-clause-order = "deny"
 values-terms = "deny"
 insert-values = "deny"
+subquery-columns = "deny"
 # schema = "deny"           # shorthand for all 4 schema checks
 ```
 
@@ -154,6 +155,7 @@ Each field sets a diagnostic category to `"allow"` (suppress), `"warn"`, or
 | `on-clause-order` | string | `"deny"` | An outer join's `ON` clause referencing a table joined to its right |
 | `values-terms` | string | `"deny"` | `VALUES` rows with a different number of terms than the first row |
 | `insert-values` | string | `"deny"` | `INSERT` statements supplying a different number of values than the columns they fill |
+| `subquery-columns` | string | `"deny"` | Subqueries returning a different number of columns than a value or `IN` takes |
 | `schema` | string | N/A | Shorthand for `unknown-table`, `unknown-column`, `unknown-function`, `function-arity` |
 | `all` | string | N/A | Shorthand for all categories |
 
