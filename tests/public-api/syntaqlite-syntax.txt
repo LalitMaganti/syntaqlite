@@ -1276,6 +1276,7 @@ pub fn syntaqlite_syntax::any::Rewrite<'a>::kind(&self) -> syntaqlite_syntax::an
 pub fn syntaqlite_syntax::any::Rewrite<'a>::name(&self) -> &'a str
 pub fn syntaqlite_syntax::any::Rewrite<'a>::parent(&self) -> core::option::Option<syntaqlite_syntax::source::RewriteIdx>
 pub fn syntaqlite_syntax::any::Rewrite<'a>::parent_buffer(&self) -> &'a syntaqlite_syntax::source::LayerText
+pub fn syntaqlite_syntax::any::TextSpan::is_absent(self) -> bool
 pub fn syntaqlite_syntax::any::TextSpan::is_empty(self) -> bool
 pub fn syntaqlite_syntax::any::TextSpan::is_macro_free(self) -> bool
 pub fn syntaqlite_syntax::any::TextSpan::is_quoted(self) -> bool
