@@ -1469,11 +1469,17 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
         let Some(list_id) = fields.node_id_at(cols_idx) else {
             return;
         };
-        reader.for_each_result_column(list_id, |child_fields, _flags, alias_idx, _expr| {
+        reader.for_each_result_column(list_id, |child_fields, _flags, alias_idx, expr_idx| {
             let alias_node = child_fields.node_id_at(alias_idx);
             let (alias_text, alias_range) = reader.stmt().name_text(alias_node);
             if !alias_text.is_empty() {
                 visitor.on_column_definition(table_name, alias_text, alias_range);
+            } else if let Some((name, range)) = child_fields
+                .node_id_at(expr_idx)
+                .and_then(|id| reader.column_ref_name_span(id))
+            {
+                // An unaliased column passes its own name through.
+                visitor.on_column_definition(table_name, &name, range);
             }
             true
         });

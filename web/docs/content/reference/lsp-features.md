@@ -167,5 +167,3 @@ open document are republished after the change.
   navigation.
 - Unqualified column completion offers columns from every table in the
   schema, not only those in the query's `FROM` clause.
-- A CTE column that passes another column through unchanged, as in
-  `WITH w AS (SELECT qty FROM t)`, has no definition site of its own.

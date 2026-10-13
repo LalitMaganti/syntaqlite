@@ -198,7 +198,10 @@ impl<'a, 'stmt> StmtReader<'a, 'stmt> {
     }
 
     /// Name of a bare column reference, as used in a view's column list.
-    fn column_ref_name_span(&self, node_id: AnyNodeId) -> Option<(Cow<'stmt, str>, DocRange)> {
+    pub(crate) fn column_ref_name_span(
+        &self,
+        node_id: AnyNodeId,
+    ) -> Option<(Cow<'stmt, str>, DocRange)> {
         let (SemanticRole::ColumnRef { column, .. }, fields) = self.role_for_node(node_id)? else {
             return None;
         };
