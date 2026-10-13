@@ -24,7 +24,6 @@ export type {
   DiagnosticsResult,
   AnalyzeDiagnostic,
   RelationSpec,
-  TableSpec,
   ColumnSpec,
   ColumnKind,
   AnalyzeOptions,

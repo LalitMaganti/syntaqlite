@@ -124,12 +124,12 @@ impl StatementAnalysis {
 ///
 /// ```
 /// # use syntaqlite::{AnalysisContext, Analyzer, Catalog};
-/// # use syntaqlite::analysis::{CatalogLayer, Severity};
+/// # use syntaqlite::analysis::{CatalogLayer, Severity, TableDef};
 /// let mut analyzer = Analyzer::new();
 /// let mut catalog = Catalog::new(syntaqlite::sqlite_dialect());
 /// catalog
 ///     .layer_mut(CatalogLayer::Database)
-///     .insert_table("users", Some(vec!["id".into(), "name".into()]), false);
+///     .insert_table(TableDef::new("users").columns(["id", "name"]));
 ///
 /// let mut ctx = AnalysisContext::new(&mut catalog);
 /// let model = analyzer.analyze("SELECT emial FROM users;", &mut ctx);
@@ -193,7 +193,7 @@ impl Analysis {
 #[cfg(feature = "sqlite")]
 mod tests {
     use super::super::AnalysisContext;
-    use super::super::catalog::{Catalog, CatalogLayer};
+    use super::super::catalog::{Catalog, CatalogLayer, TableDef, ViewDef};
     use super::super::engine::Analyzer;
     use super::StatementAnalysis;
 
@@ -214,11 +214,9 @@ mod tests {
     fn diagnostics_isolated_per_statement() {
         let mut analyzer = Analyzer::new();
         let mut catalog = sqlite_catalog();
-        catalog.layer_mut(CatalogLayer::Database).insert_table(
-            "users",
-            Some(vec!["id".into()]),
-            false,
-        );
+        catalog
+            .layer_mut(CatalogLayer::Database)
+            .insert_table(TableDef::new("users").columns(["id"]));
         let mut ctx = AnalysisContext::new(&mut catalog);
         let model = analyzer.analyze("SELECT id FROM users; SELECT * FROM missing;", &mut ctx);
         assert_eq!(model.statements().len(), 2);
@@ -233,10 +231,10 @@ mod tests {
         let mut catalog = sqlite_catalog();
         catalog
             .layer_mut(CatalogLayer::Database)
-            .insert_table("a", Some(vec!["x".into()]), false);
+            .insert_table(TableDef::new("a").columns(["x"]));
         catalog
             .layer_mut(CatalogLayer::Database)
-            .insert_table("b", Some(vec!["y".into()]), false);
+            .insert_table(TableDef::new("b").columns(["y"]));
         let mut ctx = AnalysisContext::new(&mut catalog);
         let model = analyzer.analyze("SELECT x FROM a; SELECT y FROM b;", &mut ctx);
 
@@ -314,7 +312,7 @@ mod tests {
         let mut catalog = sqlite_catalog();
         catalog
             .layer_mut(CatalogLayer::Database)
-            .insert_view("active_users", Some(vec!["id".into(), "name".into()]));
+            .insert_view(ViewDef::new("active_users").columns(["id", "name"]));
 
         let mut ctx = AnalysisContext::new(&mut catalog);
         let model = analyzer.analyze("SELECT id FROM active_users", &mut ctx);
@@ -327,11 +325,9 @@ mod tests {
     fn table_access_has_no_unexpanded_views() {
         let mut analyzer = Analyzer::new();
         let mut catalog = sqlite_catalog();
-        catalog.layer_mut(CatalogLayer::Database).insert_table(
-            "users",
-            Some(vec!["id".into()]),
-            false,
-        );
+        catalog
+            .layer_mut(CatalogLayer::Database)
+            .insert_table(TableDef::new("users").columns(["id"]));
         let mut ctx = AnalysisContext::new(&mut catalog);
         let model = analyzer.analyze("SELECT id FROM users", &mut ctx);
         assert_eq!(
@@ -353,11 +349,9 @@ mod tests {
     fn recursive_cte_does_not_stack_overflow() {
         let mut analyzer = Analyzer::new();
         let mut catalog = sqlite_catalog();
-        catalog.layer_mut(CatalogLayer::Database).insert_table(
-            "users",
-            Some(vec!["id".into(), "name".into()]),
-            false,
-        );
+        catalog
+            .layer_mut(CatalogLayer::Database)
+            .insert_table(TableDef::new("users").columns(["id", "name"]));
         let mut ctx = AnalysisContext::new(&mut catalog);
         let model = analyzer.analyze(
             "WITH RECURSIVE cte(id) AS (
@@ -402,11 +396,9 @@ mod tests {
         // duration of the WITH statement.
         let mut analyzer = Analyzer::new();
         let mut catalog = sqlite_catalog();
-        catalog.layer_mut(CatalogLayer::Database).insert_table(
-            "t",
-            Some(vec!["other".into()]),
-            false,
-        );
+        catalog
+            .layer_mut(CatalogLayer::Database)
+            .insert_table(TableDef::new("t").columns(["other"]));
         let mut ctx = AnalysisContext::new(&mut catalog);
         let model = analyzer.analyze("WITH t AS (SELECT 1 AS x) SELECT x FROM t", &mut ctx);
         assert!(
@@ -426,11 +418,9 @@ mod tests {
         // unaffected by unconditional self-registration.
         let mut analyzer = Analyzer::new();
         let mut catalog = sqlite_catalog();
-        catalog.layer_mut(CatalogLayer::Database).insert_table(
-            "users",
-            Some(vec!["id".into()]),
-            false,
-        );
+        catalog
+            .layer_mut(CatalogLayer::Database)
+            .insert_table(TableDef::new("users").columns(["id"]));
         let mut ctx = AnalysisContext::new(&mut catalog);
         let model = analyzer.analyze(
             "WITH active AS (SELECT id FROM users) SELECT id FROM active",

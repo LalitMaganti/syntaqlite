@@ -386,7 +386,7 @@
     },
     "syntaqlite_analyzer_add_views": {
       "linkage": "external",
-      "type": "void (SyntaqliteAnalyzer *, const SyntaqliteRelationDef *, uint32_t)"
+      "type": "void (SyntaqliteAnalyzer *, const SyntaqliteViewDef *, uint32_t)"
     },
     "syntaqlite_analyzer_analyze": {
       "linkage": "external",
@@ -2209,15 +2209,6 @@
         },
         "size": 16
       },
-      "SyntaqliteRelationDef": {
-        "align": 8,
-        "fields": {
-          "column_count": 16,
-          "columns": 8,
-          "name": 0
-        },
-        "size": 24
-      },
       "SyntaqliteResultColumn": {
         "align": 4,
         "fields": {
@@ -2580,6 +2571,15 @@
           "tag": 0
         },
         "size": 20
+      },
+      "SyntaqliteViewDef": {
+        "align": 8,
+        "fields": {
+          "column_count": 16,
+          "columns": 8,
+          "name": 0
+        },
+        "size": 24
       },
       "SyntaqliteWindowDef": {
         "align": 4,
@@ -5254,23 +5254,6 @@
       ],
       "kind": "struct"
     },
-    "SyntaqliteRelationDef": {
-      "fields": [
-        {
-          "name": "name",
-          "type": "const char *"
-        },
-        {
-          "name": "columns",
-          "type": "const char *const *"
-        },
-        {
-          "name": "column_count",
-          "type": "uint32_t"
-        }
-      ],
-      "kind": "struct"
-    },
     "SyntaqliteResultColumn": {
       "fields": [
         {
@@ -6096,6 +6079,23 @@
       ],
       "kind": "struct"
     },
+    "SyntaqliteViewDef": {
+      "fields": [
+        {
+          "name": "name",
+          "type": "const char *"
+        },
+        {
+          "name": "columns",
+          "type": "const SyntaqliteColumnDef *"
+        },
+        {
+          "name": "column_count",
+          "type": "uint32_t"
+        }
+      ],
+      "kind": "struct"
+    },
     "SyntaqliteWindowDef": {
       "fields": [
         {
@@ -6292,7 +6292,6 @@
     "SyntaqliteRaiseType": "enum SyntaqliteRaiseType",
     "SyntaqliteRangeMetaEntry": "struct SyntaqliteRangeMetaEntry",
     "SyntaqliteRelationAccess": "struct SyntaqliteRelationAccess",
-    "SyntaqliteRelationDef": "struct SyntaqliteRelationDef",
     "SyntaqliteRelationKind": "enum SyntaqliteRelationKind",
     "SyntaqliteResultColumn": "struct SyntaqliteResultColumn",
     "SyntaqliteResultColumnFlags": "union SyntaqliteResultColumnFlags",
@@ -6342,6 +6341,7 @@
     "SyntaqliteValuesClause": "struct SyntaqliteValuesClause",
     "SyntaqliteValuesRowList": "struct SyntaqliteValuesRowList",
     "SyntaqliteVariable": "struct SyntaqliteVariable",
+    "SyntaqliteViewDef": "struct SyntaqliteViewDef",
     "SyntaqliteWindowDef": "struct SyntaqliteWindowDef",
     "SyntaqliteWindowDefList": "struct SyntaqliteWindowDefList",
     "SyntaqliteWithClause": "struct SyntaqliteWithClause"

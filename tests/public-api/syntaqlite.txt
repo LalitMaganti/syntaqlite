@@ -41,6 +41,8 @@ impl syntaqlite::analysis::DiagnosticMessage
 impl syntaqlite::analysis::DirectoryModuleResolver
 impl syntaqlite::analysis::ModuleResolver for syntaqlite::analysis::DirectoryModuleResolver
 impl syntaqlite::analysis::StatementAnalysis
+impl syntaqlite::analysis::TableDef
+impl syntaqlite::analysis::ViewDef
 impl syntaqlite::any::AnyDialect
 impl syntaqlite::embedded::EmbeddedAnalyzer
 impl syntaqlite::embedded::EmbeddedFragment
@@ -169,9 +171,9 @@ pub fn syntaqlite::analysis::Analysis::lineage(&self) -> core::option::Option<sy
 pub fn syntaqlite::analysis::Analysis::source(&self) -> &str
 pub fn syntaqlite::analysis::Analysis::statements(&self) -> &[syntaqlite::analysis::StatementAnalysis]
 pub fn syntaqlite::analysis::CatalogLayerContents::insert_function_overload(&mut self, impl core::convert::Into<alloc::string::String>, syntaqlite::analysis::FunctionCategory, syntaqlite::analysis::AritySpec)
-pub fn syntaqlite::analysis::CatalogLayerContents::insert_table(&mut self, impl core::convert::Into<alloc::string::String>, core::option::Option<alloc::vec::Vec<syntaqlite::analysis::Column>>, bool)
+pub fn syntaqlite::analysis::CatalogLayerContents::insert_table(&mut self, syntaqlite::analysis::TableDef)
 pub fn syntaqlite::analysis::CatalogLayerContents::insert_table_function(&mut self, impl core::convert::Into<alloc::string::String>, syntaqlite::analysis::AritySpec, alloc::vec::Vec<alloc::string::String>)
-pub fn syntaqlite::analysis::CatalogLayerContents::insert_view(&mut self, impl core::convert::Into<alloc::string::String>, core::option::Option<alloc::vec::Vec<alloc::string::String>>)
+pub fn syntaqlite::analysis::CatalogLayerContents::insert_view(&mut self, syntaqlite::analysis::ViewDef)
 pub fn syntaqlite::analysis::CatalogLayerContents::relation_names(&self) -> impl core::iter::traits::iterator::Iterator<Item = &str>
 pub fn syntaqlite::analysis::Column::deserialize<D: serde_core::de::Deserializer<'de>>(D) -> core::result::Result<Self, <D as serde_core::de::Deserializer>::Error>
 pub fn syntaqlite::analysis::Column::from(&str) -> Self
@@ -202,6 +204,11 @@ pub fn syntaqlite::analysis::StatementAnalysis::physical_tables_accessed(&self) 
 pub fn syntaqlite::analysis::StatementAnalysis::relations_accessed(&self) -> core::option::Option<syntaqlite::analysis::LineageResult<&[syntaqlite::analysis::RelationAccess]>>
 pub fn syntaqlite::analysis::StatementAnalysis::source(&self) -> &str
 pub fn syntaqlite::analysis::StatementAnalysis::unexpanded_views(&self) -> &[alloc::string::String]
+pub fn syntaqlite::analysis::TableDef::columns(self, impl core::iter::traits::collect::IntoIterator<Item = impl core::convert::Into<syntaqlite::analysis::Column>>) -> Self
+pub fn syntaqlite::analysis::TableDef::new(impl core::convert::Into<alloc::string::String>) -> Self
+pub fn syntaqlite::analysis::TableDef::without_rowid(self) -> Self
+pub fn syntaqlite::analysis::ViewDef::columns(self, impl core::iter::traits::collect::IntoIterator<Item = impl core::convert::Into<syntaqlite::analysis::Column>>) -> Self
+pub fn syntaqlite::analysis::ViewDef::new(impl core::convert::Into<alloc::string::String>) -> Self
 pub fn syntaqlite::any::AnyDialect::cflags(&self) -> syntaqlite::util::SqliteFlags
 pub fn syntaqlite::any::AnyDialect::deref(&self) -> &syntaqlite_syntax::dialect::AnyDialect
 pub fn syntaqlite::any::AnyDialect::deref_mut(&mut self) -> &mut syntaqlite_syntax::dialect::AnyDialect
@@ -323,6 +330,8 @@ pub struct syntaqlite::analysis::DirectoryModuleResolver
 pub struct syntaqlite::analysis::PhysicalTableAccess
 pub struct syntaqlite::analysis::RelationAccess
 pub struct syntaqlite::analysis::StatementAnalysis
+pub struct syntaqlite::analysis::TableDef
+pub struct syntaqlite::analysis::ViewDef
 pub struct syntaqlite::any::AnyDialect
 pub struct syntaqlite::embedded::EmbeddedAnalyzer
 pub struct syntaqlite::embedded::EmbeddedFragment

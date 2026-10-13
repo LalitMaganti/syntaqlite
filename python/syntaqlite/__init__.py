@@ -292,7 +292,7 @@ class ColumnKind(StrEnum):
 
 
 class Column:
-    """A table column with a :class:`ColumnKind`, for :class:`Table`."""
+    """A column with a :class:`ColumnKind`, for :class:`Table` and :class:`View`."""
 
     __slots__ = ("name", "kind")
 
@@ -307,11 +307,17 @@ class Column:
         return f"Column({self.name!r}, {self.kind!s})"
 
 
+def _relation_dict(name: str, columns: list[str | Column] | None) -> dict:
+    if columns is not None:
+        columns = [c._to_dict() if isinstance(c, Column) else c for c in columns]
+    return {"name": name, "columns": columns}
+
+
 class Table:
     """A table definition for schema registration.
 
     Columns are names, or :class:`Column` values for generated and hidden
-    columns.
+    columns. ``None`` means the columns are unknown.
     """
 
     __slots__ = ("name", "columns")
@@ -321,26 +327,24 @@ class Table:
         self.columns = columns
 
     def _to_dict(self) -> dict:
-        columns = None
-        if self.columns is not None:
-            columns = [c._to_dict() if isinstance(c, Column) else c for c in self.columns]
-        return {"name": self.name, "columns": columns}
+        return _relation_dict(self.name, self.columns)
 
     def __repr__(self):
         return f"Table({self.name!r}, {self.columns!r})" if self.columns else f"Table({self.name!r})"
 
 
 class View:
-    """A view definition for schema registration."""
+    """A view definition for schema registration, with columns as for
+    :class:`Table`."""
 
     __slots__ = ("name", "columns")
 
-    def __init__(self, name: str, columns: list[str] | None = None):
+    def __init__(self, name: str, columns: list[str | Column] | None = None):
         self.name = name
         self.columns = columns
 
     def _to_dict(self) -> dict:
-        return {"name": self.name, "columns": self.columns}
+        return _relation_dict(self.name, self.columns)
 
     def __repr__(self):
         return f"View({self.name!r}, {self.columns!r})" if self.columns else f"View({self.name!r})"

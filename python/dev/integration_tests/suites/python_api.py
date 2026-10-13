@@ -305,8 +305,8 @@ def _test_validate_unknown_column_code(stq) -> bool:
 def _test_validate_column_kinds_resolve(stq) -> bool:
     columns = ["body", stq.Column("len", stq.ColumnKind.GENERATED), stq.Column("rank", "hidden")]
     with stq.Syntaqlite() as sq:
-        schema = stq.Schema(tables=[stq.Table("ft", columns)])
-        result = sq.analyze("SELECT body, len, rank, bogus FROM ft", schema)
+        schema = stq.Schema(tables=[stq.Table("ft", columns)], views=[stq.View("v", [stq.Column("x")])])
+        result = sq.analyze("SELECT body, len, rank, bogus FROM ft, v WHERE x", schema)
     unknown = [d.message for d in result.diagnostics if d.code is stq.DiagnosticCode.UNKNOWN_COLUMN]
     if len(unknown) != 1 or "bogus" not in unknown[0]:
         _fail("validate_column_kinds_resolve", f"got {result.diagnostics!r}")

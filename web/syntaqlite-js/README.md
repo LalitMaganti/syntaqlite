@@ -95,9 +95,12 @@ console.log(analysis.diagnostics);
 // [{ message: "unknown column 'c'", severity: "error", ... }]
 
 engine.analyze("SELECT id FROM logs", {
-  tables: [{name: "logs", columns: ["id", "ts"]}],
+  tables: [{name: "logs", columns: ["id", "ts", {name: "day", kind: "generated"}]}],
 });
 ```
+
+A column is a name, or `{name, kind}` where `kind` is `"normal"`,
+`"generated"` or `"hidden"`. Omitting `columns` means they are unknown.
 
 ## Documentation
 

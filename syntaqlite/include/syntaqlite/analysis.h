@@ -97,7 +97,7 @@ typedef enum {
   SYNTAQLITE_COLUMN_HIDDEN    = 2,  // a virtual-table column in neither
 } SyntaqliteColumnKind;
 
-// A table column for batch catalog registration.
+// A table or view column for batch catalog registration.
 typedef struct {
   const char* name;
   SyntaqliteColumnKind kind;
@@ -113,9 +113,9 @@ typedef struct {
 // View definition for batch catalog registration.
 typedef struct {
   const char* name;
-  const char* const* columns;  // NULL = columns unknown
-  uint32_t column_count;       // ignored when columns is NULL
-} SyntaqliteRelationDef;
+  const SyntaqliteColumnDef* columns;  // NULL = columns unknown
+  uint32_t column_count;               // ignored when columns is NULL
+} SyntaqliteViewDef;
 
 // Relation kind (table vs. view).
 typedef enum {
@@ -277,10 +277,10 @@ SYNTAQLITE_API void syntaqlite_analyzer_add_tables(
     uint32_t count);
 
 // Add views to the database layer of the catalog. `columns` are the view's
-// output columns.
+// output columns. A view with an out-of-range column kind is not added.
 SYNTAQLITE_API void syntaqlite_analyzer_add_views(
     SyntaqliteAnalyzer* v,
-    const SyntaqliteRelationDef* views,
+    const SyntaqliteViewDef* views,
     uint32_t count);
 
 // Load schema from DDL statements (CREATE TABLE, CREATE VIEW, etc.).

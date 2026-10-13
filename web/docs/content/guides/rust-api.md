@@ -135,7 +135,7 @@ syntaqlite = { version = "0.12.1", features = ["analysis", "sqlite"] }
 
 ```rust
 use syntaqlite::analysis::{
-    AnalysisContext, Analyzer, Catalog, CatalogLayer,
+    AnalysisContext, Analyzer, Catalog, CatalogLayer, TableDef,
 };
 use syntaqlite::sqlite_dialect;
 
@@ -143,9 +143,9 @@ let mut analyzer = Analyzer::new();
 
 let mut catalog = Catalog::new(sqlite_dialect());
 catalog.layer_mut(CatalogLayer::Database)
-    .insert_table("users", Some(vec!["id".into(), "name".into(), "email".into()]), false);
+    .insert_table(TableDef::new("users").columns(["id", "name", "email"]));
 catalog.layer_mut(CatalogLayer::Database)
-    .insert_table("posts", Some(vec!["id".into(), "user_id".into(), "title".into()]), false);
+    .insert_table(TableDef::new("posts").columns(["id", "user_id", "title"]));
 
 let mut ctx = AnalysisContext::new(&mut catalog);
 let model = analyzer.analyze("SELECT nme FROM users", &mut ctx);
@@ -163,8 +163,11 @@ The catalog uses a layered resolution order; see
 populate the `Database` layer with your schema and let the analyzer handle the
 rest.
 
-If you know a table exists but don't know its columns, pass `None` to
-`insert_table`; this suppresses unknown-column warnings for that table.
+If you know a table exists but don't know its columns, register
+`TableDef::new(name)` without calling `columns`; this suppresses
+unknown-column warnings for that table. Mark generated columns with
+`Column::generated(name)` and hidden virtual-table columns with
+`Column::hidden(name)`.
 
 The CLI and LSP enable strict mode when a schema is provided through `--schema`
 or `syntaqlite.toml`. Rust API callers must enable it explicitly with
@@ -178,7 +181,7 @@ column:
 
 ```rust
 use syntaqlite::analysis::{
-    AnalysisContext, Analyzer, Catalog, CatalogLayer,
+    AnalysisContext, Analyzer, Catalog, CatalogLayer, TableDef,
 };
 use syntaqlite::sqlite_dialect;
 
@@ -186,9 +189,9 @@ let mut analyzer = Analyzer::new();
 
 let mut catalog = Catalog::new(sqlite_dialect());
 catalog.layer_mut(CatalogLayer::Database)
-    .insert_table("users", Some(vec!["id".into(), "name".into()]), false);
+    .insert_table(TableDef::new("users").columns(["id", "name"]));
 catalog.layer_mut(CatalogLayer::Database)
-    .insert_table("posts", Some(vec!["id".into(), "user_id".into(), "body".into()]), false);
+    .insert_table(TableDef::new("posts").columns(["id", "user_id", "body"]));
 
 let mut ctx = AnalysisContext::new(&mut catalog);
 let model = analyzer.analyze(

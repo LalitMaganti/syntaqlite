@@ -37,8 +37,8 @@ use serde_json::Value;
 use syntaqlite_syntax::any::{AnyParser, AnyTokenizer, ParseOutcome};
 
 use crate::analysis::{
-    Analysis, CatalogLayer, Column, DiagnosticMessage, Help, ModuleResolver, RelationKind,
-    Severity as SemSeverity, StatementAnalysis,
+    Analysis, CatalogLayer, DiagnosticMessage, Help, ModuleResolver, RelationKind,
+    Severity as SemSeverity, StatementAnalysis, TableDef, ViewDef,
 };
 use crate::any::AnyDialect;
 use crate::fmt::KeywordCase;
@@ -380,22 +380,10 @@ fn token_category_name(c: syntaqlite_syntax::any::TokenCategory) -> &'static str
 // ── validate ─────────────────────────────────────────────────────────────
 
 #[derive(Deserialize)]
-struct TableRec {
-    name: String,
-    columns: Option<Vec<Column>>,
-}
-
-#[derive(Deserialize)]
-struct ViewRec {
-    name: String,
-    columns: Option<Vec<String>>,
-}
-
-#[derive(Deserialize)]
 struct ValidateReq {
     sql: String,
-    tables: Option<Vec<TableRec>>,
-    views: Option<Vec<ViewRec>>,
+    tables: Option<Vec<TableDef>>,
+    views: Option<Vec<ViewDef>>,
     schema_ddl: Option<String>,
     /// Optional map of dotted module path → SQL source, used to resolve
     /// `INCLUDE MODULE` imports. Callers must supply every module they
@@ -459,7 +447,7 @@ fn handle_analyze(
     analyzer: &mut Analyzer,
     req: &Value,
 ) -> Result<Value, String> {
-    let req: ValidateReq =
+    let mut req: ValidateReq =
         serde_json::from_value(req.clone()).map_err(|e| format!("validate: {e}"))?;
 
     let mut catalog = if let Some(ddl) = req.schema_ddl.as_deref() {
@@ -471,17 +459,12 @@ fn handle_analyze(
     } else {
         Catalog::new(dialect.clone())
     };
-    if let Some(tables) = req.tables.as_deref() {
-        let layer = catalog.layer_mut(CatalogLayer::Database);
-        for t in tables {
-            layer.insert_table(t.name.clone(), t.columns.clone(), false);
-        }
+    let layer = catalog.layer_mut(CatalogLayer::Database);
+    for table in req.tables.take().into_iter().flatten() {
+        layer.insert_table(table);
     }
-    if let Some(views) = req.views.as_deref() {
-        let layer = catalog.layer_mut(CatalogLayer::Database);
-        for v in views {
-            layer.insert_view(v.name.clone(), v.columns.clone());
-        }
+    for view in req.views.take().into_iter().flatten() {
+        layer.insert_view(view);
     }
 
     let config = AnalysisConfig::default();

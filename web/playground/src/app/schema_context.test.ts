@@ -13,7 +13,7 @@ describe("parseSimple", () => {
 
   it("parses table name without columns", () => {
     const result = parseSimple("users");
-    expect(result.tables).toEqual([{name: "users", columns: []}]);
+    expect(result.tables).toEqual([{name: "users"}]);
   });
 
   it("parses table with columns", () => {
@@ -23,7 +23,7 @@ describe("parseSimple", () => {
 
   it("handles colon with no columns", () => {
     const result = parseSimple("users:");
-    expect(result.tables).toEqual([{name: "users", columns: []}]);
+    expect(result.tables).toEqual([{name: "users"}]);
   });
 
   it("trims whitespace from names and columns", () => {

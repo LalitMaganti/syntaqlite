@@ -159,9 +159,10 @@ The params are one of:
 
 - `{"ddl": "CREATE TABLE ..."}` to build the schema from DDL.
 - `{"context": {...}}` to pass a structured schema as JSON, with `tables`,
-  `views` and `functions`. A table column is a name, or
+  `views` and `functions`. A column is a name, or
   `{"name": "total", "kind": "generated"}` where `kind` is `normal`,
-  `generated` or `hidden`.
+  `generated` or `hidden`. A missing or `null` column list means the columns
+  are unknown.
 - `{}` or `null` to clear it.
 
 The result is `{"errors": [...]}`. DDL that only partially parses is still

@@ -20,7 +20,7 @@ use super::model::Analysis;
 use types::{
     SyntaqliteColumnLineage, SyntaqliteColumnOrigin, SyntaqliteDefinedRelation,
     SyntaqliteDiagnostic, SyntaqlitePhysicalTableAccess, SyntaqliteRelationAccess,
-    SyntaqliteRelationDef, SyntaqliteUnexpandedView,
+    SyntaqliteUnexpandedView,
 };
 
 mod analyze;

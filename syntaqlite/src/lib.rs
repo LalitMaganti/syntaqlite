@@ -49,7 +49,7 @@
 //! [`Diagnostic`] values with byte-offset spans and "did you mean?" suggestions.
 //!
 //! ```rust
-//! use syntaqlite::analysis::CatalogLayer;
+//! use syntaqlite::analysis::{CatalogLayer, TableDef};
 //! use syntaqlite::{AnalysisContext, Catalog, Analyzer, sqlite_dialect};
 //!
 //! let mut analyzer = Analyzer::new();
@@ -57,7 +57,7 @@
 //!
 //! // Register a table so the analyzer can resolve column references.
 //! catalog.layer_mut(CatalogLayer::Database)
-//!     .insert_table("users", Some(vec!["id".into(), "name".into()]), false);
+//!     .insert_table(TableDef::new("users").columns(["id", "name"]));
 //!
 //! let mut ctx = AnalysisContext::new(&mut catalog);
 //! let model = analyzer.analyze("SELECT id, name FROM users", &mut ctx);
