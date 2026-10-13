@@ -1043,10 +1043,14 @@ impl Catalog {
     }
 
     /// Enumerate column names across all layers, optionally filtered to a
-    /// single relation.
+    /// single relation. Unfiltered, dialect builtins such as `sqlite_schema`
+    /// are skipped so their columns don't crowd out the user's.
     pub(crate) fn all_column_names(&self, table: Option<&str>) -> Vec<String> {
         let mut names = Vec::new();
-        for layer in self.all_layers_ordered() {
+        for (index, layer) in self.layers.iter().enumerate() {
+            if table.is_none() && index == LAYER_DIALECT {
+                continue;
+            }
             for rel in layer.relations.values() {
                 if table.is_none_or(|t| rel.name.eq_ignore_ascii_case(t))
                     && let Some(cols) = &rel.columns

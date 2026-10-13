@@ -12,10 +12,6 @@ class Completion(TestSuite):
             out="""\
             column: id
             column: name
-            column: rootpage
-            column: sql
-            column: tbl_name
-            column: type
             table: sqlite_master
             table: sqlite_schema
             table: sqlite_temp_master
@@ -163,6 +159,19 @@ class Completion(TestSuite):
 """,
         )
 
+    def test_qualified_builtin_table_columns(self):
+        return LspDiffTestBlueprint(
+            sql="SELECT sqlite_master.<|> FROM sqlite_master;",
+            op="completion",
+            out="""\
+            column: name
+            column: rootpage
+            column: sql
+            column: tbl_name
+            column: type
+""",
+        )
+
     def test_tables_after_from(self):
         return LspDiffTestBlueprint(
             sql="CREATE TABLE users (id INTEGER);\nCREATE TABLE orders (id INTEGER);\nSELECT * FROM <|>",
@@ -190,11 +199,6 @@ keyword: RIGHT
             sql="SELECT * FR<|>",
             op="completion",
             out="""\
-            column: name
-            column: rootpage
-            column: sql
-            column: tbl_name
-            column: type
             table: sqlite_master
             table: sqlite_schema
             table: sqlite_temp_master
@@ -350,11 +354,6 @@ keyword: RIGHT
             sql="SELEC 1; SELECT * FR<|>",
             op="completion",
             out="""\
-            column: name
-            column: rootpage
-            column: sql
-            column: tbl_name
-            column: type
             table: sqlite_master
             table: sqlite_schema
             table: sqlite_temp_master
