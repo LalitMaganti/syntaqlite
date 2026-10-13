@@ -395,6 +395,12 @@ pub mod roles {
             /// Field index of the ON expression (`FIELD_ABSENT` if absent).
             on: FieldIdx,
         } = 28,
+
+        /// A VALUES clause.
+        Values {
+            /// Field index of the row list.
+            rows: FieldIdx,
+        } = 29,
     }
 
     /// Metadata for a node type that defines a template macro.
@@ -550,6 +556,7 @@ pub mod roles {
                 },
                 28,
             );
+            check(SemanticRole::Values { rows: 0 }, 29);
         }
 
         #[test]

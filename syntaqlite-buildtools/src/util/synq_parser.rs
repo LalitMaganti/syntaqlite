@@ -185,6 +185,9 @@ pub(crate) enum SemanticRole {
         right: String,
         on: Option<String>,
     },
+    Values {
+        rows: String,
+    },
 }
 
 /// A `semantic { ... }` annotation on a node.
@@ -823,6 +826,9 @@ impl Parser {
                 left: require_param(&params, "left", node_name, "join")?,
                 right: require_param(&params, "right", node_name, "join")?,
                 on: get_param(&params, "on").map(str::to_string),
+            },
+            "values" => SemanticRole::Values {
+                rows: require_param(&params, "rows", node_name, "values")?,
             },
             _ => {
                 return Err(format!(

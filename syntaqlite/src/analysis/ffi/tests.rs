@@ -1136,6 +1136,13 @@ fn kind_code_on_clause_order() {
 }
 
 #[test]
+fn kind_code_values_terms() {
+    let v = Validator::new();
+    v.analyze("VALUES(1, 2), (3);");
+    assert!(v.has_code(DIAG_CODE_VALUES_TERMS));
+}
+
+#[test]
 fn kind_code_per_statement_matches_aggregate() {
     let v = Validator::new();
     v.analyze("SELECT id FROM no_such_table");
@@ -1164,6 +1171,7 @@ fn diagnostic_code_to_c_covers_all_variants() {
     check(M::CompoundColumns { operator: "UNION".into(), left: 1, right: 2 }, DIAG_CODE_COMPOUND_COLUMNS);
     check(M::UnknownWindow { name: "w".into() }, DIAG_CODE_UNKNOWN_WINDOW);
     check(M::OnClauseOrder { name: "c".into() }, DIAG_CODE_ON_CLAUSE_ORDER);
+    check(M::ValuesTerms { first: 2, row: 1 }, DIAG_CODE_VALUES_TERMS);
 }
 
 // ── Custom function / table-function registration ────────────────────

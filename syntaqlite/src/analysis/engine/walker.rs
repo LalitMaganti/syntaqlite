@@ -140,6 +140,14 @@ pub(crate) struct UnknownWindowEvent<'a> {
     pub(crate) range: DocRange,
 }
 
+/// A VALUES row with a different number of terms than the first row.
+#[derive(Copy, Clone)]
+pub(crate) struct ValuesTermsEvent {
+    pub(crate) range: DocRange,
+    pub(crate) first: usize,
+    pub(crate) row: usize,
+}
+
 /// A compound SELECT whose arms have different numbers of columns.
 #[derive(Copy, Clone)]
 pub(crate) struct CompoundColumnsEvent<'a> {
@@ -213,6 +221,7 @@ pub(crate) trait SemanticVisitor {
     const WANTS_COMPOUND_COLUMNS: bool = false;
     const WANTS_UNKNOWN_WINDOW: bool = false;
     const WANTS_ON_CLAUSE_ORDER: bool = false;
+    const WANTS_VALUES_TERMS: bool = false;
     const WANTS_CTE_BINDING: bool = false;
     const WANTS_SCOPED_SOURCE: bool = false;
     /// Return true to receive [`enter_query`](Self::enter_query) /
@@ -295,6 +304,8 @@ pub(crate) trait SemanticVisitor {
         _ev: OnClauseOrderEvent<'_>,
     ) {
     }
+
+    fn on_values_terms(&mut self, _stmt: &mut AnyParsedStatement<'_>, _ev: ValuesTermsEvent) {}
 
     /// Called once per CTE binding, BEFORE its body is walked. The body
     /// will observe the binding's own name as a resolved catalog source
@@ -451,6 +462,7 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
             | SemanticRole::CteBinding { .. }
             | SemanticRole::WindowDefinition { .. } => self.walk_children(visitor, node_id),
             SemanticRole::WindowRef { .. } => self.walk_window_ref(visitor, node_id, fields, role),
+            SemanticRole::Values { rows } => self.walk_values(visitor, node_id, fields, rows),
             SemanticRole::Join { .. } => self.walk_join(visitor, node_id, fields, role),
 
             SemanticRole::Call { name, args } => {
@@ -1777,8 +1789,57 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
         })
     }
 
+    /// Walk a VALUES clause, reporting the first row whose width differs
+    /// from the first row's.
+    fn walk_values<V: SemanticVisitor>(
+        &mut self,
+        visitor: &mut V,
+        node_id: AnyNodeId,
+        fields: &NodeFields,
+        rows: u8,
+    ) {
+        self.walk_children(visitor, node_id);
+        if !V::WANTS_VALUES_TERMS {
+            return;
+        }
+        let rows = self.values_rows(fields, rows);
+        let first = self.values_row_width(rows[0]);
+        let Some(&row) = rows[1..]
+            .iter()
+            .find(|&&r| self.values_row_width(r) != first)
+        else {
+            return;
+        };
+        let range = self
+            .stmt
+            .node_range(row)
+            .expect("a VALUES row spans source");
+        let ev = ValuesTermsEvent {
+            range,
+            first,
+            row: self.values_row_width(row),
+        };
+        visitor.on_values_terms(self.stmt, ev);
+    }
+
+    fn values_rows(&self, fields: &NodeFields, rows: u8) -> &'b [AnyNodeId] {
+        let rows = fields
+            .node_id_at(rows)
+            .and_then(|id| self.stmt.list_children(id))
+            .expect("VALUES has a row list");
+        assert!(!rows.is_empty(), "VALUES has a row");
+        rows
+    }
+
+    fn values_row_width(&self, row: AnyNodeId) -> usize {
+        self.stmt
+            .list_children(row)
+            .expect("a VALUES row is a list")
+            .len()
+    }
+
     /// Report compound arms with different column counts. Arms whose count
-    /// isn't known, such as `SELECT *` or `VALUES`, are skipped.
+    /// isn't known, such as `SELECT *`, are skipped.
     fn check_compound_columns<V: SemanticVisitor>(
         &mut self,
         visitor: &mut V,
@@ -1810,14 +1871,22 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
         visitor.on_compound_columns(self.stmt, ev);
     }
 
-    /// Result columns of a compound arm: a plain SELECT's own, or a nested
-    /// compound's leftmost arm.
+    /// Result columns of a compound arm: a plain SELECT's own, a nested
+    /// compound's leftmost arm, or a VALUES clause's row width. A VALUES
+    /// clause whose rows disagree has no width; it is reported on its own.
     fn arm_column_count(&mut self, arm: AnyNodeId) -> Option<usize> {
         let reader = StmtReader::new(self.stmt, self.roles);
         match reader.role_for_node(arm)? {
             (SemanticRole::CompoundScope { left, .. }, fields) => {
                 let left = fields.node_id_at(left)?;
                 self.arm_column_count(left)
+            }
+            (SemanticRole::Values { rows }, fields) => {
+                let rows = self.values_rows(&fields, rows);
+                let width = self.values_row_width(rows[0]);
+                rows.iter()
+                    .all(|&r| self.values_row_width(r) == width)
+                    .then_some(width)
             }
             (SemanticRole::Query { .. }, _) => self.count_result_columns(Some(arm)),
             _ => None,

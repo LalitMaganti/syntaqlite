@@ -92,6 +92,7 @@ impl CheckLevel {
 /// | `compound-columns` | [`compound_columns`](Self::compound_columns) | Compound `SELECT` arms with different numbers of result columns | `deny` |
 /// | `unknown-window` | [`unknown_window`](Self::unknown_window) | `OVER` naming a window the query doesn't define | `deny` |
 /// | `on-clause-order` | [`on_clause_order`](Self::on_clause_order) | An outer join's `ON` clause referencing a table joined to its right | `deny` |
+/// | `values-terms` | [`values_terms`](Self::values_terms) | `VALUES` rows with a different number of terms than the first row | `deny` |
 ///
 /// The group name `schema` is a shorthand for `unknown-table`,
 /// `unknown-column`, `unknown-function`, and `function-arity`.
@@ -110,6 +111,7 @@ pub struct CheckConfig {
     pub(crate) compound_columns: CheckLevel,
     pub(crate) unknown_window: CheckLevel,
     pub(crate) on_clause_order: CheckLevel,
+    pub(crate) values_terms: CheckLevel,
 }
 
 impl Default for CheckConfig {
@@ -128,6 +130,7 @@ impl Default for CheckConfig {
             compound_columns: CheckLevel::Deny,
             unknown_window: CheckLevel::Deny,
             on_clause_order: CheckLevel::Deny,
+            values_terms: CheckLevel::Deny,
         }
     }
 }
@@ -186,6 +189,10 @@ impl CheckConfig {
     /// Level for ON clauses that reference a table joined to their right.
     pub fn on_clause_order(&self) -> CheckLevel {
         self.on_clause_order
+    }
+    /// Level for VALUES rows with different numbers of terms.
+    pub fn values_terms(&self) -> CheckLevel {
+        self.values_terms
     }
 
     // ── Builders ─────────────────────────────────────────────────────────
@@ -268,6 +275,12 @@ impl CheckConfig {
         self.on_clause_order = level;
         self
     }
+    /// Set the level for VALUES rows with different numbers of terms.
+    #[must_use]
+    pub fn with_values_terms(mut self, level: CheckLevel) -> Self {
+        self.values_terms = level;
+        self
+    }
     /// Set all schema checks (`unknown-table`, `unknown-column`,
     /// `unknown-function`, `function-arity`).
     #[must_use]
@@ -294,6 +307,7 @@ impl CheckConfig {
         self.compound_columns = level;
         self.unknown_window = level;
         self.on_clause_order = level;
+        self.values_terms = level;
         self
     }
 
@@ -314,6 +328,7 @@ impl CheckConfig {
         "compound-columns",
         "unknown-window",
         "on-clause-order",
+        "values-terms",
     ];
 
     /// Group names that expand to multiple categories.
@@ -339,6 +354,7 @@ impl CheckConfig {
             "compound-columns" => self.compound_columns = level,
             "unknown-window" => self.unknown_window = level,
             "on-clause-order" => self.on_clause_order = level,
+            "values-terms" => self.values_terms = level,
             "schema" => self = self.with_schema(level),
             "all" => self = self.with_all(level),
             _ => return Err(format!("unknown check category: {name}")),
@@ -459,6 +475,7 @@ mod tests {
         assert_eq!(c.compound_columns(), CheckLevel::Deny);
         assert_eq!(c.unknown_window(), CheckLevel::Deny);
         assert_eq!(c.on_clause_order(), CheckLevel::Deny);
+        assert_eq!(c.values_terms(), CheckLevel::Deny);
     }
 
     #[test]

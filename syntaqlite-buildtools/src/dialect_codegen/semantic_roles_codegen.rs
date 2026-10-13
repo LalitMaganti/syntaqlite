@@ -460,6 +460,10 @@ fn role_to_bytes(
             bytes[3] = fi(right);
             bytes[4] = opt(on);
         }
+        SynqRole::Values { rows } => {
+            bytes[0] = disc(SemanticRole::Values { rows: 0 });
+            bytes[1] = fi(rows);
+        }
     }
 
     bytes
