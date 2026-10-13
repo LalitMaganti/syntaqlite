@@ -5,6 +5,8 @@ node TriggerEvent {
   event_type: inline TriggerEventType
   columns: index ExprList
 
+  semantic { trigger_update_of(columns: columns) }
+
   fmt {
     switch(event_type) {
       DELETE { "DELETE" }
@@ -36,7 +38,7 @@ node CreateTriggerStmt {
   when_expr: index Expr
   body: index TriggerCmdList
 
-  semantic { trigger_scope(target: table, when: when_expr, body: body) }
+  semantic { trigger_scope(target: table, when: when_expr, body: body, event: event) }
 
   fmt {
     "CREATE"

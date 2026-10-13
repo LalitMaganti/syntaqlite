@@ -60,9 +60,8 @@ pub(crate) struct SourceRefEvent<'a> {
     /// was written — callers use `name` as the scope key in that case).
     pub(crate) alias: Option<&'a str>,
     pub(crate) resolved: bool,
-    /// The ref names a foreign key's parent, which `SQLite` doesn't check
-    /// until the key is enforced.
-    pub(crate) in_fk_parent: bool,
+    /// Set when `SQLite` doesn't check this name, so failures are expected.
+    pub(crate) unchecked: Option<UncheckedRef>,
 }
 
 /// A column reference (qualified or bare) inside an expression.
@@ -79,8 +78,8 @@ pub(crate) struct ColumnRefEvent<'a> {
     /// The ref is inside a CREATE VIEW body, where `SQLite` defers name
     /// resolution until the view is first used.
     pub(crate) in_view_body: bool,
-    /// The ref is a foreign key's parent column.
-    pub(crate) in_fk_parent: bool,
+    /// Set when `SQLite` doesn't check this name, so failures are expected.
+    pub(crate) unchecked: Option<UncheckedRef>,
     /// The ref is where `SQLite` forbids qualified names.
     pub(crate) unqualified_only: Option<QualifiedRefContext>,
     pub(crate) resolution: &'a ColumnResolution,
@@ -113,6 +112,15 @@ pub(crate) struct CteColumnCountMismatchEvent<'a> {
     pub(crate) name_range: DocRange,
     pub(crate) declared: usize,
     pub(crate) actual: usize,
+}
+
+/// Why a name is one `SQLite` doesn't check.
+#[derive(Copy, Clone)]
+pub(crate) enum UncheckedRef {
+    /// A foreign key's parent table or column, checked only when enforced.
+    ForeignKeyParent,
+    /// A trigger's `UPDATE OF` column.
+    TriggerUpdateOf,
 }
 
 /// A `CREATE INDEX` whose target is a view.
@@ -255,8 +263,8 @@ pub(crate) struct SemanticWalker<'a, 'b> {
     view_body_depth: u32,
     /// The table whose CREATE TABLE column list is being walked.
     defining_table: Option<DefiningTable>,
-    /// A foreign key's parent columns are being walked.
-    in_fk_parent: bool,
+    /// Names `SQLite` doesn't check are being walked.
+    unchecked: Option<UncheckedRef>,
     /// Expressions are being walked where `SQLite` forbids qualified names.
     unqualified_only: Option<QualifiedRefContext>,
     /// Reusable lookup key — catalog/scope probes share one allocation.
@@ -283,7 +291,7 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
             roles,
             view_body_depth: 0,
             defining_table: None,
-            in_fk_parent: false,
+            unchecked: None,
             unqualified_only: None,
             key_scratch: NameKey::default(),
         }
@@ -381,11 +389,12 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
                 bindings,
                 body,
             } => self.walk_cte_scope(visitor, fields, bindings, body),
-            SemanticRole::TriggerScope {
-                target: _,
-                when,
-                body,
-            } => self.walk_trigger_scope(visitor, fields, when, body),
+            SemanticRole::TriggerScope { .. } => {
+                self.walk_trigger_scope(visitor, node_id, fields, role);
+            }
+            SemanticRole::TriggerUpdateOf { columns } => {
+                self.walk_unchecked(visitor, fields, columns, UncheckedRef::TriggerUpdateOf);
+            }
             SemanticRole::DmlScope {
                 with_recursive: _,
                 with_ctes,
@@ -580,7 +589,7 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
                 name,
                 alias,
                 resolved: is_known,
-                in_fk_parent: false,
+                unchecked: None,
             };
             let mut cx = WalkCtx {
                 catalog: self.catalog,
@@ -693,7 +702,7 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
                 resolution: &resolution,
                 dqs_candidate,
                 in_view_body: self.view_body_depth > 0,
-                in_fk_parent: self.in_fk_parent,
+                unchecked: self.unchecked,
                 unqualified_only: self.unqualified_only,
             };
             let mut cx = WalkCtx {
@@ -746,27 +755,21 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
         node_id: AnyNodeId,
         fields: &NodeFields,
         target_idx: u8,
-    ) {
-        if !V::WANTS_SOURCE_REF {
-            return;
-        }
+    ) -> Option<String> {
         // target → QualifiedName node; its object name is the first child.
-        let Some(target_id) = fields.node_id_at(target_idx) else {
-            return;
-        };
-        let Some((_, qf)) = self.stmt.extract_fields(target_id) else {
-            return;
-        };
-        let Some(obj_id) = qf.node_id_at(0) else {
-            return;
-        };
+        let target_id = fields.node_id_at(target_idx)?;
+        let (_, qf) = self.stmt.extract_fields(target_id)?;
+        let obj_id = qf.node_id_at(0)?;
         let (name, range) = self.stmt.name_text(Some(obj_id));
         if name.is_empty() {
-            return;
+            return None;
         }
         // `name` keeps the raw source text for display; the catalog key uses
         // the identifier value (escape-collapsed).
-        let (name_ident, _) = self.stmt.name_ident_text(Some(obj_id));
+        let name_ident = self.stmt.name_ident_text(Some(obj_id)).0.into_owned();
+        if !V::WANTS_SOURCE_REF {
+            return Some(name_ident);
+        }
         self.key_scratch.set(&name_ident);
         let resolved = self.catalog.relation_defined(&self.key_scratch);
         let ev = SourceRefEvent {
@@ -776,13 +779,14 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
             name,
             alias: None,
             resolved,
-            in_fk_parent: false,
+            unchecked: None,
         };
         let mut cx = WalkCtx {
             catalog: self.catalog,
             scope: &mut self.scope,
         };
         visitor.on_source_ref(self.stmt, &mut cx, ev);
+        Some(name_ident)
     }
 
     /// Record a CREATE TABLE's definitions, then walk its body with the
@@ -883,7 +887,7 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
     }
 
     /// Resolve a REFERENCES clause's parent table and columns. Failures are
-    /// reported with `in_fk_parent` so visitors can accept them.
+    /// reported as unchecked so visitors can accept them.
     fn walk_foreign_key<V: SemanticVisitor>(
         &mut self,
         visitor: &mut V,
@@ -908,7 +912,7 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
                 name,
                 alias: None,
                 resolved: self.catalog.resolve_relation(&self.key_scratch),
-                in_fk_parent: true,
+                unchecked: Some(UncheckedRef::ForeignKeyParent),
             };
             let mut cx = WalkCtx {
                 catalog: self.catalog,
@@ -920,9 +924,7 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
         self.scope.push();
         self.scope
             .add_table(&name_ident, columns, without_rowid.into());
-        self.in_fk_parent = true;
-        self.walk_opt(visitor, fields.node_id_at(columns_idx));
-        self.in_fk_parent = false;
+        self.walk_unchecked(visitor, fields, columns_idx, UncheckedRef::ForeignKeyParent);
         self.scope.pop();
     }
 
@@ -975,7 +977,7 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
                     name,
                     alias: None,
                     resolved: self.catalog.resolve_relation(&self.key_scratch),
-                    in_fk_parent: false,
+                    unchecked: None,
                 };
                 let mut cx = WalkCtx {
                     catalog: self.catalog,
@@ -1087,18 +1089,54 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
         aliases
     }
 
-    fn walk_trigger_scope<V: SemanticVisitor>(
+    /// Walk names `SQLite` never checks, so visitors can accept failures.
+    fn walk_unchecked<V: SemanticVisitor>(
         &mut self,
         visitor: &mut V,
         fields: &NodeFields,
-        when_idx: u8,
-        body_idx: u8,
+        idx: u8,
+        reason: UncheckedRef,
     ) {
+        self.unchecked = Some(reason);
+        self.walk_opt(visitor, fields.node_id_at(idx));
+        self.unchecked = None;
+    }
+
+    /// Existence-check a trigger's target, then walk its `UPDATE OF` list,
+    /// WHEN and body with OLD and NEW standing for the target's row.
+    fn walk_trigger_scope<V: SemanticVisitor>(
+        &mut self,
+        visitor: &mut V,
+        node_id: AnyNodeId,
+        fields: &NodeFields,
+        role: SemanticRole,
+    ) {
+        let SemanticRole::TriggerScope {
+            target,
+            when,
+            body,
+            event,
+        } = role
+        else {
+            unreachable!("not a trigger role: {role:?}");
+        };
+        let target_name = self.walk_schema_target(visitor, node_id, fields, target);
         self.scope.push();
-        self.scope.add_table("OLD", None, RowIdPolicy::WithRowId);
-        self.scope.add_table("NEW", None, RowIdPolicy::WithRowId);
-        self.walk_opt(visitor, fields.node_id_at(when_idx));
-        self.walk_opt(visitor, fields.node_id_at(body_idx));
+        for row in ["OLD", "NEW"] {
+            match &target_name {
+                Some(name) => {
+                    self.key_scratch.set(name);
+                    let (columns, without_rowid) =
+                        self.catalog.table_source_info(&self.key_scratch);
+                    self.scope
+                        .add_aliased_table(row, name, columns, without_rowid.into());
+                }
+                None => self.scope.add_table(row, None, RowIdPolicy::WithRowId),
+            }
+        }
+        self.walk_opt(visitor, fields.node_id_at(event));
+        self.walk_opt(visitor, fields.node_id_at(when));
+        self.walk_opt(visitor, fields.node_id_at(body));
         self.scope.pop();
     }
 

@@ -22,7 +22,7 @@ use crate::dialect::SemanticRole;
 
 use super::walker::{
     CallEvent, ColumnRefEvent, CteBindingEvent, CteColumnCountMismatchEvent, IndexOnViewEvent,
-    ScopedSourceEvent, SemanticVisitor, SourceRefEvent, WalkCtx,
+    ScopedSourceEvent, SemanticVisitor, SourceRefEvent, UncheckedRef, WalkCtx,
 };
 
 /// Whether `name` is an embedded-SQL interpolation placeholder: an identifier of
@@ -57,13 +57,24 @@ enum AcceptedRef {
     /// `SQLite` doesn't check a foreign key's parent table or columns until
     /// the key is enforced, so they may be missing or defined later.
     ForeignKeyParentDeferred,
+    /// `SQLite` never checks a trigger's `UPDATE OF` column names.
+    TriggerUpdateOfUnchecked,
+}
+
+impl From<UncheckedRef> for AcceptedRef {
+    fn from(r: UncheckedRef) -> Self {
+        match r {
+            UncheckedRef::ForeignKeyParent => Self::ForeignKeyParentDeferred,
+            UncheckedRef::TriggerUpdateOf => Self::TriggerUpdateOfUnchecked,
+        }
+    }
 }
 
 /// Decide whether an unresolved source ref is intentionally accepted.
 /// `None` means the failure deserves a diagnostic.
 fn accepted_source_ref(ev: &SourceRefEvent<'_>) -> Option<AcceptedRef> {
-    if ev.in_fk_parent {
-        Some(AcceptedRef::ForeignKeyParentDeferred)
+    if let Some(r) = ev.unchecked {
+        Some(r.into())
     } else if is_hole_placeholder(ev.name) {
         Some(AcceptedRef::HolePlaceholder)
     } else {
@@ -74,8 +85,10 @@ fn accepted_source_ref(ev: &SourceRefEvent<'_>) -> Option<AcceptedRef> {
 /// Decide whether an unresolved column ref is intentionally accepted.
 /// `None` means the failure deserves a diagnostic.
 fn accepted_ref(ev: &ColumnRefEvent<'_>) -> Option<AcceptedRef> {
-    if ev.in_fk_parent && !matches!(ev.resolution, ColumnResolution::Found { .. }) {
-        return Some(AcceptedRef::ForeignKeyParentDeferred);
+    if let Some(r) = ev.unchecked
+        && !matches!(ev.resolution, ColumnResolution::Found { .. })
+    {
+        return Some(r.into());
     }
     match ev.resolution {
         ColumnResolution::Found { .. } => None,

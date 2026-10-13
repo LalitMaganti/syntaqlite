@@ -116,6 +116,7 @@ pub(crate) enum SemanticRole {
         target: String,
         when: String,
         body: String,
+        event: Option<String>,
     },
     DmlScope {
         with_recursive: Option<String>,
@@ -166,6 +167,9 @@ pub(crate) enum SemanticRole {
         kind: String,
         target: String,
         if_exists: String,
+    },
+    TriggerUpdateOf {
+        columns: Option<String>,
     },
 }
 
@@ -739,6 +743,7 @@ impl Parser {
                 target: require_param(&params, "target", node_name, "trigger_scope")?,
                 when: require_param(&params, "when", node_name, "trigger_scope")?,
                 body: require_param(&params, "body", node_name, "trigger_scope")?,
+                event: get_param(&params, "event").map(str::to_string),
             },
             "dml_scope" => SemanticRole::DmlScope {
                 with_recursive: get_param(&params, "with_recursive").map(str::to_string),
@@ -787,6 +792,9 @@ impl Parser {
                 kind: require_param(&params, "kind", node_name, "drop_object")?,
                 target: require_param(&params, "target", node_name, "drop_object")?,
                 if_exists: require_param(&params, "if_exists", node_name, "drop_object")?,
+            },
+            "trigger_update_of" => SemanticRole::TriggerUpdateOf {
+                columns: get_param(&params, "columns").map(str::to_string),
             },
             _ => {
                 return Err(format!(
