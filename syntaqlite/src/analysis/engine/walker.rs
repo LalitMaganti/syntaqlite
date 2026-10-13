@@ -25,6 +25,7 @@ use syntaqlite_syntax::source::DocRange;
 
 use crate::analysis::catalog::{Catalog, ColumnResolution, FunctionCheckResult, drop_kind_is_view};
 use crate::analysis::name_key::NameKey;
+use crate::analysis::result_columns::ColumnResolver;
 use crate::analysis::stmt_reader::StmtReader;
 use crate::analysis::{BuiltinChange, QualifiedRefContext};
 use crate::dialect::{FIELD_ABSENT, SemanticRole};
@@ -323,8 +324,15 @@ pub(crate) trait SemanticVisitor {
     /// for a statement corresponds to the outermost query.
     fn enter_query(&mut self, _stmt: &mut AnyParsedStatement<'_>, _node_id: AnyNodeId) {}
 
-    /// Called after a `Query` node's fields have been walked.
-    fn exit_query(&mut self, _stmt: &mut AnyParsedStatement<'_>, _node_id: AnyNodeId) {}
+    /// Called after a `Query` node's fields have been walked. `catalog`
+    /// is as it stood while the query was walked.
+    fn exit_query(
+        &mut self,
+        _stmt: &mut AnyParsedStatement<'_>,
+        _catalog: &Catalog,
+        _node_id: AnyNodeId,
+    ) {
+    }
 
     /// Called once before the AST walk for each successfully parsed
     /// statement. Visitors that want tokens or comments iterate
@@ -591,9 +599,9 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
                 // Bind the alias only; the body is its own scope.
                 let (alias_ident, _) = self.stmt.name_ident_text(fields.node_id_at(alias));
                 if !alias_ident.is_empty() {
-                    let cols = fields.node_id_at(body).and_then(|id| {
-                        StmtReader::new(self.stmt, self.roles).columns_from_select(id)
-                    });
+                    let cols = fields
+                        .node_id_at(body)
+                        .and_then(|id| self.result_columns(id));
                     self.scope
                         .add_table(&alias_ident, cols, RowIdPolicy::WithRowId);
                 }
@@ -837,8 +845,7 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
             visitor.on_scoped_source(self.stmt, ScopedSourceEvent { alias, body_id });
         }
 
-        let cols =
-            body_id.and_then(|id| StmtReader::new(self.stmt, self.roles).columns_from_select(id));
+        let cols = body_id.and_then(|id| self.result_columns(id));
         match alias {
             None => self.scope.add_anonymous(cols),
             Some(name) => self.scope.add_table(name, cols, RowIdPolicy::WithRowId),
@@ -1252,7 +1259,7 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
         self.scope.pop();
 
         if V::WANTS_QUERY {
-            visitor.exit_query(self.stmt, node_id);
+            visitor.exit_query(self.stmt, self.catalog, node_id);
         }
     }
 
@@ -1271,6 +1278,7 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
             left,
             right,
             on,
+            ..
         } = role
         else {
             unreachable!("not a join role: {role:?}");
@@ -1730,7 +1738,8 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
 
             let cols = if let Some(declared) = binding.declared_cols.as_ref() {
                 if V::WANTS_CTE_COLUMN_COUNT
-                    && let Some(actual) = self.count_result_columns(binding.body_id)
+                    && let Some(actual) =
+                        binding.body_id.and_then(|id| self.result_column_count(id))
                     && actual != declared.len()
                 {
                     let ev = CteColumnCountMismatchEvent {
@@ -1751,9 +1760,7 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
                 if V::WANTS_COLUMN_DEFINITION {
                     self.emit_select_column_definitions(visitor, binding.body_id, &binding.name);
                 }
-                binding
-                    .body_id
-                    .and_then(|id| StmtReader::new(self.stmt, self.roles).columns_from_select(id))
+                binding.body_id.and_then(|id| self.result_columns(id))
             };
             self.catalog.add_query_table(&binding.name, cols);
         }
@@ -1839,7 +1846,7 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
     }
 
     /// Report compound arms with different column counts. Arms whose count
-    /// isn't known, such as `SELECT *`, are skipped.
+    /// isn't known, such as a `*` over a source with unknown columns, are skipped.
     fn check_compound_columns<V: SemanticVisitor>(
         &mut self,
         visitor: &mut V,
@@ -1848,9 +1855,10 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
         left: AnyNodeId,
         right: AnyNodeId,
     ) {
-        let (Some(left_count), Some(right_count)) =
-            (self.arm_column_count(left), self.arm_column_count(right))
-        else {
+        let (Some(left_count), Some(right_count)) = (
+            self.result_column_count(left),
+            self.result_column_count(right),
+        ) else {
             return;
         };
         if left_count == right_count {
@@ -1871,55 +1879,14 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
         visitor.on_compound_columns(self.stmt, ev);
     }
 
-    /// Result columns of a compound arm: a plain SELECT's own, a nested
-    /// compound's leftmost arm, or a VALUES clause's row width. A VALUES
-    /// clause whose rows disagree has no width; it is reported on its own.
-    fn arm_column_count(&mut self, arm: AnyNodeId) -> Option<usize> {
-        let reader = StmtReader::new(self.stmt, self.roles);
-        match reader.role_for_node(arm)? {
-            (SemanticRole::CompoundScope { left, .. }, fields) => {
-                let left = fields.node_id_at(left)?;
-                self.arm_column_count(left)
-            }
-            (SemanticRole::Values { rows }, fields) => {
-                let rows = self.values_rows(&fields, rows);
-                let width = self.values_row_width(rows[0]);
-                rows.iter()
-                    .all(|&r| self.values_row_width(r) == width)
-                    .then_some(width)
-            }
-            (SemanticRole::Query { .. }, _) => self.count_result_columns(Some(arm)),
-            _ => None,
-        }
+    /// The columns `query` produces, resolved against the catalog as it
+    /// stands at this point of the walk.
+    fn result_columns(&self, query: AnyNodeId) -> Option<Vec<String>> {
+        ColumnResolver::new(self.stmt, self.roles, self.catalog).result_columns(query)
     }
 
-    fn count_result_columns(&mut self, body_id: Option<AnyNodeId>) -> Option<usize> {
-        let body_id = body_id?;
-        let reader = StmtReader::new(self.stmt, self.roles);
-        let (
-            SemanticRole::Query {
-                columns: cols_idx, ..
-            },
-            body_fields,
-        ) = reader.role_for_node(body_id)?
-        else {
-            return None;
-        };
-        let list_id = body_fields.node_id_at(cols_idx)?;
-
-        let mut count = 0usize;
-        let mut saw_star = false;
-        reader.for_each_result_column(list_id, |fields, flags_idx, _alias, _expr| {
-            if let FieldValue::Flags(f) = fields[flags_idx as usize]
-                && f & 1 != 0
-            {
-                saw_star = true;
-                return false;
-            }
-            count += 1;
-            true
-        });
-        if saw_star { None } else { Some(count) }
+    fn result_column_count(&self, query: AnyNodeId) -> Option<usize> {
+        ColumnResolver::new(self.stmt, self.roles, self.catalog).result_column_count(query)
     }
 
     fn emit_select_column_definitions<V: SemanticVisitor>(

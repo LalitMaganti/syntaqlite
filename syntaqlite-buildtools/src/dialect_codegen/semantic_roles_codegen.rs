@@ -448,17 +448,20 @@ fn role_to_bytes(
             left,
             right,
             on,
+            using,
         } => {
             bytes[0] = disc(SemanticRole::Join {
                 kind: 0,
                 left: 0,
                 right: 0,
                 on: 0,
+                using: 0,
             });
             bytes[1] = fi(kind);
             bytes[2] = fi(left);
             bytes[3] = fi(right);
             bytes[4] = opt(on);
+            bytes[5] = opt(using);
         }
         SynqRole::Values { rows } => {
             bytes[0] = disc(SemanticRole::Values { rows: 0 });

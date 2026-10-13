@@ -14,13 +14,14 @@
 
 use std::collections::HashMap;
 
-use syntaqlite_syntax::any::{AnyNodeId, AnyParsedStatement, FieldValue, NodeFields};
+use syntaqlite_syntax::any::{AnyNodeId, AnyParsedStatement};
 
 use super::catalog::Catalog;
 use super::engine::walker::{
     CteBindingEvent, ScopedSourceEvent, SemanticVisitor, SourceRefEvent, WalkCtx,
 };
 use super::name_key::NameKey;
+use super::result_columns::{ColumnResolver, FromColumns, StarColumn, is_star};
 use super::stmt_reader::StmtReader;
 use crate::dialect::SemanticRole;
 
@@ -144,7 +145,12 @@ impl SemanticVisitor for LineageCapture {
         });
     }
 
-    fn exit_query(&mut self, stmt: &mut AnyParsedStatement<'_>, _node_id: AnyNodeId) {
+    fn exit_query(
+        &mut self,
+        stmt: &mut AnyParsedStatement<'_>,
+        catalog: &Catalog,
+        _node_id: AnyNodeId,
+    ) {
         // The walker pairs enter/exit; an exit without a matching enter
         // is a walker bug, not a data-shape concern.
         let Some(frame) = self.stack.pop() else {
@@ -153,6 +159,7 @@ impl SemanticVisitor for LineageCapture {
         let summary = Finalizer {
             roles: self.roles,
             stmt,
+            catalog,
             per_query: &self.per_query,
             sources: &frame.sources,
         }
@@ -228,6 +235,7 @@ impl SemanticVisitor for LineageCapture {
 struct Finalizer<'a, 'b> {
     roles: &'static [SemanticRole],
     stmt: &'a AnyParsedStatement<'b>,
+    catalog: &'a Catalog,
     per_query: &'a HashMap<AnyNodeId, QuerySummary>,
     sources: &'a HashMap<String, SourceInfo>,
 }
@@ -262,7 +270,9 @@ impl<'a, 'b> Finalizer<'a, 'b> {
         let sema = self.sema();
         let Some((
             SemanticRole::Query {
-                columns: cols_idx, ..
+                from,
+                columns: cols_idx,
+                ..
             },
             fields,
         )) = sema.role_for_node(query)
@@ -272,29 +282,55 @@ impl<'a, 'b> Finalizer<'a, 'b> {
         let Some(list_id) = fields.node_id_at(cols_idx) else {
             return (Vec::new(), Vec::new(), true);
         };
+        let from = ColumnResolver::new(self.stmt, self.roles, self.catalog)
+            .source_columns(fields.node_id_at(from));
 
         let mut columns: Vec<ColumnLineage> = Vec::new();
         let mut names: Vec<String> = Vec::new();
         let mut complete = true;
         let mut index: u32 = 0;
+        let mut push = |name: &str, origin: Option<ColumnOrigin>| {
+            let name = name.to_ascii_lowercase();
+            names.push(name.clone());
+            columns.push(ColumnLineage {
+                name,
+                index,
+                origin,
+            });
+            index += 1;
+        };
 
         sema.for_each_result_column(list_id, |child_fields, flags_idx, alias_idx, expr_idx| {
-            if is_star(child_fields, flags_idx) {
-                self.expand_star(&mut columns, &mut names, &mut index, &mut complete);
-            } else {
+            if !is_star(child_fields, flags_idx) {
                 let name = sema
                     .infer_result_col_name(child_fields, alias_idx, expr_idx)
                     .unwrap_or_default();
                 let origin = child_fields
                     .node_id_at(expr_idx)
                     .and_then(|id| self.trace_expr(id));
-                names.push(name.clone());
-                columns.push(ColumnLineage {
-                    name,
-                    index,
-                    origin,
-                });
-                index += 1;
+                push(&name, origin);
+            } else if let Some(qualifier) = child_fields.node_id_at(expr_idx) {
+                let qualifier = self
+                    .stmt
+                    .first_span_ident_text(qualifier)
+                    .expect("a qualified * names its table");
+                match from.qualified_star(&qualifier) {
+                    Some((item, cols)) => {
+                        for col in cols {
+                            push(col, self.star_origin(&from, item, col));
+                        }
+                    }
+                    None => complete = false,
+                }
+            } else {
+                for column in &from.star {
+                    match column {
+                        StarColumn::Column { item, name } => {
+                            push(name, self.star_origin(&from, *item, name));
+                        }
+                        StarColumn::Unknown => complete = false,
+                    }
+                }
             }
             true
         });
@@ -302,30 +338,11 @@ impl<'a, 'b> Finalizer<'a, 'b> {
         (columns, names, complete)
     }
 
-    fn expand_star(
-        &self,
-        columns: &mut Vec<ColumnLineage>,
-        names: &mut Vec<String>,
-        index: &mut u32,
-        complete: &mut bool,
-    ) {
-        for info in self.sources.values() {
-            let Some(cols) = info.columns.clone() else {
-                *complete = false;
-                continue;
-            };
-            for col in cols {
-                let origin = self.origin_for_source(info, &col);
-                let name = col.to_ascii_lowercase();
-                names.push(name.clone());
-                columns.push(ColumnLineage {
-                    name,
-                    index: *index,
-                    origin,
-                });
-                *index += 1;
-            }
-        }
+    /// The origin of column `col` of FROM entry `item`, through this
+    /// query's captured source for that entry.
+    fn star_origin(&self, from: &FromColumns, item: usize, col: &str) -> Option<ColumnOrigin> {
+        let name = from.items[item].name.as_deref()?.to_ascii_lowercase();
+        self.origin_for_source(self.sources.get(&name)?, col)
     }
 
     /// Trace a single expression's origin. Only `ColumnRef` resolves;
@@ -467,13 +484,6 @@ impl<'a, 'b> Finalizer<'a, 'b> {
 
         (relations, physical_tables, unexpanded_views, complete)
     }
-}
-
-fn is_star(fields: &NodeFields, flags_idx: u8) -> bool {
-    matches!(
-        fields[flags_idx as usize],
-        FieldValue::Flags(f) if f & 1 != 0
-    )
 }
 
 // ── Public entry point ────────────────────────────────────────────────────────

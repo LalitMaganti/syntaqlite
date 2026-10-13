@@ -141,11 +141,17 @@ class CreateTableAsSelect(TestSuite):
 """,
         )
 
-    def test_star_accepts_any_column(self):
+    def test_star_expands(self):
         return DiffTestBlueprint(
             sql="CREATE TABLE src (id INTEGER); CREATE TABLE t AS SELECT * FROM src; SELECT t.anything FROM t;",
             strict_schema=True,
-            out="",
+            out="""\
+            error: unknown column 'anything' in table 't'
+             --> <stdin>:1:78
+              |
+            1 | CREATE TABLE src (id INTEGER); CREATE TABLE t AS SELECT * FROM src; SELECT t.anything FROM t;
+              |                                                                              ^~~~~~~~
+            """,
         )
 
 

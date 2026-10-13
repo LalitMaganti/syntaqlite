@@ -88,7 +88,7 @@ node JoinClause {
   on_expr: index Expr
   using_columns: index ExprList
 
-  semantic { join(kind: join_type, left: left, right: right, on: on_expr) }
+  semantic { join(kind: join_type, left: left, right: right, on: on_expr, using: using_columns) }
 
   fmt {
     switch(join_type) {

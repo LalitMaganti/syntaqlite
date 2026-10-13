@@ -394,6 +394,8 @@ pub mod roles {
             right: FieldIdx,
             /// Field index of the ON expression (`FIELD_ABSENT` if absent).
             on: FieldIdx,
+            /// Field index of the USING column list (`FIELD_ABSENT` if absent).
+            using: FieldIdx,
         } = 28,
 
         /// A VALUES clause.
@@ -553,6 +555,7 @@ pub mod roles {
                     left: 0,
                     right: 0,
                     on: 0,
+                    using: 0,
                 },
                 28,
             );

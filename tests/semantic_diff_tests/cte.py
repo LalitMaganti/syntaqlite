@@ -96,9 +96,15 @@ class CteInferredColumns(TestSuite):
             out="",
         )
 
-    def test_star_body_accepts_any_ref(self):
+    def test_star_body_expands(self):
         return DiffTestBlueprint(
             sql="CREATE TABLE t (a INTEGER, b TEXT); WITH cte AS (SELECT * FROM t) SELECT anything FROM cte",
             strict_schema=True,
-            out="",
+            out="""\
+            error: unknown column 'anything'
+             --> <stdin>:1:74
+              |
+            1 | CREATE TABLE t (a INTEGER, b TEXT); WITH cte AS (SELECT * FROM t) SELECT anything FROM cte
+              |                                                                          ^~~~~~~~
+            """,
         )

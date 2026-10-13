@@ -61,6 +61,8 @@ pub(crate) mod name_key;
 #[cfg(feature = "analysis")]
 pub(crate) mod resolver;
 #[cfg(feature = "analysis")]
+pub(crate) mod result_columns;
+#[cfg(feature = "analysis")]
 pub(crate) mod stmt_reader;
 
 // ── Public re-exports ─────────────────────────────────────────────────────────
