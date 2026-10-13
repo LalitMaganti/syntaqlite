@@ -38,6 +38,24 @@ class Rename(TestSuite):
 """,
         )
 
+    def test_prepare_rename_on_table_definition(self):
+        return LspDiffTestBlueprint(
+            sql="CREATE TABLE <|>users (id INT);\nSELECT * FROM users;",
+            op="prepare-rename",
+            out="""\
+            0:13..0:18 "users"
+""",
+        )
+
+    def test_prepare_rename_on_column_definition(self):
+        return LspDiffTestBlueprint(
+            sql="CREATE TABLE users (<|>id INT);\nSELECT id FROM users;",
+            op="prepare-rename",
+            out="""\
+            0:20..0:22 "id"
+""",
+        )
+
     def test_prepare_rename_on_unknown_returns_none(self):
         return LspDiffTestBlueprint(
             sql="SELECT * FROM <|>nonexistent;",

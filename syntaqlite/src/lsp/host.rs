@@ -632,7 +632,7 @@ impl LspHost {
             .analysis
             .as_ref()
             .expect("ensure_analysis sets analysis");
-        super::hover_service::prepare_rename(data, offset)
+        super::hover_service::prepare_rename(data, &doc.source, offset)
     }
 
     /// Rename the symbol at `offset` to `new_name` across all open documents.
