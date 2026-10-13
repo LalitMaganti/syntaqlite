@@ -31,6 +31,7 @@ fn syntaqlite_syntax_no_sqlite_feature_path_compiles() {
         .env("RUSTC_WRAPPER", "")
         .output()
         .expect("failed to run cargo check for no-sqlite path");
+    let _ = std::fs::remove_dir_all(&target_dir);
 
     if !output.status.success() {
         let stdout = String::from_utf8_lossy(&output.stdout);
