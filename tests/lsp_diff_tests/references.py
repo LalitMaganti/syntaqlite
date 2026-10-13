@@ -132,3 +132,26 @@ class References(TestSuite):
             1:35..1:36
 """,
         )
+
+    def test_column_through_table_alias(self):
+        return LspDiffTestBlueprint(
+            sql="CREATE TABLE t (<|>qty INT);\nSELECT c.qty FROM t c;\nSELECT qty FROM t AS c;",
+            op="references",
+            include_declaration=False,
+            out="""\
+            1:9..1:12
+            2:7..2:10
+""",
+        )
+
+    def test_column_through_self_join_aliases(self):
+        return LspDiffTestBlueprint(
+            sql="CREATE TABLE t (<|>id INT);\nSELECT a.id FROM t a JOIN t b ON a.id = b.id;",
+            op="references",
+            include_declaration=False,
+            out="""\
+            1:35..1:37
+            1:42..1:44
+            1:9..1:11
+""",
+        )

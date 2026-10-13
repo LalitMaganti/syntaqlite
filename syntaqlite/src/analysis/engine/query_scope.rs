@@ -38,9 +38,17 @@ pub(crate) struct ActiveTable {
     /// `None` = table exists but column list is unknown (accept any ref).
     columns: Option<Vec<String>>,
     rowid: RowIdPolicy,
+    /// The relation an alias stands for; `None` when bound under its own name.
+    relation: Option<String>,
 }
 
 impl ActiveTable {
+    fn relation_name(&self, key: &NameKey) -> String {
+        self.relation
+            .clone()
+            .unwrap_or_else(|| key.as_str().to_string())
+    }
+
     fn has_column(&self, column: &str) -> bool {
         match &self.columns {
             Some(cs) => {
@@ -86,9 +94,34 @@ impl QueryScope {
         rowid: RowIdPolicy,
     ) {
         if let Some(frame) = self.frames.last_mut() {
-            frame
-                .named
-                .insert(NameKey::new(name), ActiveTable { columns, rowid });
+            frame.named.insert(
+                NameKey::new(name),
+                ActiveTable {
+                    columns,
+                    rowid,
+                    relation: None,
+                },
+            );
+        }
+    }
+
+    /// Bind `relation` under `alias`, so resolved columns report the relation.
+    pub(crate) fn add_aliased_table(
+        &mut self,
+        alias: &str,
+        relation: &str,
+        columns: Option<Vec<String>>,
+        rowid: RowIdPolicy,
+    ) {
+        if let Some(frame) = self.frames.last_mut() {
+            frame.named.insert(
+                NameKey::new(alias),
+                ActiveTable {
+                    columns,
+                    rowid,
+                    relation: Some(relation.to_string()),
+                },
+            );
         }
     }
 
@@ -97,6 +130,7 @@ impl QueryScope {
             frame.anonymous.push(ActiveTable {
                 columns,
                 rowid: RowIdPolicy::WithRowId,
+                relation: None,
             });
         }
     }
@@ -116,14 +150,14 @@ impl QueryScope {
             };
             if entry.has_column(column) {
                 return ColumnResolution::Found {
-                    table: table.as_str().to_string(),
+                    table: entry.relation_name(table),
                     all_columns: entry.columns.clone().unwrap_or_default(),
                 };
             }
             return match &entry.columns {
                 Some(_) => ColumnResolution::TableFoundColumnMissing,
                 None => ColumnResolution::Found {
-                    table: table.as_str().to_string(),
+                    table: entry.relation_name(table),
                     all_columns: Vec::new(),
                 },
             };
@@ -138,7 +172,7 @@ impl QueryScope {
             for (tbl_name, entry) in &frame.named {
                 if entry.has_column(column) {
                     return ColumnResolution::Found {
-                        table: tbl_name.as_str().to_string(),
+                        table: entry.relation_name(tbl_name),
                         all_columns: entry.columns.clone().unwrap_or_default(),
                     };
                 }

@@ -121,3 +121,12 @@ target: 0:13..0:14
 target: 0:16..0:18
 """,
         )
+
+    def test_column_through_table_alias(self):
+        return LspDiffTestBlueprint(
+            sql="CREATE TABLE t (qty INT); SELECT c.<|>qty FROM t c;",
+            op="definition",
+            out="""\
+target: 0:16..0:19
+""",
+        )

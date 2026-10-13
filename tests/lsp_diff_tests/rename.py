@@ -131,3 +131,14 @@ class Rename(TestSuite):
             1:11..1:12 -> "u"
 """,
         )
+
+    def test_rename_column_through_table_alias(self):
+        return LspDiffTestBlueprint(
+            sql="CREATE TABLE t (<|>qty INT);\nSELECT c.qty FROM t c;",
+            op="rename",
+            new_name="amount",
+            out="""\
+            0:16..0:19 -> "amount"
+            1:9..1:12 -> "amount"
+""",
+        )
