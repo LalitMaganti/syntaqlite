@@ -54,23 +54,31 @@ def _fail(name: str, detail: str) -> None:
     print(f"  {_RED}FAIL{_RESET}  {name}: {detail}")
 
 
+def _write_config(dir: Path, schema: Path) -> Path:
+    """Write a syntaqlite.toml in `dir` that applies `schema` to every file."""
+    config = dir / "syntaqlite.toml"
+    config.write_text(f'schema = ["{schema}"]\n')
+    return config
+
+
 def _test_schema_from_ddl(ctx: SuiteContext) -> bool:
-    """With schemaPath, SELECT from a known table should produce zero diagnostics."""
+    """With a configured schema, SELECT from a known table should produce zero diagnostics."""
     schema_file = ctx.root_dir / "tests" / "lsp_tests" / "schema.sql"
     query_text = (ctx.root_dir / "tests" / "lsp_tests" / "query.sql").read_text()
 
-    client = spawn_lsp(ctx.binary, {"schemaPath": str(schema_file)})
-    try:
-        diags = _open_and_get_diagnostics(client, "file:///test.sql", query_text)
-        # Filter to only error-severity diagnostics about unknown tables/columns.
-        errors = [d for d in diags if d.get("severity", 0) <= 2]
-        if errors:
-            _fail("schema_from_ddl", f"expected 0 errors, got {len(errors)}: {errors}")
-            return False
-        _pass("schema_from_ddl")
-        return True
-    finally:
-        client.shutdown()
+    with tempfile.TemporaryDirectory() as tmp:
+        client = spawn_lsp(ctx.binary, config=_write_config(Path(tmp), schema_file))
+        try:
+            diags = _open_and_get_diagnostics(client, f"file://{tmp}/test.sql", query_text)
+            # Filter to only error-severity diagnostics about unknown tables/columns.
+            errors = [d for d in diags if d.get("severity", 0) <= 2]
+            if errors:
+                _fail("schema_from_ddl", f"expected 0 errors, got {len(errors)}: {errors}")
+                return False
+            _pass("schema_from_ddl")
+            return True
+        finally:
+            client.shutdown()
 
 
 def _test_no_schema_warns(ctx: SuiteContext) -> bool:
@@ -146,11 +154,11 @@ def _test_sqlite3_dot_schema(ctx: SuiteContext) -> bool:
         schema_path.write_text(result.stdout)
 
         # Feed the real .schema output to the LSP.
-        client = spawn_lsp(ctx.binary, {"schemaPath": str(schema_path)})
+        client = spawn_lsp(ctx.binary, config=_write_config(Path(tmp), schema_path))
         try:
             # Query both tables using columns from the schema.
             diags = _open_and_get_diagnostics(
-                client, "file:///test.sql",
+                client, f"file://{tmp}/test.sql",
                 "SELECT name, email FROM users; SELECT amount, created_at FROM orders;",
             )
             errors = [d for d in diags if d.get("severity", 0) <= 2]
@@ -163,93 +171,6 @@ def _test_sqlite3_dot_schema(ctx: SuiteContext) -> bool:
             client.shutdown()
 
 
-def _test_schema_reload(ctx: SuiteContext) -> bool:
-    """Changing schemaPath via didChangeConfiguration should update diagnostics."""
-    query_text = (ctx.root_dir / "tests" / "lsp_tests" / "query.sql").read_text()
-    schema_file = ctx.root_dir / "tests" / "lsp_tests" / "schema.sql"
-
-    # Start without schema — should warn.
-    client = spawn_lsp(ctx.binary)
-    try:
-        diags = _open_and_get_diagnostics(client, "file:///test.sql", query_text)
-        table_diags = [d for d in diags if "users" in d.get("message", "").lower()]
-        if not table_diags:
-            _fail("schema_reload", f"phase 1: expected 'unknown table' diagnostic, got: {diags}")
-            return False
-
-        # Send didChangeConfiguration with the schema path.
-        client.send_notification("workspace/didChangeConfiguration", {
-            "settings": {"schemaPath": str(schema_file)},
-        })
-
-        # Re-open (via didChange) to trigger re-analysis.
-        client.send_notification("textDocument/didChange", {
-            "textDocument": {"uri": "file:///test.sql", "version": 2},
-            "contentChanges": [{"text": query_text}],
-        })
-        diags = client.collect_diagnostics()
-        errors = [d for d in diags if d.get("severity", 0) <= 2]
-        if errors:
-            _fail("schema_reload", f"phase 2: expected 0 errors after reload, got: {errors}")
-            return False
-
-        _pass("schema_reload")
-        return True
-    finally:
-        client.shutdown()
-
-
-def _test_multi_schema(ctx: SuiteContext) -> bool:
-    """Switching schemas via didChangeConfiguration should change diagnostics."""
-    with tempfile.TemporaryDirectory() as tmp:
-        schema_a = Path(tmp) / "schema_a.sql"
-        schema_b = Path(tmp) / "schema_b.sql"
-        schema_a.write_text("CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT);\n")
-        schema_b.write_text("CREATE TABLE orders (id INTEGER PRIMARY KEY, amount REAL);\n")
-
-        # Start with schema_a (users table).
-        client = spawn_lsp(ctx.binary, {"schemaPath": str(schema_a)})
-        try:
-            # Query users — should be fine with schema_a.
-            diags = _open_and_get_diagnostics(
-                client, "file:///test.sql", "SELECT name FROM users;",
-            )
-            errors = [d for d in diags if d.get("severity", 0) <= 2]
-            if errors:
-                _fail("multi_schema", f"phase 1: expected 0 errors for users, got: {errors}")
-                return False
-
-            # Switch to schema_b (orders table, no users).
-            client.send_notification("workspace/didChangeConfiguration", {
-                "settings": {"schemaPath": str(schema_b)},
-            })
-
-            # Re-send the same doc querying users — should now error.
-            client.send_notification("textDocument/didChange", {
-                "textDocument": {"uri": "file:///test.sql", "version": 2},
-                "contentChanges": [{"text": "SELECT name FROM users;"}],
-            })
-            diags = client.collect_diagnostics()
-            table_diags = [d for d in diags if "users" in d.get("message", "").lower()]
-            if not table_diags:
-                _fail("multi_schema", f"phase 2: expected 'unknown table' for users, got: {diags}")
-                return False
-
-            # Open a new doc querying orders — should be fine with schema_b.
-            diags = _open_and_get_diagnostics(
-                client, "file:///orders.sql", "SELECT amount FROM orders;",
-            )
-            errors = [d for d in diags if d.get("severity", 0) <= 2]
-            if errors:
-                _fail("multi_schema", f"phase 3: expected 0 errors for orders, got: {errors}")
-                return False
-
-            _pass("multi_schema")
-            return True
-        finally:
-            client.shutdown()
-
-
 # ── Suite entry point ─────────────────────────────────────────────────────
 
 def run(ctx: SuiteContext) -> int:
@@ -257,8 +178,6 @@ def run(ctx: SuiteContext) -> int:
         _test_schema_from_ddl,
         _test_no_schema_warns,
         _test_sqlite3_dot_schema,
-        _test_schema_reload,
-        _test_multi_schema,
     ]
     results = [t(ctx) for t in tests]
     passed = sum(results)

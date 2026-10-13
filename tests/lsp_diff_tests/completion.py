@@ -12,6 +12,14 @@ class Completion(TestSuite):
             out="""\
             column: id
             column: name
+            column: rootpage
+            column: sql
+            column: tbl_name
+            column: type
+            table: sqlite_master
+            table: sqlite_schema
+            table: sqlite_temp_master
+            table: sqlite_temp_schema
             table: users
             keyword: ALL
             keyword: CASE
@@ -161,6 +169,10 @@ class Completion(TestSuite):
             op="completion",
             out="""\
 table: orders
+table: sqlite_master
+table: sqlite_schema
+table: sqlite_temp_master
+table: sqlite_temp_schema
 table: users
 keyword: CROSS
 keyword: FULL
@@ -178,6 +190,15 @@ keyword: RIGHT
             sql="SELECT * FR<|>",
             op="completion",
             out="""\
+            column: name
+            column: rootpage
+            column: sql
+            column: tbl_name
+            column: type
+            table: sqlite_master
+            table: sqlite_schema
+            table: sqlite_temp_master
+            table: sqlite_temp_schema
             keyword: ALTER
             keyword: ANALYZE
             keyword: ATTACH
@@ -329,6 +350,15 @@ keyword: RIGHT
             sql="SELEC 1; SELECT * FR<|>",
             op="completion",
             out="""\
+            column: name
+            column: rootpage
+            column: sql
+            column: tbl_name
+            column: type
+            table: sqlite_master
+            table: sqlite_schema
+            table: sqlite_temp_master
+            table: sqlite_temp_schema
             keyword: ALTER
             keyword: ANALYZE
             keyword: ATTACH
@@ -480,6 +510,10 @@ keyword: RIGHT
             sql="SELECT * FROM s AS x J<|>",
             op="completion",
             out="""\
+            table: sqlite_master
+            table: sqlite_schema
+            table: sqlite_temp_master
+            table: sqlite_temp_schema
             keyword: ALTER
             keyword: ANALYZE
             keyword: ATTACH
@@ -532,6 +566,10 @@ keyword: RIGHT
             sql="SELECT * FROM slice <|>",
             op="completion",
             out="""\
+            table: sqlite_master
+            table: sqlite_schema
+            table: sqlite_temp_master
+            table: sqlite_temp_schema
             keyword: AS
             keyword: CROSS
             keyword: EXCEPT
@@ -562,6 +600,10 @@ keyword: RIGHT
             sql="SELECT * FROM slice<|>",
             op="completion",
             out="""\
+            table: sqlite_master
+            table: sqlite_schema
+            table: sqlite_temp_master
+            table: sqlite_temp_schema
             keyword: AS
             keyword: CROSS
             keyword: EXCEPT
@@ -594,6 +636,10 @@ keyword: RIGHT
             out="""\
             table: a
             table: b
+            table: sqlite_master
+            table: sqlite_schema
+            table: sqlite_temp_master
+            table: sqlite_temp_schema
             keyword: CROSS
             keyword: FULL
             keyword: INDEXED
