@@ -151,6 +151,10 @@ pub(crate) enum SemanticRole {
         check: Option<String>,
         generated: Option<String>,
     },
+    TableConstraint {
+        check: Option<String>,
+        columns: Option<String>,
+    },
 }
 
 /// A `semantic { ... }` annotation on a node.
@@ -755,6 +759,10 @@ impl Parser {
             "column_constraint" => SemanticRole::ColumnConstraint {
                 check: get_param(&params, "check").map(str::to_string),
                 generated: get_param(&params, "generated").map(str::to_string),
+            },
+            "table_constraint" => SemanticRole::TableConstraint {
+                check: get_param(&params, "check").map(str::to_string),
+                columns: get_param(&params, "columns").map(str::to_string),
             },
             _ => {
                 return Err(format!(

@@ -319,6 +319,15 @@ pub mod roles {
             /// Field index of the GENERATED expression (`FIELD_ABSENT` if absent).
             generated: FieldIdx,
         } = 21,
+
+        /// Table constraint inside CREATE TABLE: resolves its CHECK expression
+        /// and PRIMARY KEY / UNIQUE columns against the table being created.
+        TableConstraint {
+            /// Field index of the CHECK expression (`FIELD_ABSENT` if absent).
+            check: FieldIdx,
+            /// Field index of the PRIMARY KEY / UNIQUE column list (`FIELD_ABSENT` if absent).
+            columns: FieldIdx,
+        } = 22,
     }
 
     /// Metadata for a node type that defines a template macro.
@@ -429,6 +438,13 @@ pub mod roles {
                     generated: 0,
                 },
                 21,
+            );
+            check(
+                SemanticRole::TableConstraint {
+                    check: 0,
+                    columns: 0,
+                },
+                22,
             );
         }
 

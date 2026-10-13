@@ -80,3 +80,14 @@ class Rename(TestSuite):
             0:31..0:34 -> "amount"
 """,
         )
+
+    def test_rename_column_renames_primary_key(self):
+        return LspDiffTestBlueprint(
+            sql="CREATE TABLE t (<|>id INT, PRIMARY KEY (id));",
+            op="rename",
+            new_name="key",
+            out="""\
+            0:16..0:18 -> "key"
+            0:37..0:39 -> "key"
+""",
+        )

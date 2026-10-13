@@ -304,12 +304,9 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
         fields: &NodeFields,
     ) {
         match role {
-            SemanticRole::DefineTable {
-                name,
-                columns,
-                select,
-                ..
-            } => self.walk_define_table(visitor, node_id, fields, name, columns, select),
+            SemanticRole::DefineTable { name, .. } => {
+                self.walk_define_table(visitor, node_id, fields, name);
+            }
             SemanticRole::DefineView { select, .. } => {
                 self.walk_define_view(visitor, node_id, fields, select);
             }
@@ -398,9 +395,14 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
             SemanticRole::IndexScope { table, .. } => {
                 self.walk_index_scope(visitor, node_id, fields, table);
             }
-            SemanticRole::ColumnConstraint { check, generated } => {
-                self.walk_column_constraint(visitor, fields, check, generated);
+            SemanticRole::ColumnConstraint {
+                check,
+                generated: no_rowid,
             }
+            | SemanticRole::TableConstraint {
+                check,
+                columns: no_rowid,
+            } => self.walk_constraint(visitor, fields, check, no_rowid),
         }
     }
 
@@ -756,16 +758,14 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
         visitor.on_source_ref(self.stmt, &mut cx, ev);
     }
 
-    /// Record a CREATE TABLE's definitions, then walk its column list with
-    /// the table available to constraint expressions.
+    /// Record a CREATE TABLE's definitions, then walk its body with the
+    /// table available to constraint expressions.
     fn walk_define_table<V: SemanticVisitor>(
         &mut self,
         visitor: &mut V,
         node_id: AnyNodeId,
         fields: &NodeFields,
         name_idx: u8,
-        columns_idx: u8,
-        select_idx: u8,
     ) {
         if V::WANTS_RELATION_DEFINITION || V::WANTS_COLUMN_DEFINITION {
             self.emit_ddl_definitions(visitor, node_id);
@@ -778,10 +778,9 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
                 columns,
                 rowid: without_rowid.into(),
             });
-            self.walk_opt(visitor, fields.node_id_at(columns_idx));
-            self.defining_table = None;
         }
-        self.walk_opt(visitor, fields.node_id_at(select_idx));
+        self.walk_children(visitor, node_id);
+        self.defining_table = None;
     }
 
     fn walk_define_view<V: SemanticVisitor>(
@@ -800,23 +799,24 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
         self.view_body_depth -= 1;
     }
 
-    /// Resolve a column constraint's CHECK and GENERATED expressions against
-    /// the table being created. DEFAULT and REFERENCES are not column scopes.
-    fn walk_column_constraint<V: SemanticVisitor>(
+    /// Resolve a constraint's CHECK expression, and its GENERATED expression
+    /// or key columns, against the table being created. DEFAULT and
+    /// REFERENCES are not column scopes.
+    fn walk_constraint<V: SemanticVisitor>(
         &mut self,
         visitor: &mut V,
         fields: &NodeFields,
         check_idx: u8,
-        generated_idx: u8,
+        no_rowid_idx: u8,
     ) {
         let Some(table) = self.defining_table.take() else {
             return;
         };
         self.walk_in_table_scope(visitor, fields.node_id_at(check_idx), &table, table.rowid);
-        // Generated columns cannot reference rowid.
+        // Generated columns and key columns cannot reference rowid.
         self.walk_in_table_scope(
             visitor,
-            fields.node_id_at(generated_idx),
+            fields.node_id_at(no_rowid_idx),
             &table,
             RowIdPolicy::WithoutRowId,
         );

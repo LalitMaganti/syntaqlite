@@ -356,3 +356,64 @@ class CreateTableColumnConstraints(TestSuite):
             strict_schema=True,
             out="",
         )
+
+
+class CreateTableTableConstraints(TestSuite):
+    def test_known_columns(self):
+        return DiffTestBlueprint(
+            sql="CREATE TABLE t (a, b, PRIMARY KEY (a, b), UNIQUE (b COLLATE nocase), CHECK (a > rowid));",
+            strict_schema=True,
+            out="",
+        )
+
+    def test_primary_key_unknown_column(self):
+        return DiffTestBlueprint(
+            sql="CREATE TABLE t (a, PRIMARY KEY (nope));",
+            strict_schema=True,
+            out="""\
+            error: unknown column 'nope'
+             --> <stdin>:1:33
+              |
+            1 | CREATE TABLE t (a, PRIMARY KEY (nope));
+              |                                 ^~~~
+            """,
+        )
+
+    def test_unique_cannot_use_rowid(self):
+        return DiffTestBlueprint(
+            sql="CREATE TABLE t (a, UNIQUE (rowid));",
+            strict_schema=True,
+            out="""\
+            error: unknown column 'rowid'
+             --> <stdin>:1:28
+              |
+            1 | CREATE TABLE t (a, UNIQUE (rowid));
+              |                            ^~~~~
+            """,
+        )
+
+    def test_check_unknown_column(self):
+        return DiffTestBlueprint(
+            sql="CREATE TABLE t (a, CHECK (nope > 0));",
+            strict_schema=True,
+            out="""\
+            error: unknown column 'nope'
+             --> <stdin>:1:27
+              |
+            1 | CREATE TABLE t (a, CHECK (nope > 0));
+              |                           ^~~~
+            """,
+        )
+
+    def test_check_rowid_in_without_rowid_table(self):
+        return DiffTestBlueprint(
+            sql="CREATE TABLE t (a PRIMARY KEY, CHECK (rowid > 0)) WITHOUT ROWID;",
+            strict_schema=True,
+            out="""\
+            error: unknown column 'rowid'
+             --> <stdin>:1:39
+              |
+            1 | CREATE TABLE t (a PRIMARY KEY, CHECK (rowid > 0)) WITHOUT ROWID;
+              |                                       ^~~~~
+            """,
+        )

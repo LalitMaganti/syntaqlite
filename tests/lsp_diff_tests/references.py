@@ -89,3 +89,15 @@ class References(TestSuite):
             0:51..0:54
 """,
         )
+
+    def test_column_in_table_constraints(self):
+        return LspDiffTestBlueprint(
+            sql="CREATE TABLE t (<|>id INT, PRIMARY KEY (id), UNIQUE (id), CHECK (id > 0));",
+            op="references",
+            include_declaration=False,
+            out="""\
+            0:37..0:39
+            0:50..0:52
+            0:62..0:64
+""",
+        )
