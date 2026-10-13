@@ -789,20 +789,24 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
         node_id: AnyNodeId,
         fields: &NodeFields,
         target_idx: u8,
-    ) -> Option<(String, DocRange)> {
+    ) -> (String, DocRange) {
         // target → QualifiedName node; its object name is the first child.
-        let target_id = fields.node_id_at(target_idx)?;
-        let (_, qf) = self.stmt.extract_fields(target_id)?;
-        let obj_id = qf.node_id_at(0)?;
+        let target_id = fields
+            .node_id_at(target_idx)
+            .expect("a schema statement has a target");
+        let (_, qf) = self
+            .stmt
+            .extract_fields(target_id)
+            .expect("the target is a qualified name");
+        let obj_id = qf
+            .node_id_at(0)
+            .expect("a qualified name has an object name");
         let (name, range) = self.stmt.name_text(Some(obj_id));
-        if name.is_empty() {
-            return None;
-        }
         // `name` keeps the raw source text for display; the catalog key uses
         // the identifier value (escape-collapsed).
         let name_ident = self.stmt.name_ident_text(Some(obj_id)).0.into_owned();
         if !V::WANTS_SOURCE_REF {
-            return Some((name_ident, range));
+            return (name_ident, range);
         }
         self.key_scratch.set(&name_ident);
         let resolved = self.catalog.relation_defined(&self.key_scratch);
@@ -820,7 +824,7 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
             scope: &mut self.scope,
         };
         visitor.on_source_ref(self.stmt, &mut cx, ev);
-        Some((name_ident, range))
+        (name_ident, range)
     }
 
     /// Record a CREATE TABLE's definitions, then walk its body with the
@@ -835,15 +839,17 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
         if V::WANTS_RELATION_DEFINITION || V::WANTS_COLUMN_DEFINITION {
             self.emit_ddl_definitions(visitor, node_id);
         }
-        if let Some(name) = self.stmt.span_field_ident_text(fields, name_idx) {
-            self.key_scratch.set(&name);
-            let (columns, without_rowid) = self.catalog.table_source_info(&self.key_scratch);
-            self.defining_table = Some(DefiningTable {
-                name: name.into_owned(),
-                columns,
-                rowid: without_rowid.into(),
-            });
-        }
+        let name = self
+            .stmt
+            .span_field_ident_text(fields, name_idx)
+            .expect("CREATE TABLE names its table");
+        self.key_scratch.set(&name);
+        let (columns, without_rowid) = self.catalog.table_source_info(&self.key_scratch);
+        self.defining_table = Some(DefiningTable {
+            name: name.into_owned(),
+            columns,
+            rowid: without_rowid.into(),
+        });
         self.walk_children(visitor, node_id);
         self.defining_table = None;
     }
@@ -930,13 +936,14 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
         table_idx: u8,
         columns_idx: u8,
     ) {
-        let Some((name, range)) = self.stmt.span_field_range(fields, table_idx) else {
-            return;
-        };
+        let (name, range) = self
+            .stmt
+            .span_field_range(fields, table_idx)
+            .expect("REFERENCES names its table");
         let name_ident = self
             .stmt
             .span_field_ident_text(fields, table_idx)
-            .unwrap_or(Cow::Borrowed(name));
+            .expect("REFERENCES names its table");
         self.key_scratch.set(&name_ident);
         if V::WANTS_SOURCE_REF {
             let ev = SourceRefEvent {
@@ -997,11 +1004,15 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
             unreachable!("not an index role: {role:?}");
         };
         self.scope.push();
-        if let Some((name, range)) = self.stmt.span_field_range(fields, table_idx) {
+        {
+            let (name, range) = self
+                .stmt
+                .span_field_range(fields, table_idx)
+                .expect("CREATE INDEX names its table");
             let name_ident = self
                 .stmt
                 .span_field_ident_text(fields, table_idx)
-                .unwrap_or(Cow::Borrowed(name));
+                .expect("CREATE INDEX names its table");
             self.key_scratch.set(&name_ident);
             if V::WANTS_SOURCE_REF {
                 let ev = SourceRefEvent {
@@ -1043,9 +1054,8 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
         fields: &NodeFields,
         target_idx: u8,
     ) {
-        if let Some((name, range)) = self.walk_schema_target(visitor, node_id, fields, target_idx) {
-            self.check_builtin(visitor, &name, range, BuiltinChange::Alter);
-        }
+        let (name, range) = self.walk_schema_target(visitor, node_id, fields, target_idx);
+        self.check_builtin(visitor, &name, range, BuiltinChange::Alter);
     }
 
     /// Report a DDL change to one of the dialect's built-in tables. Returns
@@ -1099,16 +1109,12 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
         if matches!(fields[if_exists as usize], FieldValue::Bool(true)) {
             self.unchecked = Some(UncheckedRef::DropIfExists);
         }
-        let target = self.walk_schema_target(visitor, node_id, fields, target);
+        let (name, range) = self.walk_schema_target(visitor, node_id, fields, target);
         self.unchecked = None;
-        if let Some((name, range)) = &target
-            && self.check_builtin(visitor, name, *range, BuiltinChange::Drop)
-        {
+        if self.check_builtin(visitor, &name, range, BuiltinChange::Drop) {
             return;
         }
-        if V::WANTS_DROP_WRONG_KIND
-            && let Some((name, range)) = target
-        {
+        if V::WANTS_DROP_WRONG_KIND {
             self.key_scratch.set(&name);
             if self.catalog.resolve_relation(&self.key_scratch) {
                 let is_view = self.catalog.is_view(&self.key_scratch);
@@ -1218,24 +1224,14 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
         else {
             unreachable!("not a trigger role: {role:?}");
         };
-        let target_name = self
-            .walk_schema_target(visitor, node_id, fields, target)
-            .map(|(name, range)| {
-                self.check_builtin(visitor, &name, range, BuiltinChange::Trigger);
-                name
-            });
+        let (target_name, range) = self.walk_schema_target(visitor, node_id, fields, target);
+        self.check_builtin(visitor, &target_name, range, BuiltinChange::Trigger);
         self.scope.push();
         for row in ["OLD", "NEW"] {
-            match &target_name {
-                Some(name) => {
-                    self.key_scratch.set(name);
-                    let (columns, without_rowid) =
-                        self.catalog.table_source_info(&self.key_scratch);
-                    self.scope
-                        .add_aliased_table(row, name, columns, without_rowid.into());
-                }
-                None => self.scope.add_table(row, None, RowIdPolicy::WithRowId),
-            }
+            self.key_scratch.set(&target_name);
+            let (columns, without_rowid) = self.catalog.table_source_info(&self.key_scratch);
+            self.scope
+                .add_aliased_table(row, &target_name, columns, without_rowid.into());
         }
         self.walk_opt(visitor, fields.node_id_at(event));
         self.walk_opt(visitor, fields.node_id_at(when));

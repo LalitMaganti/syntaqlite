@@ -853,9 +853,7 @@ impl Catalog {
         let Some(drops_view) = drop_kind_is_view(kind_name) else {
             return;
         };
-        let Some(name) = alter_qualified_name(stmt, fields, target_idx) else {
-            return;
-        };
+        let name = alter_qualified_name(stmt, fields, target_idx);
         let key = NameKey::new(&name);
         if self.visible_relation_is_dialect_builtin(&key) {
             return;
@@ -888,9 +886,7 @@ impl Catalog {
         old_name: u8,
         column: u8,
     ) {
-        let Some(table_name) = alter_qualified_name(stmt, fields, target_idx) else {
-            return;
-        };
+        let table_name = alter_qualified_name(stmt, fields, target_idx);
         let table_key = NameKey::new(&table_name);
         // Dialect built-ins are immutable. Do not let an invalid ALTER mutate
         // the analyzer's built-in relation and poison later statements.
@@ -1176,16 +1172,17 @@ pub(crate) fn drop_kind_is_view(kind_name: &str) -> Option<bool> {
 /// Unqualified table name from an `ALTER` target field. The field points at a
 /// `QualifiedName` node whose object name is its first child; the schema
 /// qualifier (if any) is dropped, matching how catalog keys are stored.
-fn alter_qualified_name(
-    stmt: &AnyParsedStatement<'_>,
-    fields: &NodeFields,
-    idx: u8,
-) -> Option<String> {
-    let target_id = fields.node_id_at(idx)?;
-    let (_, qf) = stmt.extract_fields(target_id)?;
-    let obj_id = qf.node_id_at(0)?;
-    let (text, _) = stmt.name_ident_text(Some(obj_id));
-    (!text.is_empty()).then(|| text.into_owned())
+fn alter_qualified_name(stmt: &AnyParsedStatement<'_>, fields: &NodeFields, idx: u8) -> String {
+    let target_id = fields
+        .node_id_at(idx)
+        .expect("a schema statement has a target");
+    let (_, qf) = stmt
+        .extract_fields(target_id)
+        .expect("the target is a qualified name");
+    let obj_id = qf
+        .node_id_at(0)
+        .expect("a qualified name has an object name");
+    stmt.name_ident_text(Some(obj_id)).0.into_owned()
 }
 
 /// Identifier value of an `ALTER` name field (a `Name` node), or `None`.
