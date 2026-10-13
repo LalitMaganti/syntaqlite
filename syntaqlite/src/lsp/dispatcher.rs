@@ -1177,12 +1177,7 @@ mod tests {
         );
         let notif: serde_json::Value = serde_json::from_str(&out[0]).unwrap();
         assert_eq!(notif["method"], "textDocument/publishDiagnostics");
-        assert!(
-            notif["params"]["diagnostics"]
-                .as_array()
-                .unwrap()
-                .is_empty()
-        );
+        assert_eq!(notif["params"]["diagnostics"], serde_json::json!([]));
     }
 
     #[test]
@@ -1200,7 +1195,7 @@ mod tests {
         let resp: serde_json::Value = serde_json::from_str(&out[0]).unwrap();
         assert_eq!(resp["error"]["code"], ErrorCode::InvalidRequest as i32);
         let out = d.handle_json(r#"{"jsonrpc":"2.0","method":"exit","params":null}"#);
-        assert!(out.is_empty());
+        assert_eq!(out, Vec::<String>::new());
         assert!(d.exited());
     }
 
@@ -1248,7 +1243,7 @@ mod tests {
         );
         let out = set_ddl_context(&mut d, 2, "CREATE TABLE t(a INTEGER);");
         assert_eq!(out.len(), 2, "expected response + publishDiagnostics");
-        assert!(out[0]["result"]["errors"].as_array().unwrap().is_empty());
+        assert_eq!(out[0]["result"]["errors"], serde_json::json!([]));
         assert_eq!(out[1]["method"], "textDocument/publishDiagnostics");
         assert!(
             out[1]["params"]["diagnostics"]

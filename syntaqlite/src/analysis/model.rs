@@ -280,7 +280,7 @@ mod tests {
         let mut catalog = sqlite_catalog();
         let mut ctx = AnalysisContext::new(&mut catalog);
         let model = analyzer.analyze("SELECT 1;", &mut ctx);
-        assert!(model.statements()[0].defined_relations().is_empty());
+        assert_eq!(model.statements()[0].defined_relations(), []);
     }
 
     #[test]
@@ -334,13 +334,9 @@ mod tests {
         );
         let mut ctx = AnalysisContext::new(&mut catalog);
         let model = analyzer.analyze("SELECT id FROM users", &mut ctx);
-        assert!(
-            model
-                .statements()
-                .last()
-                .unwrap()
-                .unexpanded_views()
-                .is_empty()
+        assert_eq!(
+            model.statements().last().unwrap().unexpanded_views(),
+            Vec::<String>::new()
         );
     }
 

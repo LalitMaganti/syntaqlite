@@ -39,7 +39,7 @@ fn parsing_example_loop_yields_successful_statement() {
                 let _ = statement.root();
             }
             ParseOutcome::Err(error) => {
-                assert!(!error.message().is_empty());
+                assert_ne!(error.message(), "");
                 if error.kind() == ParseErrorKind::Fatal {
                     break;
                 }
@@ -89,7 +89,7 @@ fn parse_session_continues_after_statement_error() {
         ParseOutcome::Done => panic!("second statement should exist"),
         ParseOutcome::Ok(_) => panic!("second statement should fail"),
     };
-    assert!(!error.message().is_empty());
+    assert_ne!(error.message(), "");
     assert!(matches!(
         error.kind(),
         ParseErrorKind::Recovered | ParseErrorKind::Fatal

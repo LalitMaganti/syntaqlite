@@ -628,7 +628,7 @@ mod tests {
             ParseOutcome::Done => panic!("second statement missing"),
             ParseOutcome::Ok(_) => panic!("second statement should fail"),
         };
-        assert!(!error.message().is_empty());
+        assert_ne!(error.message(), "");
         assert_ne!(error.is_fatal(), error.is_recovered());
         assert!(matches!(
             error.kind(),

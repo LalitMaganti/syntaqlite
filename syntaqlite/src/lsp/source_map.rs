@@ -193,6 +193,6 @@ mod tests {
     fn empty_batch() {
         let src = DocText::new("abc");
         let map = SourceMap::new(src);
-        assert!(map.byte_offsets_to_utf16(&[]).is_empty());
+        assert_eq!(map.byte_offsets_to_utf16(&[]), Vec::new());
     }
 }

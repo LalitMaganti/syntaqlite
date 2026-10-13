@@ -241,11 +241,11 @@ line-width = 120
 
         // Matches third glob (empty schemas).
         let schemas = resolve_schemas(Path::new("/project/migrations/001.sql"), &config, dir);
-        assert!(schemas.is_empty());
+        assert_eq!(schemas, Vec::<PathBuf>::new());
 
         // No match, no fallback.
         let schemas = resolve_schemas(Path::new("/project/other/file.sql"), &config, dir);
-        assert!(schemas.is_empty());
+        assert_eq!(schemas, Vec::<PathBuf>::new());
     }
 
     #[test]
@@ -312,7 +312,7 @@ semicolons = false
         assert!(config.schema.is_none());
         assert!(config.schemas.is_empty());
         assert!(config.sqlite_version.is_none());
-        assert!(config.sqlite_cflags.is_empty());
+        assert_eq!(config.sqlite_cflags, Vec::<String>::new());
         assert!(config.format.line_width.is_none());
     }
 
@@ -320,7 +320,7 @@ semicolons = false
     fn parse_sqlite_version_only() {
         let config: ProjectConfig = toml::from_str("sqlite-version = \"latest\"\n").unwrap();
         assert_eq!(config.sqlite_version.as_deref(), Some("latest"));
-        assert!(config.sqlite_cflags.is_empty());
+        assert_eq!(config.sqlite_cflags, Vec::<String>::new());
     }
 
     #[test]
