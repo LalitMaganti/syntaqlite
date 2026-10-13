@@ -533,13 +533,13 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
         self.key_scratch.set(&name_ident);
         let (columns, without_rowid) = self.catalog.table_source_info(&self.key_scratch);
         let (alias_ident, _) = self.stmt.name_ident_text(fields.node_id_at(alias_idx));
-        let scope_name = if alias_ident.is_empty() {
-            &*name_ident
+        if alias_ident.is_empty() {
+            self.scope
+                .add_table(&name_ident, columns, without_rowid.into());
         } else {
-            &*alias_ident
-        };
-        self.scope
-            .add_table(scope_name, columns, without_rowid.into());
+            self.scope
+                .add_aliased_table(&alias_ident, &name_ident, columns, without_rowid.into());
+        }
     }
 
     // ── Role walkers ──────────────────────────────────────────────────────────
