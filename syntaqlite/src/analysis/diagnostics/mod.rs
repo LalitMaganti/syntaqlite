@@ -153,7 +153,7 @@ impl Diagnostic {
 ///             println!("parse error: {msg}");
 ///         }
 ///         other => {
-///             // FunctionArity, UnknownColumn, CteColumnCountMismatch
+///             // FunctionArity, UnknownColumn, CteColumnCountMismatch, QualifiedRef
 ///             println!("{other}");
 ///         }
 ///     }
@@ -195,6 +195,16 @@ pub enum DiagnosticMessage {
         declared: usize,
         /// Number of result columns in the CTE body.
         actual: usize,
+    },
+    /// A column was qualified with its table name where `SQLite` forbids
+    /// qualified names.
+    QualifiedRef {
+        /// The table qualifier.
+        table: String,
+        /// The column name.
+        column: String,
+        /// Where the qualified name appeared.
+        context: QualifiedRefContext,
     },
     /// Module import could not be resolved.
     UnknownModule {
@@ -242,9 +252,44 @@ impl std::fmt::Display for DiagnosticMessage {
                 f,
                 "table '{name}' has {actual} values for {declared} columns"
             ),
+            Self::QualifiedRef {
+                table,
+                column,
+                context,
+            } => write!(
+                f,
+                "qualified name '{table}.{column}' is not allowed in {context}"
+            ),
             Self::UnknownModule { name } => write!(f, "unknown module '{name}'"),
             Self::ParseError(msg) => f.write_str(msg),
         }
+    }
+}
+
+/// Where a [`DiagnosticMessage::QualifiedRef`] appeared.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum QualifiedRefContext {
+    /// An index column list, including PRIMARY KEY and UNIQUE constraints.
+    IndexExpression,
+    /// A generated column expression.
+    GeneratedColumn,
+}
+
+impl QualifiedRefContext {
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::IndexExpression => "index_expression",
+            Self::GeneratedColumn => "generated_column",
+        }
+    }
+}
+
+impl std::fmt::Display for QualifiedRefContext {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(match self {
+            Self::IndexExpression => "an index expression",
+            Self::GeneratedColumn => "a generated column",
+        })
     }
 }
 
@@ -349,6 +394,18 @@ impl serde::Serialize for DiagnosticMessage {
                 m.serialize_entry("name", name)?;
                 m.serialize_entry("expected", expected)?;
                 m.serialize_entry("got", got)?;
+                m.end()
+            }
+            Self::QualifiedRef {
+                table,
+                column,
+                context,
+            } => {
+                let mut m = serializer.serialize_map(Some(4))?;
+                m.serialize_entry("kind", "qualified_ref")?;
+                m.serialize_entry("table", table)?;
+                m.serialize_entry("column", column)?;
+                m.serialize_entry("context", context.as_str())?;
                 m.end()
             }
             Self::UnknownModule { name } => {

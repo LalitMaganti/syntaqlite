@@ -124,6 +124,7 @@ impl CheckConfig {
             DiagnosticMessage::UnknownFunction { .. } => self.unknown_function,
             DiagnosticMessage::FunctionArity { .. } => self.function_arity,
             DiagnosticMessage::CteColumnCountMismatch { .. } => self.cte_columns,
+            DiagnosticMessage::QualifiedRef { .. } => self.qualified_ref,
             DiagnosticMessage::ParseError(_) => self.parse_errors,
         }
     }
@@ -319,7 +320,21 @@ impl<V: SemanticVisitor> SemanticVisitor for StatementVisitor<'_, V> {
         cx: &mut WalkCtx<'_>,
         ev: ColumnRefEvent<'_>,
     ) {
-        if !matches!(ev.resolution, ColumnResolution::Found { .. }) && accepted_ref(&ev).is_none() {
+        let found = matches!(ev.resolution, ColumnResolution::Found { .. });
+        if let (true, Some(context), Some(table)) = (found, ev.unqualified_only, ev.table) {
+            self.emit(
+                stmt,
+                ev.node_id,
+                ev.table_idx,
+                ev.table_range.unwrap_or(ev.range),
+                DiagnosticMessage::QualifiedRef {
+                    table: table.to_string(),
+                    column: ev.column.to_string(),
+                    context,
+                },
+                None,
+            );
+        } else if !found && accepted_ref(&ev).is_none() {
             self.emit_unresolved_column_ref(stmt, cx, &ev);
         }
         self.extra.on_column_ref(stmt, cx, ev);

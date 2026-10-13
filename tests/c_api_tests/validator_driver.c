@@ -89,6 +89,7 @@ static const char* code_str(uint32_t code) {
     case SYNTAQLITE_DIAG_UNKNOWN_MODULE:            return "UNKNOWN_MODULE";
     case SYNTAQLITE_DIAG_FUNCTION_ARITY:            return "FUNCTION_ARITY";
     case SYNTAQLITE_DIAG_CTE_COLUMN_COUNT_MISMATCH: return "CTE_COLUMN_COUNT_MISMATCH";
+    case SYNTAQLITE_DIAG_QUALIFIED_REF:             return "QUALIFIED_REF";
     default:                                         return "?";
   }
 }

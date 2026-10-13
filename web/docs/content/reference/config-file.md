@@ -49,6 +49,7 @@ unknown-column = "warn"
 unknown-function = "warn"
 function-arity = "warn"
 cte-columns = "deny"
+qualified-ref = "deny"
 # schema = "deny"           # shorthand for all 4 schema checks
 ```
 
@@ -136,6 +137,7 @@ Each field sets a diagnostic category to `"allow"` (suppress), `"warn"`, or
 | `unknown-function` | string | `"warn"` | Unresolved function names |
 | `function-arity` | string | `"warn"` | Wrong number of function arguments |
 | `cte-columns` | string | `"deny"` | CTE column count mismatches |
+| `qualified-ref` | string | `"deny"` | Qualified names like `t.a` in index expressions and generated columns |
 | `schema` | string | N/A | Shorthand for `unknown-table`, `unknown-column`, `unknown-function`, `function-arity` |
 | `all` | string | N/A | Shorthand for all categories |
 

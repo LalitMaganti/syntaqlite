@@ -557,3 +557,67 @@ class DropTable(TestSuite):
             strict_schema=True,
             out="",
         )
+
+
+class QualifiedRef(TestSuite):
+    def test_index_column(self):
+        return DiffTestBlueprint(
+            sql="CREATE TABLE t (a); CREATE INDEX i ON t (lower(t.a));",
+            out="""\
+            error: qualified name 't.a' is not allowed in an index expression
+             --> <stdin>:1:48
+              |
+            1 | CREATE TABLE t (a); CREATE INDEX i ON t (lower(t.a));
+              |                                                ^
+            """,
+        )
+
+    def test_index_where_allows_qualified(self):
+        return DiffTestBlueprint(
+            sql="CREATE TABLE t (a); CREATE INDEX i ON t (a) WHERE t.a > 0;",
+            out="",
+        )
+
+    def test_generated_column(self):
+        return DiffTestBlueprint(
+            sql="CREATE TABLE t (a, b AS (t.a + 1));",
+            out="""\
+            error: qualified name 't.a' is not allowed in a generated column
+             --> <stdin>:1:26
+              |
+            1 | CREATE TABLE t (a, b AS (t.a + 1));
+              |                          ^
+            """,
+        )
+
+    def test_primary_key(self):
+        return DiffTestBlueprint(
+            sql="CREATE TABLE t (a, PRIMARY KEY (t.a));",
+            out="""\
+            error: qualified name 't.a' is not allowed in an index expression
+             --> <stdin>:1:33
+              |
+            1 | CREATE TABLE t (a, PRIMARY KEY (t.a));
+              |                                 ^
+            """,
+        )
+
+    def test_check_allows_qualified(self):
+        return DiffTestBlueprint(
+            sql="CREATE TABLE t (a, CHECK (t.a > 0));",
+            out="",
+        )
+
+    def test_other_qualifier_is_unknown_table(self):
+        return DiffTestBlueprint(
+            sql="CREATE TABLE t (a); CREATE INDEX i ON t (x.a);",
+            strict_schema=True,
+            out="""\
+            error: unknown table 'x'
+             --> <stdin>:1:42
+              |
+            1 | CREATE TABLE t (a); CREATE INDEX i ON t (x.a);
+              |                                          ^
+              = help: did you mean 't'?
+            """,
+        )

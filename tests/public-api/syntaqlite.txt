@@ -12,6 +12,7 @@ impl core::default::Default for syntaqlite::lsp::LspHost
 impl core::error::Error for syntaqlite::fmt::FormatError
 impl core::fmt::Display for syntaqlite::analysis::DiagnosticMessage
 impl core::fmt::Display for syntaqlite::analysis::Help
+impl core::fmt::Display for syntaqlite::analysis::QualifiedRefContext
 impl core::fmt::Display for syntaqlite::fmt::FormatError
 impl core::marker::Send for syntaqlite::any::AnyDialect
 impl core::marker::Sync for syntaqlite::any::AnyDialect
@@ -67,6 +68,7 @@ pub enum syntaqlite::analysis::DiagnosticMessage
 pub enum syntaqlite::analysis::FunctionCategory
 pub enum syntaqlite::analysis::Help
 pub enum syntaqlite::analysis::LineageResult<T>
+pub enum syntaqlite::analysis::QualifiedRefContext
 pub enum syntaqlite::analysis::RelationKind
 pub enum syntaqlite::analysis::Severity
 pub enum syntaqlite::embedded::HostLanguage
@@ -102,6 +104,7 @@ pub fn syntaqlite::CheckConfig::cte_columns(&self) -> syntaqlite::CheckLevel
 pub fn syntaqlite::CheckConfig::default() -> Self
 pub fn syntaqlite::CheckConfig::function_arity(&self) -> syntaqlite::CheckLevel
 pub fn syntaqlite::CheckConfig::parse_errors(&self) -> syntaqlite::CheckLevel
+pub fn syntaqlite::CheckConfig::qualified_ref(&self) -> syntaqlite::CheckLevel
 pub fn syntaqlite::CheckConfig::set_by_name(self, &str, syntaqlite::CheckLevel) -> core::result::Result<Self, alloc::string::String>
 pub fn syntaqlite::CheckConfig::unknown_column(&self) -> syntaqlite::CheckLevel
 pub fn syntaqlite::CheckConfig::unknown_function(&self) -> syntaqlite::CheckLevel
@@ -110,6 +113,7 @@ pub fn syntaqlite::CheckConfig::with_all(self, syntaqlite::CheckLevel) -> Self
 pub fn syntaqlite::CheckConfig::with_cte_columns(self, syntaqlite::CheckLevel) -> Self
 pub fn syntaqlite::CheckConfig::with_function_arity(self, syntaqlite::CheckLevel) -> Self
 pub fn syntaqlite::CheckConfig::with_parse_errors(self, syntaqlite::CheckLevel) -> Self
+pub fn syntaqlite::CheckConfig::with_qualified_ref(self, syntaqlite::CheckLevel) -> Self
 pub fn syntaqlite::CheckConfig::with_schema(self, syntaqlite::CheckLevel) -> Self
 pub fn syntaqlite::CheckConfig::with_unknown_column(self, syntaqlite::CheckLevel) -> Self
 pub fn syntaqlite::CheckConfig::with_unknown_function(self, syntaqlite::CheckLevel) -> Self
@@ -163,6 +167,7 @@ pub fn syntaqlite::analysis::LineageResult<T>::into_inner(self) -> T
 pub fn syntaqlite::analysis::LineageResult<T>::is_complete(&self) -> bool
 pub fn syntaqlite::analysis::LineageResult<T>::map<U, F: core::ops::function::FnOnce(T) -> U>(self, F) -> syntaqlite::analysis::LineageResult<U>
 pub fn syntaqlite::analysis::ModuleResolver::resolve(&self, &str) -> core::option::Option<alloc::string::String>
+pub fn syntaqlite::analysis::QualifiedRefContext::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn syntaqlite::analysis::Severity::serialize<S: serde_core::ser::Serializer>(&self, S) -> core::result::Result<<S as serde_core::ser::Serializer>::Ok, <S as serde_core::ser::Serializer>::Error>
 pub fn syntaqlite::analysis::StatementAnalysis::defined_relations(&self) -> &[syntaqlite::analysis::DefinedRelation]
 pub fn syntaqlite::analysis::StatementAnalysis::diagnostics(&self) -> &[syntaqlite::Diagnostic]
@@ -336,6 +341,10 @@ pub syntaqlite::analysis::DiagnosticMessage::FunctionArity::expected: alloc::vec
 pub syntaqlite::analysis::DiagnosticMessage::FunctionArity::got: usize
 pub syntaqlite::analysis::DiagnosticMessage::FunctionArity::name: alloc::string::String
 pub syntaqlite::analysis::DiagnosticMessage::ParseError(alloc::string::String)
+pub syntaqlite::analysis::DiagnosticMessage::QualifiedRef
+pub syntaqlite::analysis::DiagnosticMessage::QualifiedRef::column: alloc::string::String
+pub syntaqlite::analysis::DiagnosticMessage::QualifiedRef::context: syntaqlite::analysis::QualifiedRefContext
+pub syntaqlite::analysis::DiagnosticMessage::QualifiedRef::table: alloc::string::String
 pub syntaqlite::analysis::DiagnosticMessage::UnknownColumn
 pub syntaqlite::analysis::DiagnosticMessage::UnknownColumn::column: alloc::string::String
 pub syntaqlite::analysis::DiagnosticMessage::UnknownColumn::table: core::option::Option<alloc::string::String>
@@ -352,6 +361,8 @@ pub syntaqlite::analysis::Help::Suggestion(alloc::string::String)
 pub syntaqlite::analysis::LineageResult::Complete(T)
 pub syntaqlite::analysis::LineageResult::Partial(T)
 pub syntaqlite::analysis::PhysicalTableAccess::name: alloc::string::String
+pub syntaqlite::analysis::QualifiedRefContext::GeneratedColumn
+pub syntaqlite::analysis::QualifiedRefContext::IndexExpression
 pub syntaqlite::analysis::RelationAccess::kind: syntaqlite::analysis::RelationKind
 pub syntaqlite::analysis::RelationAccess::name: alloc::string::String
 pub syntaqlite::analysis::RelationKind::Table

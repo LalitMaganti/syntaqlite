@@ -75,7 +75,7 @@ pub use config::{AnalysisConfig, AnalysisMode, CheckConfig, CheckLevel};
 #[cfg(feature = "analysis")]
 pub use context::AnalysisContext;
 #[doc(inline)]
-pub use diagnostics::{Diagnostic, DiagnosticMessage, Help, Severity};
+pub use diagnostics::{Diagnostic, DiagnosticMessage, Help, QualifiedRefContext, Severity};
 #[doc(inline)]
 #[cfg(feature = "analysis")]
 pub use engine::Analyzer;
