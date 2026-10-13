@@ -148,3 +148,12 @@ target: 0:15..0:16
 target: 0:44..0:47
 """,
         )
+
+    def test_references_parent_defined_later(self):
+        return LspDiffTestBlueprint(
+            sql="CREATE TABLE c (pid INT REFERENCES <|>p (id));\nCREATE TABLE p (id INT);",
+            op="definition",
+            out="""\
+target: 1:13..1:14
+""",
+        )

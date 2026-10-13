@@ -24,7 +24,7 @@ use crate::analysis::catalog::{
 };
 use crate::analysis::engine::tokens::{SemanticToken, StoredComment, StoredToken};
 use crate::analysis::engine::walker::{
-    CallEvent, ColumnRefEvent, SemanticVisitor, SourceRefEvent, WalkCtx,
+    CallEvent, ColumnRefEvent, SemanticVisitor, SourceRefEvent, UncheckedRef, WalkCtx,
 };
 use crate::analysis::name_key::NameKey;
 use crate::dialect::AnyDialect;
@@ -265,6 +265,9 @@ impl ExternalDefinitions {
 pub(crate) struct LspCapture<'a> {
     pub(crate) data: DocumentAnalysisData,
     external: Option<&'a ExternalDefinitions>,
+    /// Foreign key parents not yet defined when referenced, resolved once
+    /// the whole document's definitions are known.
+    deferred_parents: Vec<(String, DocRange)>,
 }
 
 impl<'a> LspCapture<'a> {
@@ -272,10 +275,38 @@ impl<'a> LspCapture<'a> {
         Self {
             data: DocumentAnalysisData::default(),
             external,
+            deferred_parents: Vec::new(),
         }
     }
 
-    pub(crate) fn into_data(self) -> DocumentAnalysisData {
+    /// Finish the capture, linking references to definitions that appeared
+    /// later in the document, such as a foreign key's parent table.
+    pub(crate) fn into_data(mut self) -> DocumentAnalysisData {
+        for (name, range) in std::mem::take(&mut self.deferred_parents) {
+            if let Some(definition) = self.lookup_table_definition(&name) {
+                self.data.resolutions.push(Resolution {
+                    range,
+                    symbol: ResolvedSymbol::Table {
+                        name,
+                        columns: None,
+                        definition: Some(definition),
+                    },
+                });
+            }
+        }
+        let mut resolutions = std::mem::take(&mut self.data.resolutions);
+        for res in &mut resolutions {
+            if let ResolvedSymbol::Column {
+                column,
+                table,
+                definition: definition @ None,
+                ..
+            } = &mut res.symbol
+            {
+                *definition = self.lookup_column_definition(table, column);
+            }
+        }
+        self.data.resolutions = resolutions;
         self.data
     }
 
@@ -331,6 +362,9 @@ impl SemanticVisitor for LspCapture<'_> {
         ev: SourceRefEvent<'_>,
     ) {
         if !ev.resolved {
+            if matches!(ev.unchecked, Some(UncheckedRef::ForeignKeyParent)) {
+                self.deferred_parents.push((ev.name.to_string(), ev.range));
+            }
             return;
         }
         let (columns, _without_rowid) = cx.catalog.table_source_info(&NameKey::new(ev.name));

@@ -165,8 +165,3 @@ The params are one of:
 The result is `{"errors": [...]}`. DDL that only partially parses is still
 applied, and its parse errors are listed in `errors`. Diagnostics for every
 open document are republished after the change.
-
-## Limitations
-
-- A `REFERENCES` parent table defined later in the file is not resolved for
-  navigation.

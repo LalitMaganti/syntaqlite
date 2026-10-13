@@ -153,3 +153,14 @@ class Rename(TestSuite):
             1:21..1:22 -> "u"
 """,
         )
+
+    def test_rename_parent_defined_later(self):
+        return LspDiffTestBlueprint(
+            sql="CREATE TABLE c (pid INT REFERENCES p (id));\nCREATE TABLE <|>p (id INT);",
+            op="rename",
+            new_name="parent",
+            out="""\
+            0:35..0:36 -> "parent"
+            1:13..1:14 -> "parent"
+""",
+        )
