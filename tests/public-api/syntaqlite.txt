@@ -103,6 +103,7 @@ pub fn syntaqlite::Catalog::new_document(&mut self)
 pub fn syntaqlite::CheckConfig::cte_columns(&self) -> syntaqlite::CheckLevel
 pub fn syntaqlite::CheckConfig::default() -> Self
 pub fn syntaqlite::CheckConfig::function_arity(&self) -> syntaqlite::CheckLevel
+pub fn syntaqlite::CheckConfig::index_on_view(&self) -> syntaqlite::CheckLevel
 pub fn syntaqlite::CheckConfig::parse_errors(&self) -> syntaqlite::CheckLevel
 pub fn syntaqlite::CheckConfig::qualified_ref(&self) -> syntaqlite::CheckLevel
 pub fn syntaqlite::CheckConfig::set_by_name(self, &str, syntaqlite::CheckLevel) -> core::result::Result<Self, alloc::string::String>
@@ -112,6 +113,7 @@ pub fn syntaqlite::CheckConfig::unknown_table(&self) -> syntaqlite::CheckLevel
 pub fn syntaqlite::CheckConfig::with_all(self, syntaqlite::CheckLevel) -> Self
 pub fn syntaqlite::CheckConfig::with_cte_columns(self, syntaqlite::CheckLevel) -> Self
 pub fn syntaqlite::CheckConfig::with_function_arity(self, syntaqlite::CheckLevel) -> Self
+pub fn syntaqlite::CheckConfig::with_index_on_view(self, syntaqlite::CheckLevel) -> Self
 pub fn syntaqlite::CheckConfig::with_parse_errors(self, syntaqlite::CheckLevel) -> Self
 pub fn syntaqlite::CheckConfig::with_qualified_ref(self, syntaqlite::CheckLevel) -> Self
 pub fn syntaqlite::CheckConfig::with_schema(self, syntaqlite::CheckLevel) -> Self
@@ -340,6 +342,8 @@ pub syntaqlite::analysis::DiagnosticMessage::FunctionArity
 pub syntaqlite::analysis::DiagnosticMessage::FunctionArity::expected: alloc::vec::Vec<usize>
 pub syntaqlite::analysis::DiagnosticMessage::FunctionArity::got: usize
 pub syntaqlite::analysis::DiagnosticMessage::FunctionArity::name: alloc::string::String
+pub syntaqlite::analysis::DiagnosticMessage::IndexOnView
+pub syntaqlite::analysis::DiagnosticMessage::IndexOnView::name: alloc::string::String
 pub syntaqlite::analysis::DiagnosticMessage::ParseError(alloc::string::String)
 pub syntaqlite::analysis::DiagnosticMessage::QualifiedRef
 pub syntaqlite::analysis::DiagnosticMessage::QualifiedRef::column: alloc::string::String

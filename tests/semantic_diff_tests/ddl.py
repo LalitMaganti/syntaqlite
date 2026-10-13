@@ -621,3 +621,23 @@ class QualifiedRef(TestSuite):
               = help: did you mean 't'?
             """,
         )
+
+
+class IndexOnView(TestSuite):
+    def test_index_on_view(self):
+        return DiffTestBlueprint(
+            sql="CREATE VIEW v AS SELECT 1 AS a; CREATE INDEX i ON v (a);",
+            out="""\
+            error: cannot index view 'v'
+             --> <stdin>:1:51
+              |
+            1 | CREATE VIEW v AS SELECT 1 AS a; CREATE INDEX i ON v (a);
+              |                                                   ^
+            """,
+        )
+
+    def test_index_on_table_named_like_dropped_view(self):
+        return DiffTestBlueprint(
+            sql="CREATE VIEW v AS SELECT 1 AS a; DROP VIEW v; CREATE TABLE v (a); CREATE INDEX i ON v (a);",
+            out="",
+        )

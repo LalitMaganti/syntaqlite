@@ -642,6 +642,7 @@ def _test_diagnostic_code_enum_members(stq) -> bool:
         "FUNCTION_ARITY",
         "CTE_COLUMN_COUNT_MISMATCH",
         "QUALIFIED_REF",
+        "INDEX_ON_VIEW",
     }
     actual = {m.name for m in stq.DiagnosticCode}
     if actual != expected:

@@ -115,6 +115,13 @@ pub(crate) struct CteColumnCountMismatchEvent<'a> {
     pub(crate) actual: usize,
 }
 
+/// A `CREATE INDEX` whose target is a view.
+#[derive(Copy, Clone)]
+pub(crate) struct IndexOnViewEvent<'a> {
+    pub(crate) name: &'a str,
+    pub(crate) range: DocRange,
+}
+
 /// A single CTE binding, fired BEFORE its body is walked so visitors
 /// can register the `name -> body` mapping in time for body
 /// source-refs (including recursive self-references) to look it up.
@@ -150,6 +157,7 @@ pub(crate) trait SemanticVisitor {
     const WANTS_RELATION_DEFINITION: bool = false;
     const WANTS_COLUMN_DEFINITION: bool = false;
     const WANTS_CTE_COLUMN_COUNT: bool = false;
+    const WANTS_INDEX_ON_VIEW: bool = false;
     const WANTS_CTE_BINDING: bool = false;
     const WANTS_SCOPED_SOURCE: bool = false;
     /// Return true to receive [`enter_query`](Self::enter_query) /
@@ -195,6 +203,8 @@ pub(crate) trait SemanticVisitor {
         _ev: CteColumnCountMismatchEvent<'_>,
     ) {
     }
+
+    fn on_index_on_view(&mut self, _stmt: &mut AnyParsedStatement<'_>, _ev: IndexOnViewEvent<'_>) {}
 
     /// Called once per CTE binding, BEFORE its body is walked. The body
     /// will observe the binding's own name as a resolved catalog source
@@ -972,6 +982,10 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
                     scope: &mut self.scope,
                 };
                 visitor.on_source_ref(self.stmt, &mut cx, ev);
+            }
+            if V::WANTS_INDEX_ON_VIEW && self.catalog.is_view(&self.key_scratch) {
+                let ev = IndexOnViewEvent { name, range };
+                visitor.on_index_on_view(self.stmt, ev);
             }
             let (columns, _) = self.catalog.table_source_info(&self.key_scratch);
             // Index expressions cannot reference rowid.

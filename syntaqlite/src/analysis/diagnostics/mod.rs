@@ -153,7 +153,7 @@ impl Diagnostic {
 ///             println!("parse error: {msg}");
 ///         }
 ///         other => {
-///             // FunctionArity, UnknownColumn, CteColumnCountMismatch, QualifiedRef
+///             // FunctionArity, UnknownColumn, CteColumnCountMismatch, QualifiedRef, IndexOnView
 ///             println!("{other}");
 ///         }
 ///     }
@@ -205,6 +205,11 @@ pub enum DiagnosticMessage {
         column: String,
         /// Where the qualified name appeared.
         context: QualifiedRefContext,
+    },
+    /// `CREATE INDEX` targets a view, which `SQLite` cannot index.
+    IndexOnView {
+        /// The view name.
+        name: String,
     },
     /// Module import could not be resolved.
     UnknownModule {
@@ -260,6 +265,7 @@ impl std::fmt::Display for DiagnosticMessage {
                 f,
                 "qualified name '{table}.{column}' is not allowed in {context}"
             ),
+            Self::IndexOnView { name } => write!(f, "cannot index view '{name}'"),
             Self::UnknownModule { name } => write!(f, "unknown module '{name}'"),
             Self::ParseError(msg) => f.write_str(msg),
         }
@@ -406,6 +412,12 @@ impl serde::Serialize for DiagnosticMessage {
                 m.serialize_entry("table", table)?;
                 m.serialize_entry("column", column)?;
                 m.serialize_entry("context", context.as_str())?;
+                m.end()
+            }
+            Self::IndexOnView { name } => {
+                let mut m = serializer.serialize_map(Some(2))?;
+                m.serialize_entry("kind", "index_on_view")?;
+                m.serialize_entry("name", name)?;
                 m.end()
             }
             Self::UnknownModule { name } => {

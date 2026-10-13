@@ -21,8 +21,8 @@ use crate::analysis::{AnalysisConfig, CheckConfig, CheckLevel};
 use crate::dialect::SemanticRole;
 
 use super::walker::{
-    CallEvent, ColumnRefEvent, CteBindingEvent, CteColumnCountMismatchEvent, ScopedSourceEvent,
-    SemanticVisitor, SourceRefEvent, WalkCtx,
+    CallEvent, ColumnRefEvent, CteBindingEvent, CteColumnCountMismatchEvent, IndexOnViewEvent,
+    ScopedSourceEvent, SemanticVisitor, SourceRefEvent, WalkCtx,
 };
 
 /// Whether `name` is an embedded-SQL interpolation placeholder: an identifier of
@@ -125,6 +125,7 @@ impl CheckConfig {
             DiagnosticMessage::FunctionArity { .. } => self.function_arity,
             DiagnosticMessage::CteColumnCountMismatch { .. } => self.cte_columns,
             DiagnosticMessage::QualifiedRef { .. } => self.qualified_ref,
+            DiagnosticMessage::IndexOnView { .. } => self.index_on_view,
             DiagnosticMessage::ParseError(_) => self.parse_errors,
         }
     }
@@ -281,6 +282,7 @@ impl<V: SemanticVisitor> SemanticVisitor for StatementVisitor<'_, V> {
     const WANTS_RELATION_DEFINITION: bool = V::WANTS_RELATION_DEFINITION;
     const WANTS_COLUMN_DEFINITION: bool = V::WANTS_COLUMN_DEFINITION;
     const WANTS_CTE_COLUMN_COUNT: bool = true;
+    const WANTS_INDEX_ON_VIEW: bool = true;
     // LineageCapture wants source refs, scoped sources, CTE bindings,
     // and enter/exit — all forwarded below.
     const WANTS_CTE_BINDING: bool = true;
@@ -405,6 +407,17 @@ impl<V: SemanticVisitor> SemanticVisitor for StatementVisitor<'_, V> {
             None,
         );
         self.extra.on_cte_column_count_mismatch(stmt, ev);
+    }
+
+    fn on_index_on_view(&mut self, stmt: &mut AnyParsedStatement<'_>, ev: IndexOnViewEvent<'_>) {
+        self.emit_at(
+            ev.range,
+            DiagnosticMessage::IndexOnView {
+                name: ev.name.to_string(),
+            },
+            None,
+        );
+        self.extra.on_index_on_view(stmt, ev);
     }
 
     fn on_cte_binding(&mut self, stmt: &mut AnyParsedStatement<'_>, ev: CteBindingEvent<'_>) {

@@ -90,6 +90,7 @@ class DiagnosticCode(IntEnum):
     FUNCTION_ARITY = 5
     CTE_COLUMN_COUNT_MISMATCH = 6
     QUALIFIED_REF = 7
+    INDEX_ON_VIEW = 8
 
 
 class AnalysisOutput(StrEnum):

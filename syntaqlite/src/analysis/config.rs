@@ -86,6 +86,7 @@ impl CheckLevel {
 /// | `function-arity` | [`function_arity`](Self::function_arity) | Wrong number of function arguments | `warn` |
 /// | `cte-columns` | [`cte_columns`](Self::cte_columns) | CTE column count mismatches | `deny` |
 /// | `qualified-ref` | [`qualified_ref`](Self::qualified_ref) | Qualified names where `SQLite` forbids them | `deny` |
+/// | `index-on-view` | [`index_on_view`](Self::index_on_view) | `CREATE INDEX` on a view | `deny` |
 ///
 /// The group name `schema` is a shorthand for `unknown-table`,
 /// `unknown-column`, `unknown-function`, and `function-arity`.
@@ -98,6 +99,7 @@ pub struct CheckConfig {
     pub(crate) function_arity: CheckLevel,
     pub(crate) cte_columns: CheckLevel,
     pub(crate) qualified_ref: CheckLevel,
+    pub(crate) index_on_view: CheckLevel,
 }
 
 impl Default for CheckConfig {
@@ -110,6 +112,7 @@ impl Default for CheckConfig {
             function_arity: CheckLevel::Warn,
             cte_columns: CheckLevel::Deny,
             qualified_ref: CheckLevel::Deny,
+            index_on_view: CheckLevel::Deny,
         }
     }
 }
@@ -144,6 +147,10 @@ impl CheckConfig {
     /// Level for qualified names where `SQLite` forbids them.
     pub fn qualified_ref(&self) -> CheckLevel {
         self.qualified_ref
+    }
+    /// Level for `CREATE INDEX` on a view.
+    pub fn index_on_view(&self) -> CheckLevel {
+        self.index_on_view
     }
 
     // ── Builders ─────────────────────────────────────────────────────────
@@ -190,6 +197,12 @@ impl CheckConfig {
         self.qualified_ref = level;
         self
     }
+    /// Set the level for `CREATE INDEX` on a view.
+    #[must_use]
+    pub fn with_index_on_view(mut self, level: CheckLevel) -> Self {
+        self.index_on_view = level;
+        self
+    }
     /// Set all schema checks (`unknown-table`, `unknown-column`,
     /// `unknown-function`, `function-arity`).
     #[must_use]
@@ -210,6 +223,7 @@ impl CheckConfig {
         self.function_arity = level;
         self.cte_columns = level;
         self.qualified_ref = level;
+        self.index_on_view = level;
         self
     }
 
@@ -224,6 +238,7 @@ impl CheckConfig {
         "function-arity",
         "cte-columns",
         "qualified-ref",
+        "index-on-view",
     ];
 
     /// Group names that expand to multiple categories.
@@ -243,6 +258,7 @@ impl CheckConfig {
             "function-arity" => self.function_arity = level,
             "cte-columns" => self.cte_columns = level,
             "qualified-ref" => self.qualified_ref = level,
+            "index-on-view" => self.index_on_view = level,
             "schema" => self = self.with_schema(level),
             "all" => self = self.with_all(level),
             _ => return Err(format!("unknown check category: {name}")),
@@ -357,6 +373,7 @@ mod tests {
         assert_eq!(c.function_arity(), CheckLevel::Warn);
         assert_eq!(c.cte_columns(), CheckLevel::Deny);
         assert_eq!(c.qualified_ref(), CheckLevel::Deny);
+        assert_eq!(c.index_on_view(), CheckLevel::Deny);
     }
 
     #[test]
