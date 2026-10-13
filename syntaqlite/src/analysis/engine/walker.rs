@@ -121,6 +121,8 @@ pub(crate) enum UncheckedRef {
     ForeignKeyParent,
     /// A trigger's `UPDATE OF` column.
     TriggerUpdateOf,
+    /// The target of a `DROP ... IF EXISTS`.
+    DropIfExists,
 }
 
 /// A `CREATE INDEX` whose target is a view.
@@ -779,7 +781,7 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
             name,
             alias: None,
             resolved,
-            unchecked: None,
+            unchecked: self.unchecked,
         };
         let mut cx = WalkCtx {
             catalog: self.catalog,
@@ -1001,8 +1003,9 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
         self.scope.pop();
     }
 
-    /// Existence-check a `DROP TABLE` / `DROP VIEW` target unless it says
-    /// `IF EXISTS`. Indexes and triggers aren't tracked, so aren't checked.
+    /// Existence-check a `DROP TABLE` / `DROP VIEW` target. With `IF EXISTS`
+    /// it still resolves for navigation, but a missing target is accepted.
+    /// Indexes and triggers aren't tracked, so aren't checked.
     fn walk_drop<V: SemanticVisitor>(
         &mut self,
         visitor: &mut V,
@@ -1018,12 +1021,14 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
         else {
             unreachable!("not a drop role: {role:?}");
         };
-        if matches!(fields[if_exists as usize], FieldValue::Bool(true))
-            || drop_kind_is_view(fields, kind).is_none()
-        {
+        if drop_kind_is_view(fields, kind).is_none() {
             return;
         }
+        if matches!(fields[if_exists as usize], FieldValue::Bool(true)) {
+            self.unchecked = Some(UncheckedRef::DropIfExists);
+        }
         self.walk_schema_target(visitor, node_id, fields, target);
+        self.unchecked = None;
     }
 
     #[expect(clippy::too_many_arguments)]
