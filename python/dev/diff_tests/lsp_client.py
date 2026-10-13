@@ -129,10 +129,15 @@ class LspClient:
         raise TimeoutError(f"No response for request id={req_id}")
 
 
-def spawn_lsp(binary: Path, init_options: dict[str, Any] | None = None) -> LspClient:
+def spawn_lsp(
+    binary: Path,
+    init_options: dict[str, Any] | None = None,
+    config: Path | None = None,
+) -> LspClient:
     """Spawn the LSP server and complete the initialize handshake."""
+    config_args = ["--config", str(config)] if config else ["--no-config"]
     proc = subprocess.Popen(
-        [str(binary), "--no-config", "lsp"],
+        [str(binary), *config_args, "lsp"],
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,

@@ -235,7 +235,7 @@ _RUST_PARSER_PATHS = (
     "syntaqlite/src/sqlite/",
 )
 _RUST_FMT_PATHS = ("syntaqlite/src/fmt/",)
-_RUST_SEMANTIC_PATHS = ("syntaqlite/src/semantic/",)
+_RUST_SEMANTIC_PATHS = ("syntaqlite/src/analysis/",)
 _RUST_PERFETTO_PATHS = ("dialects/perfetto/",)
 _RUST_AMALG_PATHS = ("syntaqlite-wasm/",)
 
@@ -243,6 +243,19 @@ _RUST_AMALG_PATHS = ("syntaqlite-wasm/",)
 _RUST_NO_DIFF_PATHS = (
     "syntaqlite-buildtools/",
     "syntaqlite/src/lsp/",
+)
+
+# Baselines for the suites that exercise CLI behavior beyond parse/format.
+_CLI_TEST_PATHS = (
+    "tests/semantic_diff_tests/",
+    "tests/lsp_diff_tests/",
+    "tests/lsp_tests/",
+    "tests/lineage_diff_tests/",
+    "tests/token_preservation/",
+)
+
+_DIFF_FLAGS = (
+    "run_ast", "run_fmt", "run_amalg", "run_perfetto_fmt", "run_perfetto_val", "run_grammar", "run_cli",
 )
 
 # C/H files under these paths only affect amalgamation tests.
@@ -295,7 +308,7 @@ def _classify(changed: set[str] | None) -> dict[str, bool]:
         "has_rust": True, "has_c": True,
         "run_ast": True, "run_fmt": True, "run_amalg": True,
         "run_perfetto_fmt": True, "run_perfetto_val": True,
-        "run_grammar": True,
+        "run_grammar": True, "run_cli": True,
     }
     if changed is None:
         return all_true
@@ -312,6 +325,9 @@ def _classify(changed: set[str] | None) -> dict[str, bool]:
             f["has_rust"] = True
         if is_c:
             f["has_c"] = True
+
+        if is_rust or is_c or is_synq or path.endswith(".y") or path.startswith(_CLI_TEST_PATHS):
+            f["run_cli"] = True
 
         # .y grammar action files affect token IDs in all dialects.
         if path.endswith(".y"):
@@ -402,7 +418,7 @@ def _run(fix: bool, verbosity: int, run_all: bool, cargo: Callable[..., list[str
     need_c = flags["has_c"]
     need_compilation = need_rust or need_c
     need_diff_tests = any(
-        flags[k] for k in ("run_ast", "run_fmt", "run_amalg", "run_perfetto_fmt", "run_perfetto_val", "run_grammar")
+        flags[k] for k in _DIFF_FLAGS
     )
 
     # If diff tests are needed but no Rust/C changed, verify the CLI binary
@@ -428,8 +444,7 @@ def _run(fix: bool, verbosity: int, run_all: bool, cargo: Callable[..., list[str
         if not domains:
             domains.append("non-code")
         active_diffs = [
-            k.replace("run_", "") for k in
-            ("run_ast", "run_fmt", "run_amalg", "run_perfetto_fmt", "run_perfetto_val", "run_grammar")
+            k.replace("run_", "") for k in _DIFF_FLAGS
             if flags[k]
         ]
         diff_summary = ", ".join(active_diffs) if active_diffs else "none"
@@ -571,6 +586,16 @@ def _run(fix: bool, verbosity: int, run_all: bool, cargo: Callable[..., list[str
         ("run_perfetto_fmt",  "perfetto-fmt"),
         ("run_perfetto_val",  "perfetto-val"),
         ("run_grammar",       "grammar"),
+        ("run_amalg",         "amalg-api-surface"),
+        ("run_cli",           "semantic"),
+        ("run_cli",           "lsp"),
+        ("run_cli",           "lsp-diff"),
+        ("run_cli",           "analyze"),
+        ("run_cli",           "lineage"),
+        ("run_cli",           "introspect"),
+        ("run_cli",           "serve"),
+        ("run_cli",           "sql-idempotency"),
+        ("run_cli",           "token-preservation"),
     ):
         if flags[key]:
             diff_lanes.append([(
