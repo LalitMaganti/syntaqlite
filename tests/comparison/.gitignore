@@ -12,6 +12,7 @@ formatter/bench_*.md
 lsp/bench.sql
 lsp/bench.md
 lsp/sqls_config.yml
+lsp/syntaqlite.toml
 lsp/_wrap_*.sh
 validator/bench.sql
 validator/bench_30x.sql
