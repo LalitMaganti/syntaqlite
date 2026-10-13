@@ -234,6 +234,11 @@ pub enum DiagnosticMessage {
         /// Columns in the right arm.
         right: usize,
     },
+    /// A window specification names a window the query doesn't define.
+    UnknownWindow {
+        /// The window name.
+        name: String,
+    },
     /// Module import could not be resolved.
     UnknownModule {
         /// The unresolved module path (e.g. `slices.flow`).
@@ -313,6 +318,7 @@ impl std::fmt::Display for DiagnosticMessage {
                 f,
                 "SELECTs to the left and right of {operator} have {left} and {right} result columns"
             ),
+            Self::UnknownWindow { name } => write!(f, "unknown window '{name}'"),
             Self::UnknownModule { name } => write!(f, "unknown module '{name}'"),
             Self::ParseError(msg) => f.write_str(msg),
         }
@@ -422,17 +428,25 @@ pub enum Severity {
 // ── JSON serialization (feature = "json") ────────────────────────────
 
 #[cfg(feature = "serde")]
+fn kind_and_name<S: serde::Serializer>(
+    serializer: S,
+    kind: &str,
+    name: &str,
+) -> Result<S::Ok, S::Error> {
+    use serde::ser::SerializeMap;
+    let mut m = serializer.serialize_map(Some(2))?;
+    m.serialize_entry("kind", kind)?;
+    m.serialize_entry("name", name)?;
+    m.end()
+}
+
+#[cfg(feature = "serde")]
 impl serde::Serialize for DiagnosticMessage {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         use serde::ser::SerializeMap;
         match self {
             Self::ParseError(_) => serializer.serialize_none(),
-            Self::UnknownTable { name } => {
-                let mut m = serializer.serialize_map(Some(2))?;
-                m.serialize_entry("kind", "unknown_table")?;
-                m.serialize_entry("name", name)?;
-                m.end()
-            }
+            Self::UnknownTable { name } => kind_and_name(serializer, "unknown_table", name),
             Self::UnknownColumn { column, table } => {
                 let len = if table.is_some() { 3 } else { 2 };
                 let mut m = serializer.serialize_map(Some(len))?;
@@ -443,12 +457,7 @@ impl serde::Serialize for DiagnosticMessage {
                 }
                 m.end()
             }
-            Self::UnknownFunction { name } => {
-                let mut m = serializer.serialize_map(Some(2))?;
-                m.serialize_entry("kind", "unknown_function")?;
-                m.serialize_entry("name", name)?;
-                m.end()
-            }
+            Self::UnknownFunction { name } => kind_and_name(serializer, "unknown_function", name),
             Self::CteColumnCountMismatch {
                 name,
                 declared,
@@ -485,12 +494,7 @@ impl serde::Serialize for DiagnosticMessage {
                 m.serialize_entry("context", context.as_str())?;
                 m.end()
             }
-            Self::IndexOnView { name } => {
-                let mut m = serializer.serialize_map(Some(2))?;
-                m.serialize_entry("kind", "index_on_view")?;
-                m.serialize_entry("name", name)?;
-                m.end()
-            }
+            Self::IndexOnView { name } => kind_and_name(serializer, "index_on_view", name),
             Self::DropWrongKind { name, is_view } => {
                 let mut m = serializer.serialize_map(Some(3))?;
                 m.serialize_entry("kind", "drop_wrong_kind")?;
@@ -517,12 +521,8 @@ impl serde::Serialize for DiagnosticMessage {
                 m.serialize_entry("right", right)?;
                 m.end()
             }
-            Self::UnknownModule { name } => {
-                let mut m = serializer.serialize_map(Some(2))?;
-                m.serialize_entry("kind", "unknown_module")?;
-                m.serialize_entry("name", name)?;
-                m.end()
-            }
+            Self::UnknownWindow { name } => kind_and_name(serializer, "unknown_window", name),
+            Self::UnknownModule { name } => kind_and_name(serializer, "unknown_module", name),
         }
     }
 }

@@ -114,6 +114,7 @@ pub fn syntaqlite::CheckConfig::set_by_name(self, &str, syntaqlite::CheckLevel) 
 pub fn syntaqlite::CheckConfig::unknown_column(&self) -> syntaqlite::CheckLevel
 pub fn syntaqlite::CheckConfig::unknown_function(&self) -> syntaqlite::CheckLevel
 pub fn syntaqlite::CheckConfig::unknown_table(&self) -> syntaqlite::CheckLevel
+pub fn syntaqlite::CheckConfig::unknown_window(&self) -> syntaqlite::CheckLevel
 pub fn syntaqlite::CheckConfig::with_all(self, syntaqlite::CheckLevel) -> Self
 pub fn syntaqlite::CheckConfig::with_builtin_modify(self, syntaqlite::CheckLevel) -> Self
 pub fn syntaqlite::CheckConfig::with_compound_columns(self, syntaqlite::CheckLevel) -> Self
@@ -127,6 +128,7 @@ pub fn syntaqlite::CheckConfig::with_schema(self, syntaqlite::CheckLevel) -> Sel
 pub fn syntaqlite::CheckConfig::with_unknown_column(self, syntaqlite::CheckLevel) -> Self
 pub fn syntaqlite::CheckConfig::with_unknown_function(self, syntaqlite::CheckLevel) -> Self
 pub fn syntaqlite::CheckConfig::with_unknown_table(self, syntaqlite::CheckLevel) -> Self
+pub fn syntaqlite::CheckConfig::with_unknown_window(self, syntaqlite::CheckLevel) -> Self
 pub fn syntaqlite::CheckLevel::parse(&str) -> core::result::Result<Self, alloc::string::String>
 pub fn syntaqlite::CheckLevel::to_severity(self) -> core::option::Option<syntaqlite::analysis::Severity>
 pub fn syntaqlite::Diagnostic::end(&self) -> syntaqlite_syntax::source::DocOffset
@@ -380,6 +382,8 @@ pub syntaqlite::analysis::DiagnosticMessage::UnknownModule
 pub syntaqlite::analysis::DiagnosticMessage::UnknownModule::name: alloc::string::String
 pub syntaqlite::analysis::DiagnosticMessage::UnknownTable
 pub syntaqlite::analysis::DiagnosticMessage::UnknownTable::name: alloc::string::String
+pub syntaqlite::analysis::DiagnosticMessage::UnknownWindow
+pub syntaqlite::analysis::DiagnosticMessage::UnknownWindow::name: alloc::string::String
 pub syntaqlite::analysis::FunctionCategory::Aggregate
 pub syntaqlite::analysis::FunctionCategory::Scalar
 pub syntaqlite::analysis::FunctionCategory::Window

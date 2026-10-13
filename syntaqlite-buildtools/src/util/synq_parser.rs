@@ -172,6 +172,13 @@ pub(crate) enum SemanticRole {
     TriggerUpdateOf {
         columns: Option<String>,
     },
+    WindowRef {
+        reference: Option<String>,
+        base: Option<String>,
+    },
+    WindowDefinition {
+        name: String,
+    },
 }
 
 /// A `semantic { ... }` annotation on a node.
@@ -797,6 +804,13 @@ impl Parser {
             },
             "trigger_update_of" => SemanticRole::TriggerUpdateOf {
                 columns: get_param(&params, "columns").map(str::to_string),
+            },
+            "window_ref" => SemanticRole::WindowRef {
+                reference: get_param(&params, "reference").map(str::to_string),
+                base: get_param(&params, "base").map(str::to_string),
+            },
+            "window_definition" => SemanticRole::WindowDefinition {
+                name: require_param(&params, "name", node_name, "window_definition")?,
             },
             _ => {
                 return Err(format!(

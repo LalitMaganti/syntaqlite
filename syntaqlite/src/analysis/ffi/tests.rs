@@ -1060,6 +1060,13 @@ fn kind_code_compound_columns() {
 }
 
 #[test]
+fn kind_code_unknown_window() {
+    let v = Validator::new();
+    v.analyze("CREATE TABLE a(x); SELECT sum(x) OVER w FROM a");
+    assert!(v.has_code(DIAG_CODE_UNKNOWN_WINDOW));
+}
+
+#[test]
 fn kind_code_per_statement_matches_aggregate() {
     let v = Validator::new();
     v.analyze("SELECT id FROM no_such_table");
@@ -1086,6 +1093,7 @@ fn diagnostic_code_to_c_covers_all_variants() {
     check(M::DropWrongKind { name: "v".into(), is_view: true }, DIAG_CODE_DROP_WRONG_KIND);
     check(M::BuiltinModify { name: "sqlite_schema".into(), change: super::super::BuiltinChange::Drop }, DIAG_CODE_BUILTIN_MODIFY);
     check(M::CompoundColumns { operator: "UNION".into(), left: 1, right: 2 }, DIAG_CODE_COMPOUND_COLUMNS);
+    check(M::UnknownWindow { name: "w".into() }, DIAG_CODE_UNKNOWN_WINDOW);
 }
 
 // ── Custom function / table-function registration ────────────────────

@@ -54,6 +54,7 @@ index-on-view = "deny"
 drop-wrong-kind = "deny"
 builtin-modify = "deny"
 compound-columns = "deny"
+unknown-window = "deny"
 # schema = "deny"           # shorthand for all 4 schema checks
 ```
 
@@ -146,6 +147,7 @@ Each field sets a diagnostic category to `"allow"` (suppress), `"warn"`, or
 | `drop-wrong-kind` | string | `"deny"` | `DROP TABLE` on a view or `DROP VIEW` on a table |
 | `builtin-modify` | string | `"deny"` | `DROP`, `ALTER`, `CREATE INDEX` or `CREATE TRIGGER` on a built-in table such as `sqlite_schema` |
 | `compound-columns` | string | `"deny"` | Compound `SELECT` arms with different numbers of result columns |
+| `unknown-window` | string | `"deny"` | `OVER` naming a window the query doesn't define |
 | `schema` | string | N/A | Shorthand for `unknown-table`, `unknown-column`, `unknown-function`, `function-arity` |
 | `all` | string | N/A | Shorthand for all categories |
 

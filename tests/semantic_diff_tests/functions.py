@@ -59,3 +59,35 @@ class Functions(TestSuite):
             cflags=["SQLITE_ENABLE_MATH_FUNCTIONS"],
             out="",
         )
+
+
+class UnknownWindow(TestSuite):
+    def test_undefined_window(self):
+        return DiffTestBlueprint(
+            sql="CREATE TABLE a (x, y); SELECT sum(x) OVER w FROM a;",
+            out="""\
+            error: unknown window 'w'
+             --> <stdin>:1:43
+              |
+            1 | CREATE TABLE a (x, y); SELECT sum(x) OVER w FROM a;
+              |                                           ^
+            """,
+        )
+
+    def test_window_defined_later_in_clause(self):
+        return DiffTestBlueprint(
+            sql="CREATE TABLE a (x, y); SELECT sum(x) OVER v FROM a WINDOW v AS (w ORDER BY y), w AS ();",
+            out="",
+        )
+
+    def test_outer_window_not_visible_in_subquery(self):
+        return DiffTestBlueprint(
+            sql="CREATE TABLE a (x, y); SELECT (SELECT sum(x) OVER w FROM a) FROM a WINDOW w AS ();",
+            out="""\
+            error: unknown window 'w'
+             --> <stdin>:1:51
+              |
+            1 | CREATE TABLE a (x, y); SELECT (SELECT sum(x) OVER w FROM a) FROM a WINDOW w AS ();
+              |                                                   ^
+            """,
+        )

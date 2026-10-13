@@ -367,6 +367,21 @@ pub mod roles {
             /// Field index of the column list (`FIELD_ABSENT` if absent).
             columns: FieldIdx,
         } = 25,
+
+        /// Window specification: names a window defined in the query's
+        /// WINDOW clause, either outright or as the base it extends.
+        WindowRef {
+            /// Field index of `OVER name` (`FIELD_ABSENT` if absent).
+            reference: FieldIdx,
+            /// Field index of `OVER (name ...)` (`FIELD_ABSENT` if absent).
+            base: FieldIdx,
+        } = 26,
+
+        /// A WINDOW clause entry, defining a named window for its query.
+        WindowDefinition {
+            /// Field index of the window name.
+            name: FieldIdx,
+        } = 27,
     }
 
     /// Metadata for a node type that defines a template macro.
@@ -505,6 +520,14 @@ pub mod roles {
                 24,
             );
             check(SemanticRole::TriggerUpdateOf { columns: 0 }, 25);
+            check(
+                SemanticRole::WindowRef {
+                    reference: 0,
+                    base: 0,
+                },
+                26,
+            );
+            check(SemanticRole::WindowDefinition { name: 0 }, 27);
         }
 
         #[test]

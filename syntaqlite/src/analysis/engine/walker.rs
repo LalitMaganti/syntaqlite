@@ -16,6 +16,7 @@
 //! composition is explicit and grep-able.
 
 use std::borrow::Cow;
+use std::collections::HashSet;
 
 use syntaqlite_syntax::any::{
     AnyNodeId, AnyParseError, AnyParsedStatement, FieldValue, NodeFields,
@@ -125,6 +126,13 @@ pub(crate) enum UncheckedRef {
     DropIfExists,
 }
 
+/// A window specification naming a window its query doesn't define.
+#[derive(Copy, Clone)]
+pub(crate) struct UnknownWindowEvent<'a> {
+    pub(crate) name: &'a str,
+    pub(crate) range: DocRange,
+}
+
 /// A compound SELECT whose arms have different numbers of columns.
 #[derive(Copy, Clone)]
 pub(crate) struct CompoundColumnsEvent<'a> {
@@ -196,6 +204,7 @@ pub(crate) trait SemanticVisitor {
     const WANTS_DROP_WRONG_KIND: bool = false;
     const WANTS_BUILTIN_MODIFY: bool = false;
     const WANTS_COMPOUND_COLUMNS: bool = false;
+    const WANTS_UNKNOWN_WINDOW: bool = false;
     const WANTS_CTE_BINDING: bool = false;
     const WANTS_SCOPED_SOURCE: bool = false;
     /// Return true to receive [`enter_query`](Self::enter_query) /
@@ -265,6 +274,13 @@ pub(crate) trait SemanticVisitor {
     ) {
     }
 
+    fn on_unknown_window(
+        &mut self,
+        _stmt: &mut AnyParsedStatement<'_>,
+        _ev: UnknownWindowEvent<'_>,
+    ) {
+    }
+
     /// Called once per CTE binding, BEFORE its body is walked. The body
     /// will observe the binding's own name as a resolved catalog source
     /// (`SQLite` allows any CTE to self-reference, with or without the
@@ -316,6 +332,8 @@ pub(crate) struct SemanticWalker<'a, 'b> {
     defining_table: Option<DefiningTable>,
     /// Names `SQLite` doesn't check are being walked.
     unchecked: Option<UncheckedRef>,
+    /// Window names defined by each enclosing query, innermost last.
+    windows: Vec<HashSet<NameKey>>,
     /// Expressions are being walked where `SQLite` forbids qualified names.
     unqualified_only: Option<QualifiedRefContext>,
     /// Reusable lookup key — catalog/scope probes share one allocation.
@@ -343,6 +361,7 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
             view_body_depth: 0,
             defining_table: None,
             unchecked: None,
+            windows: Vec::new(),
             unqualified_only: None,
             key_scratch: NameKey::default(),
         }
@@ -401,7 +420,9 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
             SemanticRole::Transparent
             | SemanticRole::ColumnDef { .. }
             | SemanticRole::ResultColumn { .. }
-            | SemanticRole::CteBinding { .. } => self.walk_children(visitor, node_id),
+            | SemanticRole::CteBinding { .. }
+            | SemanticRole::WindowDefinition { .. } => self.walk_children(visitor, node_id),
+            SemanticRole::WindowRef { .. } => self.walk_window_ref(visitor, node_id, fields, role),
 
             SemanticRole::Call { name, args } => {
                 self.walk_call(visitor, node_id, fields, name, args);
@@ -415,26 +436,7 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
             SemanticRole::ScopedSource { body, alias } => {
                 self.walk_scoped_source(visitor, fields, body, alias);
             }
-            SemanticRole::Query {
-                from,
-                columns,
-                where_clause,
-                groupby,
-                having,
-                orderby,
-                limit_clause,
-            } => self.walk_query(
-                visitor,
-                node_id,
-                fields,
-                from,
-                columns,
-                where_clause,
-                groupby,
-                having,
-                orderby,
-                limit_clause,
-            ),
+            SemanticRole::Query { .. } => self.walk_query(visitor, node_id, fields, role),
             SemanticRole::CteScope {
                 recursive: _,
                 bindings,
@@ -1142,20 +1144,25 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
         }
     }
 
-    #[expect(clippy::too_many_arguments)]
     fn walk_query<V: SemanticVisitor>(
         &mut self,
         visitor: &mut V,
         node_id: AnyNodeId,
         fields: &NodeFields,
-        from: u8,
-        columns: u8,
-        where_clause: u8,
-        groupby: u8,
-        having: u8,
-        orderby: u8,
-        limit_clause: u8,
+        role: SemanticRole,
     ) {
+        let SemanticRole::Query {
+            from,
+            columns,
+            where_clause,
+            groupby,
+            having,
+            orderby,
+            limit_clause,
+        } = role
+        else {
+            unreachable!("not a query role: {role:?}");
+        };
         if V::WANTS_QUERY {
             visitor.enter_query(self.stmt, node_id);
         }
@@ -1164,6 +1171,8 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
         // this scope (including join ON clauses that precede later
         // sources) resolves against the complete source list.
         self.scope.push();
+        let windows = self.window_names(fields);
+        self.windows.push(windows);
         if let Some(from_id) = fields.node_id_at(from) {
             self.register_sources(from_id);
         }
@@ -1181,11 +1190,66 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
         for idx in [where_clause, groupby, having, orderby, limit_clause] {
             self.walk_opt(visitor, fields.node_id_at(idx));
         }
+        self.windows.pop();
         self.scope.pop();
 
         if V::WANTS_QUERY {
             visitor.exit_query(self.stmt, node_id);
         }
+    }
+
+    /// Names of the windows a query defines in its WINDOW clause.
+    fn window_names(&self, fields: &NodeFields) -> HashSet<NameKey> {
+        let reader = StmtReader::new(self.stmt, self.roles);
+        let mut names = HashSet::new();
+        for idx in 0..fields.len() {
+            #[expect(
+                clippy::cast_possible_truncation,
+                reason = "NodeFields holds at most 16"
+            )]
+            let Some(list) = fields.node_id_at(idx as u8) else {
+                continue;
+            };
+            for &item in self.stmt.list_children(list).unwrap_or_default() {
+                if let Some((SemanticRole::WindowDefinition { name }, item_fields)) =
+                    reader.role_for_node(item)
+                {
+                    let ident = self
+                        .stmt
+                        .span_field_ident_text(&item_fields, name)
+                        .expect("a WINDOW clause entry has a name");
+                    names.insert(NameKey::new(&ident));
+                }
+            }
+        }
+        names
+    }
+
+    /// Report a window specification naming a window its query doesn't
+    /// define, then walk its PARTITION BY, ORDER BY and frame.
+    fn walk_window_ref<V: SemanticVisitor>(
+        &mut self,
+        visitor: &mut V,
+        node_id: AnyNodeId,
+        fields: &NodeFields,
+        role: SemanticRole,
+    ) {
+        let SemanticRole::WindowRef { reference, base } = role else {
+            unreachable!("not a window role: {role:?}");
+        };
+        if V::WANTS_UNKNOWN_WINDOW
+            && let Some(defined) = self.windows.last()
+        {
+            for idx in [reference, base] {
+                if let Some((name, range)) = self.stmt.span_field_range(fields, idx)
+                    && let Some(ident) = self.stmt.span_field_ident_text(fields, idx)
+                    && !defined.contains(&NameKey::new(&ident))
+                {
+                    visitor.on_unknown_window(self.stmt, UnknownWindowEvent { name, range });
+                }
+            }
+        }
+        self.walk_children(visitor, node_id);
     }
 
     fn collect_select_aliases(&self, fields: &NodeFields, columns_idx: u8) -> Vec<String> {
