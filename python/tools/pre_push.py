@@ -256,6 +256,15 @@ _CLI_TEST_PATHS = (
 
 _DIFF_FLAGS = (
     "run_ast", "run_fmt", "run_amalg", "run_perfetto_fmt", "run_perfetto_val", "run_grammar", "run_cli",
+    "run_api",
+)
+
+# Inputs to the Python and C API suites besides compiled code.
+_API_TEST_PATHS = (
+    "python/syntaqlite/",
+    "python/dev/integration_tests/suites/python_api.py",
+    "python/dev/integration_tests/suites/c_api.py",
+    "tests/c_api",
 )
 
 # C/H files under these paths only affect amalgamation tests.
@@ -308,7 +317,7 @@ def _classify(changed: set[str] | None) -> dict[str, bool]:
         "has_rust": True, "has_c": True,
         "run_ast": True, "run_fmt": True, "run_amalg": True,
         "run_perfetto_fmt": True, "run_perfetto_val": True,
-        "run_grammar": True, "run_cli": True,
+        "run_grammar": True, "run_cli": True, "run_api": True,
     }
     if changed is None:
         return all_true
@@ -328,6 +337,8 @@ def _classify(changed: set[str] | None) -> dict[str, bool]:
 
         if is_rust or is_c or is_synq or path.endswith(".y") or path.startswith(_CLI_TEST_PATHS):
             f["run_cli"] = True
+        if is_rust or is_c or is_synq or path.endswith(".y") or path.startswith(_API_TEST_PATHS):
+            f["run_api"] = True
 
         # .y grammar action files affect token IDs in all dialects.
         if path.endswith(".y"):
@@ -565,6 +576,24 @@ def _run(fix: bool, verbosity: int, run_all: bool, cargo: Callable[..., list[str
     else:
         _skip("cargo build -p syntaqlite-cli")
 
+    # The API suites load the library itself; point them at a fresh debug
+    # build so a stale target/release copy is never used.
+    if flags["run_api"]:
+        r = run_step(
+            "cargo build -p syntaqlite --features rpc,dynload",
+            cargo("build", "-p", "syntaqlite", "--features", "rpc,dynload"),
+            verbosity,
+        )
+        if not r.ok:
+            return r.returncode
+        debug_dir = os.path.join(ROOT_DIR, "target", "debug")
+        lib_name = {"darwin": "libsyntaqlite.dylib", "win32": "syntaqlite.dll"}.get(
+            sys.platform, "libsyntaqlite.so")
+        os.environ.setdefault("SYNTAQLITE_FFI_LIB", os.path.join(debug_dir, lib_name))
+        os.environ.setdefault("SYNTAQLITE_STATIC_LIB", os.path.join(debug_dir, "libsyntaqlite.a"))
+    else:
+        _skip("cargo build -p syntaqlite --features rpc,dynload")
+
     if need_rust:
         r = run_step("tools/run-unit-tests", [_tool("run-unit-tests")], verbosity)
         if not r.ok:
@@ -596,6 +625,8 @@ def _run(fix: bool, verbosity: int, run_all: bool, cargo: Callable[..., list[str
         ("run_cli",           "serve"),
         ("run_cli",           "sql-idempotency"),
         ("run_cli",           "token-preservation"),
+        ("run_api",           "python-api"),
+        ("run_api",           "c-api"),
     ):
         if flags[key]:
             diff_lanes.append([(
