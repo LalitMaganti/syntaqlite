@@ -45,3 +45,29 @@ class GroupByAlias(TestSuite):
             strict_schema=True,
             out="",
         )
+
+
+class CompoundColumns(TestSuite):
+    def test_union_column_count_mismatch(self):
+        return DiffTestBlueprint(
+            sql="CREATE TABLE a (x, y); SELECT x FROM a UNION ALL SELECT x, y FROM a;",
+            out="""\
+            error: SELECTs to the left and right of UNION ALL have 1 and 2 result columns
+             --> <stdin>:1:50
+              |
+            1 | CREATE TABLE a (x, y); SELECT x FROM a UNION ALL SELECT x, y FROM a;
+              |                                                  ^~~~~~~~~~~~~~~~~~
+            """,
+        )
+
+    def test_matching_counts(self):
+        return DiffTestBlueprint(
+            sql="CREATE TABLE a (x, y); SELECT x FROM a UNION SELECT y FROM a;",
+            out="",
+        )
+
+    def test_star_arm_is_skipped(self):
+        return DiffTestBlueprint(
+            sql="CREATE TABLE a (x, y); SELECT * FROM a EXCEPT SELECT x FROM a;",
+            out="",
+        )

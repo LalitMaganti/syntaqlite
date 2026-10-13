@@ -34,6 +34,7 @@ pub(crate) const DIAG_CODE_QUALIFIED_REF: u32 = 7;
 pub(crate) const DIAG_CODE_INDEX_ON_VIEW: u32 = 8;
 pub(crate) const DIAG_CODE_DROP_WRONG_KIND: u32 = 9;
 pub(crate) const DIAG_CODE_BUILTIN_MODIFY: u32 = 10;
+pub(crate) const DIAG_CODE_COMPOUND_COLUMNS: u32 = 11;
 
 pub(super) fn diagnostic_code_to_c(msg: &DiagnosticMessage) -> u32 {
     match msg {
@@ -48,6 +49,7 @@ pub(super) fn diagnostic_code_to_c(msg: &DiagnosticMessage) -> u32 {
         DiagnosticMessage::IndexOnView { .. } => DIAG_CODE_INDEX_ON_VIEW,
         DiagnosticMessage::DropWrongKind { .. } => DIAG_CODE_DROP_WRONG_KIND,
         DiagnosticMessage::BuiltinModify { .. } => DIAG_CODE_BUILTIN_MODIFY,
+        DiagnosticMessage::CompoundColumns { .. } => DIAG_CODE_COMPOUND_COLUMNS,
     }
 }
 

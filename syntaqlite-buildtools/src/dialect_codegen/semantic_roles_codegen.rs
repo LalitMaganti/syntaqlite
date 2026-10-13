@@ -325,17 +325,20 @@ fn role_to_bytes(
             right,
             orderby,
             limit_clause,
+            op,
         } => {
             bytes[0] = disc(SemanticRole::CompoundScope {
                 left: 0,
                 right: 0,
                 orderby: 0,
                 limit_clause: 0,
+                op: 0,
             });
             bytes[1] = fi(left);
             bytes[2] = fi(right);
             bytes[3] = opt(orderby);
             bytes[4] = opt(limit_clause);
+            bytes[5] = fi(op);
         }
         SynqRole::AlterTable {
             op,

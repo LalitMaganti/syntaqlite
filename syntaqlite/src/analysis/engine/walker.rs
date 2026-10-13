@@ -125,6 +125,15 @@ pub(crate) enum UncheckedRef {
     DropIfExists,
 }
 
+/// A compound SELECT whose arms have different numbers of columns.
+#[derive(Copy, Clone)]
+pub(crate) struct CompoundColumnsEvent<'a> {
+    pub(crate) operator: &'a str,
+    pub(crate) range: DocRange,
+    pub(crate) left: usize,
+    pub(crate) right: usize,
+}
+
 /// A DDL statement that changes one of the dialect's built-in tables.
 #[derive(Copy, Clone)]
 pub(crate) struct BuiltinModifyEvent<'a> {
@@ -186,6 +195,7 @@ pub(crate) trait SemanticVisitor {
     const WANTS_INDEX_ON_VIEW: bool = false;
     const WANTS_DROP_WRONG_KIND: bool = false;
     const WANTS_BUILTIN_MODIFY: bool = false;
+    const WANTS_COMPOUND_COLUMNS: bool = false;
     const WANTS_CTE_BINDING: bool = false;
     const WANTS_SCOPED_SOURCE: bool = false;
     /// Return true to receive [`enter_query`](Self::enter_query) /
@@ -245,6 +255,13 @@ pub(crate) trait SemanticVisitor {
         &mut self,
         _stmt: &mut AnyParsedStatement<'_>,
         _ev: BuiltinModifyEvent<'_>,
+    ) {
+    }
+
+    fn on_compound_columns(
+        &mut self,
+        _stmt: &mut AnyParsedStatement<'_>,
+        _ev: CompoundColumnsEvent<'_>,
     ) {
     }
 
@@ -448,13 +465,8 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
                     update_where,
                 );
             }
-            SemanticRole::CompoundScope {
-                left,
-                right,
-                orderby,
-                limit_clause,
-            } => {
-                self.walk_compound_scope(visitor, fields, left, right, orderby, limit_clause);
+            SemanticRole::CompoundScope { .. } => {
+                self.walk_compound_scope(visitor, node_id, fields, role);
             }
             SemanticRole::AlterTable { target, .. } => {
                 self.walk_alter_target(visitor, node_id, fields, target);
@@ -1266,14 +1278,31 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
     fn walk_compound_scope<V: SemanticVisitor>(
         &mut self,
         visitor: &mut V,
+        node_id: AnyNodeId,
         fields: &NodeFields,
-        left_idx: u8,
-        right_idx: u8,
-        orderby_idx: u8,
-        limit_idx: u8,
+        role: SemanticRole,
     ) {
-        self.walk_opt(visitor, fields.node_id_at(left_idx));
-        self.walk_opt(visitor, fields.node_id_at(right_idx));
+        let SemanticRole::CompoundScope {
+            left: left_idx,
+            right: right_idx,
+            orderby: orderby_idx,
+            limit_clause: limit_idx,
+            op,
+        } = role
+        else {
+            unreachable!("not a compound role: {role:?}");
+        };
+        let left = fields
+            .node_id_at(left_idx)
+            .expect("a compound has a left arm");
+        let right = fields
+            .node_id_at(right_idx)
+            .expect("a compound has a right arm");
+        self.walk_node(visitor, left);
+        self.walk_node(visitor, right);
+        if V::WANTS_COMPOUND_COLUMNS {
+            self.check_compound_columns(visitor, node_id, op, left, right);
+        }
 
         let orderby = fields.node_id_at(orderby_idx);
         let limit = fields.node_id_at(limit_idx);
@@ -1512,6 +1541,53 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
             body_id: fields.node_id_at(body_idx),
             declared_cols: reader.cte_declared_cols(cte_id),
         })
+    }
+
+    /// Report compound arms with different column counts. Arms whose count
+    /// isn't known, such as `SELECT *` or `VALUES`, are skipped.
+    fn check_compound_columns<V: SemanticVisitor>(
+        &mut self,
+        visitor: &mut V,
+        node_id: AnyNodeId,
+        op: u8,
+        left: AnyNodeId,
+        right: AnyNodeId,
+    ) {
+        let (Some(left_count), Some(right_count)) =
+            (self.arm_column_count(left), self.arm_column_count(right))
+        else {
+            return;
+        };
+        if left_count == right_count {
+            return;
+        }
+        // Variant names spell the SQL with underscores, e.g. `UNION_ALL`.
+        let operator = self.stmt.enum_name(node_id, op).replace('_', " ");
+        let range = self
+            .stmt
+            .node_range(right)
+            .expect("a compound arm spans source");
+        let ev = CompoundColumnsEvent {
+            operator: &operator,
+            range,
+            left: left_count,
+            right: right_count,
+        };
+        visitor.on_compound_columns(self.stmt, ev);
+    }
+
+    /// Result columns of a compound arm: a plain SELECT's own, or a nested
+    /// compound's leftmost arm.
+    fn arm_column_count(&mut self, arm: AnyNodeId) -> Option<usize> {
+        let reader = StmtReader::new(self.stmt, self.roles);
+        match reader.role_for_node(arm)? {
+            (SemanticRole::CompoundScope { left, .. }, fields) => {
+                let left = fields.node_id_at(left)?;
+                self.arm_column_count(left)
+            }
+            (SemanticRole::Query { .. }, _) => self.count_result_columns(Some(arm)),
+            _ => None,
+        }
     }
 
     fn count_result_columns(&mut self, body_id: Option<AnyNodeId>) -> Option<usize> {
