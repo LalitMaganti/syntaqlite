@@ -21,8 +21,8 @@ use crate::analysis::{AnalysisConfig, CheckConfig, CheckLevel};
 use crate::dialect::SemanticRole;
 
 use super::walker::{
-    CallEvent, ColumnRefEvent, CteBindingEvent, CteColumnCountMismatchEvent, IndexOnViewEvent,
-    ScopedSourceEvent, SemanticVisitor, SourceRefEvent, UncheckedRef, WalkCtx,
+    CallEvent, ColumnRefEvent, CteBindingEvent, CteColumnCountMismatchEvent, DropWrongKindEvent,
+    IndexOnViewEvent, ScopedSourceEvent, SemanticVisitor, SourceRefEvent, UncheckedRef, WalkCtx,
 };
 
 /// Whether `name` is an embedded-SQL interpolation placeholder: an identifier of
@@ -142,6 +142,7 @@ impl CheckConfig {
             DiagnosticMessage::CteColumnCountMismatch { .. } => self.cte_columns,
             DiagnosticMessage::QualifiedRef { .. } => self.qualified_ref,
             DiagnosticMessage::IndexOnView { .. } => self.index_on_view,
+            DiagnosticMessage::DropWrongKind { .. } => self.drop_wrong_kind,
             DiagnosticMessage::ParseError(_) => self.parse_errors,
         }
     }
@@ -299,6 +300,7 @@ impl<V: SemanticVisitor> SemanticVisitor for StatementVisitor<'_, V> {
     const WANTS_COLUMN_DEFINITION: bool = V::WANTS_COLUMN_DEFINITION;
     const WANTS_CTE_COLUMN_COUNT: bool = true;
     const WANTS_INDEX_ON_VIEW: bool = true;
+    const WANTS_DROP_WRONG_KIND: bool = true;
     // LineageCapture wants source refs, scoped sources, CTE bindings,
     // and enter/exit — all forwarded below.
     const WANTS_CTE_BINDING: bool = true;
@@ -434,6 +436,22 @@ impl<V: SemanticVisitor> SemanticVisitor for StatementVisitor<'_, V> {
             None,
         );
         self.extra.on_index_on_view(stmt, ev);
+    }
+
+    fn on_drop_wrong_kind(
+        &mut self,
+        stmt: &mut AnyParsedStatement<'_>,
+        ev: DropWrongKindEvent<'_>,
+    ) {
+        self.emit_at(
+            ev.range,
+            DiagnosticMessage::DropWrongKind {
+                name: ev.name.to_string(),
+                is_view: ev.is_view,
+            },
+            None,
+        );
+        self.extra.on_drop_wrong_kind(stmt, ev);
     }
 
     fn on_cte_binding(&mut self, stmt: &mut AnyParsedStatement<'_>, ev: CteBindingEvent<'_>) {

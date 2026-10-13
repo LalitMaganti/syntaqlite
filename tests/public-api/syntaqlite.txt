@@ -102,6 +102,7 @@ pub fn syntaqlite::Catalog::new_database(&mut self)
 pub fn syntaqlite::Catalog::new_document(&mut self)
 pub fn syntaqlite::CheckConfig::cte_columns(&self) -> syntaqlite::CheckLevel
 pub fn syntaqlite::CheckConfig::default() -> Self
+pub fn syntaqlite::CheckConfig::drop_wrong_kind(&self) -> syntaqlite::CheckLevel
 pub fn syntaqlite::CheckConfig::function_arity(&self) -> syntaqlite::CheckLevel
 pub fn syntaqlite::CheckConfig::index_on_view(&self) -> syntaqlite::CheckLevel
 pub fn syntaqlite::CheckConfig::parse_errors(&self) -> syntaqlite::CheckLevel
@@ -112,6 +113,7 @@ pub fn syntaqlite::CheckConfig::unknown_function(&self) -> syntaqlite::CheckLeve
 pub fn syntaqlite::CheckConfig::unknown_table(&self) -> syntaqlite::CheckLevel
 pub fn syntaqlite::CheckConfig::with_all(self, syntaqlite::CheckLevel) -> Self
 pub fn syntaqlite::CheckConfig::with_cte_columns(self, syntaqlite::CheckLevel) -> Self
+pub fn syntaqlite::CheckConfig::with_drop_wrong_kind(self, syntaqlite::CheckLevel) -> Self
 pub fn syntaqlite::CheckConfig::with_function_arity(self, syntaqlite::CheckLevel) -> Self
 pub fn syntaqlite::CheckConfig::with_index_on_view(self, syntaqlite::CheckLevel) -> Self
 pub fn syntaqlite::CheckConfig::with_parse_errors(self, syntaqlite::CheckLevel) -> Self
@@ -339,6 +341,9 @@ pub syntaqlite::analysis::DiagnosticMessage::CteColumnCountMismatch
 pub syntaqlite::analysis::DiagnosticMessage::CteColumnCountMismatch::actual: usize
 pub syntaqlite::analysis::DiagnosticMessage::CteColumnCountMismatch::declared: usize
 pub syntaqlite::analysis::DiagnosticMessage::CteColumnCountMismatch::name: alloc::string::String
+pub syntaqlite::analysis::DiagnosticMessage::DropWrongKind
+pub syntaqlite::analysis::DiagnosticMessage::DropWrongKind::is_view: bool
+pub syntaqlite::analysis::DiagnosticMessage::DropWrongKind::name: alloc::string::String
 pub syntaqlite::analysis::DiagnosticMessage::FunctionArity
 pub syntaqlite::analysis::DiagnosticMessage::FunctionArity::expected: alloc::vec::Vec<usize>
 pub syntaqlite::analysis::DiagnosticMessage::FunctionArity::got: usize

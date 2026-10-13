@@ -1039,6 +1039,13 @@ fn kind_code_index_on_view() {
 }
 
 #[test]
+fn kind_code_drop_wrong_kind() {
+    let v = Validator::new();
+    v.analyze("CREATE VIEW v AS SELECT 1; DROP TABLE v");
+    assert!(v.has_code(DIAG_CODE_DROP_WRONG_KIND));
+}
+
+#[test]
 fn kind_code_per_statement_matches_aggregate() {
     let v = Validator::new();
     v.analyze("SELECT id FROM no_such_table");
@@ -1062,6 +1069,7 @@ fn diagnostic_code_to_c_covers_all_variants() {
     check(M::CteColumnCountMismatch { name: "c".into(), declared: 1, actual: 2 }, DIAG_CODE_CTE_COLUMN_COUNT_MISMATCH);
     check(M::QualifiedRef { table: "t".into(), column: "c".into(), context: super::super::QualifiedRefContext::IndexExpression }, DIAG_CODE_QUALIFIED_REF);
     check(M::IndexOnView { name: "v".into() }, DIAG_CODE_INDEX_ON_VIEW);
+    check(M::DropWrongKind { name: "v".into(), is_view: true }, DIAG_CODE_DROP_WRONG_KIND);
 }
 
 // ── Custom function / table-function registration ────────────────────

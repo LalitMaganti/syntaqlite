@@ -87,6 +87,7 @@ impl CheckLevel {
 /// | `cte-columns` | [`cte_columns`](Self::cte_columns) | CTE column count mismatches | `deny` |
 /// | `qualified-ref` | [`qualified_ref`](Self::qualified_ref) | Qualified names where `SQLite` forbids them | `deny` |
 /// | `index-on-view` | [`index_on_view`](Self::index_on_view) | `CREATE INDEX` on a view | `deny` |
+/// | `drop-wrong-kind` | [`drop_wrong_kind`](Self::drop_wrong_kind) | `DROP TABLE` on a view or `DROP VIEW` on a table | `deny` |
 ///
 /// The group name `schema` is a shorthand for `unknown-table`,
 /// `unknown-column`, `unknown-function`, and `function-arity`.
@@ -100,6 +101,7 @@ pub struct CheckConfig {
     pub(crate) cte_columns: CheckLevel,
     pub(crate) qualified_ref: CheckLevel,
     pub(crate) index_on_view: CheckLevel,
+    pub(crate) drop_wrong_kind: CheckLevel,
 }
 
 impl Default for CheckConfig {
@@ -113,6 +115,7 @@ impl Default for CheckConfig {
             cte_columns: CheckLevel::Deny,
             qualified_ref: CheckLevel::Deny,
             index_on_view: CheckLevel::Deny,
+            drop_wrong_kind: CheckLevel::Deny,
         }
     }
 }
@@ -151,6 +154,10 @@ impl CheckConfig {
     /// Level for `CREATE INDEX` on a view.
     pub fn index_on_view(&self) -> CheckLevel {
         self.index_on_view
+    }
+    /// Level for dropping a table with DROP VIEW or a view with DROP TABLE.
+    pub fn drop_wrong_kind(&self) -> CheckLevel {
+        self.drop_wrong_kind
     }
 
     // ── Builders ─────────────────────────────────────────────────────────
@@ -203,6 +210,12 @@ impl CheckConfig {
         self.index_on_view = level;
         self
     }
+    /// Set the level for dropping a table with DROP VIEW or a view with DROP TABLE.
+    #[must_use]
+    pub fn with_drop_wrong_kind(mut self, level: CheckLevel) -> Self {
+        self.drop_wrong_kind = level;
+        self
+    }
     /// Set all schema checks (`unknown-table`, `unknown-column`,
     /// `unknown-function`, `function-arity`).
     #[must_use]
@@ -224,6 +237,7 @@ impl CheckConfig {
         self.cte_columns = level;
         self.qualified_ref = level;
         self.index_on_view = level;
+        self.drop_wrong_kind = level;
         self
     }
 
@@ -239,6 +253,7 @@ impl CheckConfig {
         "cte-columns",
         "qualified-ref",
         "index-on-view",
+        "drop-wrong-kind",
     ];
 
     /// Group names that expand to multiple categories.
@@ -259,6 +274,7 @@ impl CheckConfig {
             "cte-columns" => self.cte_columns = level,
             "qualified-ref" => self.qualified_ref = level,
             "index-on-view" => self.index_on_view = level,
+            "drop-wrong-kind" => self.drop_wrong_kind = level,
             "schema" => self = self.with_schema(level),
             "all" => self = self.with_all(level),
             _ => return Err(format!("unknown check category: {name}")),
@@ -374,6 +390,7 @@ mod tests {
         assert_eq!(c.cte_columns(), CheckLevel::Deny);
         assert_eq!(c.qualified_ref(), CheckLevel::Deny);
         assert_eq!(c.index_on_view(), CheckLevel::Deny);
+        assert_eq!(c.drop_wrong_kind(), CheckLevel::Deny);
     }
 
     #[test]
