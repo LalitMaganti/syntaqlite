@@ -69,9 +69,10 @@ if (typeof parseDiags[0].data?.startOffset !== "number") {
   throw new Error(`diagnostic missing structured data: ${JSON.stringify(parseDiags[0])}`);
 }
 
+lspDiagnostics(engine, "file:///c.sql", "SELECT  FROM t", 1);
 const comp = engine.lspMessage({
   jsonrpc: "2.0", id: 2, method: "textDocument/completion",
-  params: {textDocument: {uri: "file:///w.sql"}, position: {line: 0, character: 7}},
+  params: {textDocument: {uri: "file:///c.sql"}, position: {line: 0, character: 7}},
 });
 if (!Array.isArray(comp[0]?.result) || comp[0].result.length === 0) {
   throw new Error("expected LSP completion items");

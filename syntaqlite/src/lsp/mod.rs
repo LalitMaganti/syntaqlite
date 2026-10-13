@@ -66,11 +66,24 @@ pub(crate) use crate::analysis::completion::{CompletionContext, CompletionInfo};
 pub struct CompletionEntry {
     label: String,
     kind: CompletionKind,
+    match_rank: u8,
 }
 
 impl CompletionEntry {
     pub(crate) fn new(label: String, kind: CompletionKind) -> Self {
-        CompletionEntry { label, kind }
+        CompletionEntry {
+            label,
+            kind,
+            match_rank: 0,
+        }
+    }
+
+    pub(crate) fn match_rank(&self) -> u8 {
+        self.match_rank
+    }
+
+    pub(crate) fn set_match_rank(&mut self, rank: u8) {
+        self.match_rank = rank;
     }
 
     /// The label to display and insert.

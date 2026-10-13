@@ -8,8 +8,6 @@
 //! [`CompletionEntry`](crate::lsp::CompletionEntry) values from
 //! [`CompletionInfo`] separately.
 
-use std::collections::HashSet;
-
 use syntaqlite_syntax::ParserConfig;
 use syntaqlite_syntax::any::{AnyParser, AnyTokenType, TokenCategory};
 use syntaqlite_syntax::source::{DocLen, DocOffset, DocRange, DocText};
@@ -45,6 +43,8 @@ pub(crate) struct CompletionInfo {
     pub(crate) tokens: Vec<AnyTokenType>,
     pub(crate) context: CompletionContext,
     pub(crate) qualifier: Option<String>,
+    /// The partially typed word ending at the cursor, if any.
+    pub(crate) prefix: Option<String>,
 }
 
 /// Expected tokens and semantic context at `offset`, derived by feeding the
@@ -60,6 +60,10 @@ pub(crate) fn completion_info(
     let doc_end = DocOffset::default() + end_of_doc;
     let cursor = if offset > doc_end { doc_end } else { offset };
     let (boundary, backtracked) = completion_boundary(source, tokens, cursor);
+    let prefix = backtracked.then(|| {
+        let start = tokens[boundary].offset;
+        source[DocRange::from_offset_len(start, cursor - start)].to_string()
+    });
     let start = statement_token_start(tokens, boundary);
     let stmt_tokens = &tokens[start..boundary];
 
@@ -79,6 +83,7 @@ pub(crate) fn completion_info(
                 tokens: last_expected,
                 context: CompletionContext::from_parser(cursor_p.completion_context()),
                 qualifier,
+                prefix,
             };
         }
         last_expected.clear();
@@ -87,22 +92,13 @@ pub(crate) fn completion_info(
 
     let context = CompletionContext::from_parser(cursor_p.completion_context());
 
-    if backtracked && let Some(extra) = tokens.get(boundary) {
-        let span = extra.offset..(extra.offset + extra.length);
-        if cursor_p.feed_token(extra.token_type, span).is_none() {
-            merge_expected_tokens(
-                &mut last_expected,
-                cursor_p.expected_tokens().collect::<Vec<AnyTokenType>>(),
-            );
-        }
-    }
-
     let qualifier = detect_qualifier(source, stmt_tokens, dialect);
 
     CompletionInfo {
         tokens: last_expected,
         context,
         qualifier,
+        prefix,
     }
 }
 
@@ -175,15 +171,6 @@ fn statement_token_start(tokens: &[StoredToken], boundary: usize) -> usize {
         .iter()
         .rposition(|t| t.token_type == semi)
         .map_or(0, |idx| idx + 1)
-}
-
-fn merge_expected_tokens(into: &mut Vec<AnyTokenType>, extra: Vec<AnyTokenType>) {
-    let mut seen: HashSet<AnyTokenType> = into.iter().copied().collect();
-    for token in extra {
-        if seen.insert(token) {
-            into.push(token);
-        }
-    }
 }
 
 // ── Signature help ───────────────────────────────────────────────────────────
