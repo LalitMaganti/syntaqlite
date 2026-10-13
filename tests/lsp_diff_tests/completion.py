@@ -12,10 +12,6 @@ class Completion(TestSuite):
             out="""\
             column: id
             column: name
-            table: sqlite_master
-            table: sqlite_schema
-            table: sqlite_temp_master
-            table: sqlite_temp_schema
             table: users
             keyword: ALL
             keyword: CASE
@@ -187,6 +183,25 @@ class Completion(TestSuite):
             keyword: UNION
             keyword: WHERE
             keyword: WINDOW
+""",
+        )
+
+    def test_columns_limited_to_query_sources(self):
+        return LspDiffTestBlueprint(
+            sql="CREATE TABLE a (ax INT);\nCREATE TABLE b (bx INT);\nCREATE TABLE c (cx INT);\nSELECT x<|> FROM a JOIN b AS bb ON 1;",
+            op="completion",
+            out="""\
+            column: ax
+            column: bx
+            keyword: EXISTS
+            keyword: INDEXED
+            function: hex
+            function: json_extract
+            function: jsonb_extract
+            function: load_extension
+            function: max
+            function: unhex
+            function: unixepoch
 """,
         )
 

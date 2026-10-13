@@ -117,19 +117,11 @@ fn ensure_analysis(
     // file is analyzed in one pass with host-native offsets: non-SQL lines never
     // reach the SQL engine (issue #88), and every feature — including
     // cross-fragment navigation — works without per-fragment offset bookkeeping.
-    #[cfg(feature = "experimental-embedded")]
-    let masked = crate::embedded::mask_for_analysis(
-        analyzer.dialect(),
-        &doc.source,
-        doc.language_id.as_deref(),
-    );
-    #[cfg(not(feature = "experimental-embedded"))]
-    let masked: Option<String> = None;
-    let analyzed_source = masked.as_deref().unwrap_or(&doc.source);
+    let analyzed_source = analyzable_source(analyzer, &doc.source, doc.language_id.as_deref());
 
     let mut capture = LspCapture::new(external_defs);
     let mut ctx = AnalysisContext::new(user_catalog).with_config(*analysis_config);
-    let model = analyzer.analyze_with_visitor(analyzed_source, &mut ctx, &mut capture);
+    let model = analyzer.analyze_with_visitor(&analyzed_source, &mut ctx, &mut capture);
     let all_diags: Vec<Diagnostic> = model.diagnostics().cloned().collect();
     let parse_diags: Vec<Diagnostic> = all_diags
         .iter()
@@ -139,6 +131,39 @@ fn ensure_analysis(
     doc.cached_parse_diags = Some(parse_diags);
     doc.cached_all_diags = Some(all_diags);
     doc.analysis = Some(capture.into_data());
+}
+
+/// `source` as the SQL engine should see it: embedded host files are masked
+/// into a length-preserving SQL-equivalent document.
+fn analyzable_source<'s>(
+    analyzer: &Analyzer,
+    source: &'s str,
+    language_id: Option<&str>,
+) -> std::borrow::Cow<'s, str> {
+    #[cfg(feature = "experimental-embedded")]
+    let masked = crate::embedded::mask_for_analysis(analyzer.dialect(), source, language_id);
+    #[cfg(not(feature = "experimental-embedded"))]
+    let masked: Option<String> = {
+        let _ = (analyzer, language_id);
+        None
+    };
+    masked.map_or(std::borrow::Cow::Borrowed(source), std::borrow::Cow::Owned)
+}
+
+/// The catalog and analysis config for `uri`, from `schema_map` when it has a
+/// matching entry.
+fn select_catalog<'a>(
+    uri: &str,
+    schema_map: Option<&'a mut SchemaMap>,
+    user_catalog: &'a mut Catalog,
+    base_analysis_config: &AnalysisConfig,
+) -> (&'a mut Catalog, AnalysisConfig) {
+    if let Some(map) = schema_map
+        && let Some((cat, _strict)) = map.resolve_mut(uri)
+    {
+        return (cat, base_analysis_config.with_strict_schema());
+    }
+    (user_catalog, *base_analysis_config)
 }
 
 /// Resolve the correct catalog for `uri` via `schema_map`, then call
@@ -155,15 +180,7 @@ pub(super) fn ensure_analysis_for(
     let Some(doc) = documents.get_mut(uri) else {
         return false;
     };
-    let (catalog, config) = if let Some(map) = schema_map {
-        if let Some((cat, _strict)) = map.resolve_mut(uri) {
-            (cat, base_analysis_config.with_strict_schema())
-        } else {
-            (user_catalog, *base_analysis_config)
-        }
-    } else {
-        (user_catalog, *base_analysis_config)
-    };
+    let (catalog, config) = select_catalog(uri, schema_map, user_catalog, base_analysis_config);
     ensure_analysis(doc, analyzer, catalog, &config, external_defs);
     true
 }
@@ -441,7 +458,46 @@ impl LspHost {
     /// Completion items (keywords + functions) at a byte offset.
     pub fn completion_items(&mut self, uri: &str, offset: DocOffset) -> Vec<CompletionEntry> {
         let info = self.completion_info_at_offset(uri, offset);
-        super::completion_service::build_completion_items(&info, &self.dialect, &self.user_catalog)
+        let scope = self.cursor_scope(uri, offset);
+        super::completion_service::build_completion_items(
+            &info,
+            &self.dialect,
+            &self.user_catalog,
+            scope.as_ref(),
+        )
+    }
+
+    /// The names in scope at `offset`, found by analyzing the document with
+    /// a placeholder column in place of the word being typed.
+    fn cursor_scope(
+        &mut self,
+        uri: &str,
+        offset: DocOffset,
+    ) -> Option<super::completion_service::CursorScope> {
+        use super::completion_service::{CURSOR_MARKER, CursorScopeCapture};
+        let doc = self.documents.get(uri)?;
+        let end = offset.as_usize().min(doc.source.len());
+        let start = doc.source[..end]
+            .rfind(|c: char| !(c.is_ascii_alphanumeric() || c == '_'))
+            .map_or(0, |i| i + 1);
+        let probe = format!(
+            "{}{CURSOR_MARKER}{}",
+            &doc.source[..start],
+            &doc.source[end..]
+        );
+        let source =
+            analyzable_source(&self.analyzer, &probe, doc.language_id.as_deref()).into_owned();
+        let (catalog, config) = select_catalog(
+            uri,
+            self.schema_map.as_mut(),
+            &mut self.user_catalog,
+            &self.analysis_config,
+        );
+        let mut capture = CursorScopeCapture::default();
+        let mut ctx = AnalysisContext::new(catalog).with_config(config);
+        self.analyzer
+            .analyze_with_visitor(&source, &mut ctx, &mut capture);
+        capture.into_scope()
     }
 
     // ── Analysis ────────────────────────────────────────────────────
