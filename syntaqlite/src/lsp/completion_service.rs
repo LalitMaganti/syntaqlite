@@ -22,8 +22,49 @@ use crate::analysis::completion::CompletionContext;
 use super::{CompletionEntry, CompletionInfo, CompletionKind};
 
 /// Assemble completion items from the given completion info, dialect, and
-/// catalog. The result is sorted by [`CompletionKind::sort_priority`].
+/// catalog, keeping only those matching the partially typed word. The result
+/// is sorted by [`CompletionKind::sort_priority`], then by match rank.
 pub(crate) fn build_completion_items(
+    info: &CompletionInfo,
+    dialect: &AnyDialect,
+    catalog: &Catalog,
+) -> Vec<CompletionEntry> {
+    let mut items = candidate_items(info, dialect, catalog);
+    if let Some(typed) = &info.prefix {
+        items.retain_mut(|item| match match_rank(typed, item.label()) {
+            Some(rank) => {
+                item.set_match_rank(rank);
+                true
+            }
+            None => false,
+        });
+        items.sort_by_key(|a| (a.kind().sort_priority(), a.match_rank()));
+    }
+    items
+}
+
+/// How well `typed` matches `label`, ignoring case: 0 for a prefix, 1 for a
+/// prefix of an `_`-separated part, 2 for a substring, 3 for a subsequence.
+fn match_rank(typed: &str, label: &str) -> Option<u8> {
+    let typed = typed.to_ascii_lowercase();
+    let label = label.to_ascii_lowercase();
+    if label.starts_with(&typed) {
+        return Some(0);
+    }
+    if label.split('_').any(|part| part.starts_with(&typed)) {
+        return Some(1);
+    }
+    if label.contains(&typed) {
+        return Some(2);
+    }
+    let mut label_chars = label.chars();
+    typed
+        .chars()
+        .all(|t| label_chars.by_ref().any(|l| l == t))
+        .then_some(3)
+}
+
+fn candidate_items(
     info: &CompletionInfo,
     dialect: &AnyDialect,
     catalog: &Catalog,
@@ -95,4 +136,20 @@ pub(crate) fn build_completion_items(
 
     items.sort_by_key(|a| a.kind().sort_priority());
     items
+}
+
+#[cfg(test)]
+mod tests {
+    use super::match_rank;
+
+    #[test]
+    fn match_rank_prefers_contiguous_matches() {
+        assert_eq!(match_rank("SLICE", "slice"), Some(0));
+        assert_eq!(match_rank("slice", "thread_slice"), Some(1));
+        assert_eq!(match_rank("lic", "slice"), Some(2));
+        assert_eq!(match_rank("slice", "sqlite_schema"), Some(3));
+        assert_eq!(match_rank("jn", "JOIN"), Some(3));
+        assert_eq!(match_rank("j", "CROSS"), None);
+        assert_eq!(match_rank("nj", "JOIN"), None);
+    }
 }

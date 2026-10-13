@@ -513,8 +513,9 @@ fn handle_completion(req: Request, host: &mut LspHost) -> Response {
                 .map(|entry| CompletionItem {
                     label: entry.label().to_string(),
                     sort_text: Some(format!(
-                        "{}_{}",
+                        "{}_{}_{}",
                         entry.kind().sort_priority(),
+                        entry.match_rank(),
                         entry.label()
                     )),
                     kind: Some(match entry.kind() {

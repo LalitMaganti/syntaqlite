@@ -419,6 +419,7 @@ impl LspHost {
                 tokens: Vec::new(),
                 context: super::CompletionContext::Unknown,
                 qualifier: None,
+                prefix: None,
             };
         }
         let doc = self

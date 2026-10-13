@@ -216,134 +216,21 @@ keyword: RIGHT
         return LspDiffTestBlueprint(
             sql="SELECT * FR<|>",
             op="completion",
-            out="""\
-            keyword: ALTER
-            keyword: ANALYZE
-            keyword: ATTACH
-            keyword: BEGIN
-            keyword: COMMIT
-            keyword: CREATE
-            keyword: DELETE
-            keyword: DETACH
-            keyword: DROP
-            keyword: END
-            keyword: EXCEPT
-            keyword: EXPLAIN
-            keyword: FROM
-            keyword: GROUP
-            keyword: HAVING
-            keyword: INSERT
-            keyword: INTERSECT
-            keyword: LIMIT
-            keyword: ORDER
-            keyword: PRAGMA
-            keyword: REINDEX
-            keyword: RELEASE
-            keyword: REPLACE
-            keyword: ROLLBACK
-            keyword: SAVEPOINT
-            keyword: SELECT
-            keyword: UNION
-            keyword: UPDATE
-            keyword: VACUUM
-            keyword: VALUES
-            keyword: WHERE
-            keyword: WINDOW
-            keyword: WITH
-""",
+            out="keyword: FROM",
         )
 
     def test_second_statement_after_parse_error(self):
         return LspDiffTestBlueprint(
             sql="SELEC 1; SELECT * FR<|>",
             op="completion",
-            out="""\
-            keyword: ALTER
-            keyword: ANALYZE
-            keyword: ATTACH
-            keyword: BEGIN
-            keyword: COMMIT
-            keyword: CREATE
-            keyword: DELETE
-            keyword: DETACH
-            keyword: DROP
-            keyword: END
-            keyword: EXCEPT
-            keyword: EXPLAIN
-            keyword: FROM
-            keyword: GROUP
-            keyword: HAVING
-            keyword: INSERT
-            keyword: INTERSECT
-            keyword: LIMIT
-            keyword: ORDER
-            keyword: PRAGMA
-            keyword: REINDEX
-            keyword: RELEASE
-            keyword: REPLACE
-            keyword: ROLLBACK
-            keyword: SAVEPOINT
-            keyword: SELECT
-            keyword: UNION
-            keyword: UPDATE
-            keyword: VACUUM
-            keyword: VALUES
-            keyword: WHERE
-            keyword: WINDOW
-            keyword: WITH
-""",
+            out="keyword: FROM",
         )
 
     def test_join_keyword_after_from_alias(self):
         return LspDiffTestBlueprint(
             sql="SELECT * FROM s AS x J<|>",
             op="completion",
-            out="""\
-            keyword: ALTER
-            keyword: ANALYZE
-            keyword: ATTACH
-            keyword: BEGIN
-            keyword: COMMIT
-            keyword: CREATE
-            keyword: CROSS
-            keyword: DELETE
-            keyword: DETACH
-            keyword: DROP
-            keyword: END
-            keyword: EXCEPT
-            keyword: EXPLAIN
-            keyword: FULL
-            keyword: GROUP
-            keyword: HAVING
-            keyword: INDEXED
-            keyword: INNER
-            keyword: INSERT
-            keyword: INTERSECT
-            keyword: JOIN
-            keyword: LEFT
-            keyword: LIMIT
-            keyword: NATURAL
-            keyword: NOT
-            keyword: ON
-            keyword: ORDER
-            keyword: OUTER
-            keyword: PRAGMA
-            keyword: REINDEX
-            keyword: RELEASE
-            keyword: REPLACE
-            keyword: RIGHT
-            keyword: ROLLBACK
-            keyword: SAVEPOINT
-            keyword: SELECT
-            keyword: UNION
-            keyword: UPDATE
-            keyword: USING
-            keyword: VACUUM
-            keyword: VALUES
-            keyword: WHERE
-            keyword: WINDOW
-            keyword: WITH
-""",
+            out="keyword: JOIN",
         )
 
     def test_join_keyword_after_from_table_trailing_space(self):
@@ -380,37 +267,44 @@ keyword: RIGHT
 """,
         )
 
-    def test_join_keyword_after_from_table_no_trailing_space(self):
+    def test_partial_keyword_matches_fuzzily(self):
+        return LspDiffTestBlueprint(
+            sql="SELECT * FROM s AS x jn<|>",
+            op="completion",
+            out="""\
+            keyword: JOIN
+""",
+        )
+
+    def test_number_under_cursor_matches_nothing(self):
+        return LspDiffTestBlueprint(
+            sql="SELECT 1<|>",
+            op="completion",
+            out="""\
+            (no completions)
+""",
+        )
+
+    def test_partial_table_name_after_from(self):
         return LspDiffTestBlueprint(
             sql="SELECT * FROM slice<|>",
             op="completion",
             out="""\
-            table: sqlite_master
             table: sqlite_schema
-            table: sqlite_temp_master
             table: sqlite_temp_schema
-            keyword: AS
-            keyword: CROSS
-            keyword: EXCEPT
-            keyword: FULL
-            keyword: GROUP
-            keyword: HAVING
-            keyword: INDEXED
-            keyword: INNER
-            keyword: INTERSECT
-            keyword: JOIN
-            keyword: LEFT
-            keyword: LIMIT
-            keyword: NATURAL
-            keyword: NOT
-            keyword: ON
-            keyword: ORDER
-            keyword: OUTER
-            keyword: RIGHT
-            keyword: UNION
-            keyword: USING
-            keyword: WHERE
-            keyword: WINDOW
+""",
+        )
+
+    def test_partial_table_name_ranks_contiguous_matches_first(self):
+        return LspDiffTestBlueprint(
+            sql="CREATE TABLE thread_slice (id INTEGER);\nCREATE TABLE slice (id INTEGER);\nCREATE TABLE spline_cache (id INTEGER);\nSELECT * FROM slice<|>",
+            op="completion",
+            out="""\
+            table: slice
+            table: thread_slice
+            table: spline_cache
+            table: sqlite_schema
+            table: sqlite_temp_schema
 """,
         )
 

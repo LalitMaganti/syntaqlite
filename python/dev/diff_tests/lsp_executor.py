@@ -202,13 +202,15 @@ def _render_completion(result: Any) -> str:
         items = []
     if not items:
         return "(no completions)"
-    rows: list[tuple[int, str, str]] = []
+    rows: list[tuple[int, str, str, str]] = []
     for item in items:
         kind_name = _KIND_NAMES.get(item.get("kind", 0), "other")
         label = item.get("label", "")
-        rows.append((_KIND_ORDER.get(kind_name, 99), kind_name, label))
-    rows.sort(key=lambda r: (r[0], r[1], r[2]))
-    return "\n".join(f"{kind}: {label}" for _, kind, label in rows)
+        # Editors order by sortText, which carries match quality.
+        sort_text = item.get("sortText", label)
+        rows.append((_KIND_ORDER.get(kind_name, 99), sort_text, kind_name, label))
+    rows.sort()
+    return "\n".join(f"{kind}: {label}" for _, _, kind, label in rows)
 
 
 def _test_uri(name: str) -> str:
