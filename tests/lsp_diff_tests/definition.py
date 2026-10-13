@@ -139,3 +139,12 @@ target: 0:16..0:19
 target: 0:15..0:16
 """,
         )
+
+    def test_cte_column_passed_through(self):
+        return LspDiffTestBlueprint(
+            sql="CREATE TABLE t (qty INT); WITH w AS (SELECT qty FROM t) SELECT <|>qty FROM w;",
+            op="definition",
+            out="""\
+target: 0:44..0:47
+""",
+        )
