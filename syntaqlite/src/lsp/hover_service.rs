@@ -34,19 +34,26 @@ pub(crate) fn definition_info(
     data.definition_at(offset)
 }
 
-/// If `offset` lies on a renameable resolved symbol, return its range and
-/// current name. Functions are not renameable.
+/// If `offset` lies on a renameable symbol, either a reference or its
+/// definition, return its range and current name as written in `source`.
+/// Functions are not renameable.
 pub(crate) fn prepare_rename(
     data: &DocumentAnalysisData,
+    source: &str,
     offset: DocOffset,
 ) -> Option<(DocRange, String)> {
-    let res = data.resolution_at(offset)?;
-    let name = match &res.symbol {
-        ResolvedSymbol::Table { name, .. } => name.clone(),
-        ResolvedSymbol::Column { column, .. } => column.clone(),
-        ResolvedSymbol::Function { .. } => return None,
+    let range = match data.resolution_at(offset) {
+        Some(res) => match res.symbol {
+            ResolvedSymbol::Table { .. } | ResolvedSymbol::Column { .. } => res.range,
+            ResolvedSymbol::Function { .. } => return None,
+        },
+        None => *data
+            .definition_offsets
+            .values()
+            .find(|r| offset >= r.start && offset < r.end)?,
     };
-    Some((res.range, name))
+    let name = source.get(range.start.as_usize()..range.end.as_usize())?;
+    Some((range, name.to_string()))
 }
 
 /// Determine the symbol identity at `offset` — either from a resolution or
