@@ -359,6 +359,7 @@ syntaqlite.RenderOptions(*, source_name="")
 | `DROP_WRONG_KIND` | `9` |
 | `BUILTIN_MODIFY` | `10` |
 | `COMPOUND_COLUMNS` | `11` |
+| `UNKNOWN_WINDOW` | `12` |
 
 ### `DefinedRelation`
 

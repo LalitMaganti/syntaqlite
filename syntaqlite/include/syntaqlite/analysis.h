@@ -70,6 +70,7 @@ typedef enum {
   SYNTAQLITE_DIAG_DROP_WRONG_KIND             = 9,
   SYNTAQLITE_DIAG_BUILTIN_MODIFY              = 10,
   SYNTAQLITE_DIAG_COMPOUND_COLUMNS            = 11,
+  SYNTAQLITE_DIAG_UNKNOWN_WINDOW              = 12,
 } SyntaqliteDiagnosticCode;
 
 // A single diagnostic from validation. Pointers are valid until the next

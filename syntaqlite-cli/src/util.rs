@@ -287,6 +287,9 @@ pub(crate) fn build_check_config(
         if let Some(ref v) = opts.compound_columns {
             checks = checks.with_compound_columns(CheckLevel::parse(v)?);
         }
+        if let Some(ref v) = opts.unknown_window {
+            checks = checks.with_unknown_window(CheckLevel::parse(v)?);
+        }
     }
 
     // CLI flags win (last-spec-wins per category).

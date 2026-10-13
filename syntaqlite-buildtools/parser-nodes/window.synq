@@ -53,6 +53,8 @@ node WindowDef {
   orderby: index OrderByList
   frame: index FrameSpec
 
+  semantic { window_ref(reference: ref_window_name, base: base_window_name) }
+
   fmt {
     if_span(ref_window_name) { span(ref_window_name) } else {
     group {
@@ -90,6 +92,8 @@ list WindowDefList { WindowDef }
 node NamedWindowDef {
   window_name: inline SyntaqliteTextSpan
   window_def: index WindowDef
+
+  semantic { window_definition(name: window_name) }
 
   fmt { span(window_name) space "AS" space child(window_def) }
 }

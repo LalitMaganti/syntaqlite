@@ -431,6 +431,18 @@ fn role_to_bytes(
             bytes[0] = disc(SemanticRole::TriggerUpdateOf { columns: 0 });
             bytes[1] = opt(columns);
         }
+        SynqRole::WindowRef { reference, base } => {
+            bytes[0] = disc(SemanticRole::WindowRef {
+                reference: 0,
+                base: 0,
+            });
+            bytes[1] = opt(reference);
+            bytes[2] = opt(base);
+        }
+        SynqRole::WindowDefinition { name } => {
+            bytes[0] = disc(SemanticRole::WindowDefinition { name: 0 });
+            bytes[1] = fi(name);
+        }
     }
 
     bytes
