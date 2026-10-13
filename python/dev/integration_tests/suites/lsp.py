@@ -9,6 +9,7 @@ stdio to verify schema loading and diagnostic behaviour.
 
 from __future__ import annotations
 
+import os
 import shutil
 import subprocess
 import tempfile
@@ -76,6 +77,26 @@ def _test_schema_from_ddl(ctx: SuiteContext) -> bool:
                 _fail("schema_from_ddl", f"expected 0 errors, got {len(errors)}: {errors}")
                 return False
             _pass("schema_from_ddl")
+            return True
+        finally:
+            client.shutdown()
+
+
+def _test_relative_config_path(ctx: SuiteContext) -> bool:
+    """A relative --config path still applies its schema to absolute document URIs."""
+    schema_file = ctx.root_dir / "tests" / "lsp_tests" / "schema.sql"
+    query_text = (ctx.root_dir / "tests" / "lsp_tests" / "query.sql").read_text()
+
+    with tempfile.TemporaryDirectory() as tmp:
+        config = Path(os.path.relpath(_write_config(Path(tmp), schema_file)))
+        client = spawn_lsp(ctx.binary, config=config)
+        try:
+            diags = _open_and_get_diagnostics(client, f"file://{tmp}/test.sql", query_text)
+            errors = [d for d in diags if d.get("severity", 0) <= 2]
+            if errors:
+                _fail("relative_config_path", f"expected 0 errors, got {len(errors)}: {errors}")
+                return False
+            _pass("relative_config_path")
             return True
         finally:
             client.shutdown()
@@ -200,6 +221,7 @@ def _test_definition_in_schema_file(ctx: SuiteContext) -> bool:
 def run(ctx: SuiteContext) -> int:
     tests = [
         _test_schema_from_ddl,
+        _test_relative_config_path,
         _test_no_schema_warns,
         _test_sqlite3_dot_schema,
         _test_definition_in_schema_file,

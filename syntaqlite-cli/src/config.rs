@@ -81,8 +81,27 @@ pub(crate) fn load(config_path: &Path) -> Option<(ProjectConfig, PathBuf)> {
             return None;
         }
     };
-    let dir = config_path.parent()?.to_path_buf();
+    // Schema globs are matched against absolute document paths.
+    let dir = normalize(&std::path::absolute(config_path).ok()?)
+        .parent()?
+        .to_path_buf();
     Some((config, dir))
+}
+
+/// Remove `.` and `..` components without resolving symlinks, so the path
+/// matches the document paths editors send.
+fn normalize(path: &Path) -> PathBuf {
+    let mut out = PathBuf::new();
+    for component in path.components() {
+        match component {
+            std::path::Component::CurDir => {}
+            std::path::Component::ParentDir => {
+                out.pop();
+            }
+            other => out.push(other),
+        }
+    }
+    out
 }
 
 /// Walk up from `start` looking for `syntaqlite.toml`.
