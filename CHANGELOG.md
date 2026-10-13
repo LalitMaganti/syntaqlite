@@ -1,13 +1,37 @@
 # Changelog
 
+## 0.13.0
+
+**Breaking: one schema shape everywhere**
+
+Tables and views are described the same way in Rust, C, JSON and RPC. A missing or `null` column list means the columns are unknown, and an empty list means there are none.
+
+| Before | After |
+|---|---|
+| Rust `insert_table(name, Some(cols), false)` | `insert_table(TableDef::new(name).columns(cols))` |
+| Rust `insert_table(name, None, false)` | `insert_table(TableDef::new(name))` |
+| Rust `insert_table(name, cols, true)` | `insert_table(TableDef::new(name).columns(cols).without_rowid())` |
+| Rust `insert_view(name, Some(cols))` | `insert_view(ViewDef::new(name).columns(cols))` |
+| C `SyntaqliteRelationDef` | `SyntaqliteViewDef` |
+| JSON `"columns": []` for unknown columns | Omit `columns` or pass `null` |
+
+**Analyzer**
+- Catches many more errors that SQLite reports, such as wrong column or value counts in compound SELECTs, INSERTs, VALUES and subqueries, misused row values, undefined windows, and changes to views or built-in tables. Each has its own check, on by default.
+- Checks DDL against the tables it touches: indexes, constraints, generated columns and triggers, with dropped tables no longer treated as existing.
+- Schemas can declare generated and hidden columns, and `SELECT *` expands the same way SQLite does.
+
+**Language server**
+- Completion suggests only names that fit at the cursor, from the tables in the query, ranked by what you have typed.
+- Go-to-definition, find references and rename cover much more of the schema, including schema files set in `syntaqlite.toml`.
+- Fixed schemas not loading when `--config` is a relative path.
+
+**Formatter**
+- A comment before a statement no longer changes how its `VALUES` rows wrap.
+
 ## 0.12.1
 
 **Custom dialects:**
 - A node expander can read the result of the statement it is expanding, such as its root. Before, the result still described the previous statement, and nothing for the first statement of a source ([#406](https://github.com/LalitMaganti/syntaqlite/pull/406)).
-
-## 0.12.1
-
-*No changes yet.*
 
 ## 0.12.0
 
