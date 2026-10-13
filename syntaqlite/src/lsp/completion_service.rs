@@ -31,6 +31,8 @@ pub(crate) const CURSOR_MARKER: &str = "syntaqlite_completion_cursor";
 pub(crate) struct CursorScope {
     columns: Vec<String>,
     sources: Vec<String>,
+    /// A source's columns are unknown, so any column could belong to it.
+    has_unknown_columns: bool,
 }
 
 /// Records the scope at the unqualified [`CURSOR_MARKER`] column reference.
@@ -59,6 +61,7 @@ impl SemanticVisitor for CursorScopeCapture {
             self.scope = Some(CursorScope {
                 columns: cx.scope.all_column_names(None),
                 sources: cx.scope.all_source_names(),
+                has_unknown_columns: cx.scope.has_unknown_columns(),
             });
         }
     }
@@ -175,6 +178,11 @@ fn candidate_items(
                 }
             }
             let (columns, tables) = match scope {
+                Some(scope) if scope.has_unknown_columns => {
+                    let mut columns = scope.columns.clone();
+                    columns.extend(catalog.all_column_names(None));
+                    (columns, scope.sources.clone())
+                }
                 Some(scope) => (scope.columns.clone(), scope.sources.clone()),
                 None => (catalog.all_column_names(None), catalog.all_relation_names()),
             };
