@@ -538,6 +538,13 @@ mod ffi {
             self.length == 0
         }
 
+        /// Returns `true` if the span is missing, as opposed to an empty
+        /// quoted identifier such as `""`, which covers zero bytes but is a
+        /// name.
+        pub fn is_absent(self) -> bool {
+            self.length == 0 && !self.is_quoted()
+        }
+
         /// Was this identifier quoted in source?  True for `"..."`,
         /// `` `...` ``, `[...]`, and `'...'` (a string literal in
         /// identifier position) forms; false otherwise.  Use

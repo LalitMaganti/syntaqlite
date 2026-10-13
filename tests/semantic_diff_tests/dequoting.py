@@ -5,6 +5,13 @@ from python.dev.diff_tests.testing import DiffTestBlueprint, TestSuite
 
 
 class Dequoting(TestSuite):
+    def test_empty_quoted_table_name(self):
+        return DiffTestBlueprint(
+            sql='CREATE TABLE "" (a); CREATE INDEX i ON "" (a); SELECT a FROM "";',
+            strict_schema=True,
+            out="",
+        )
+
     def test_quoted_view_name(self):
         return DiffTestBlueprint(
             sql='CREATE VIEW "v w" AS SELECT 1 AS x; SELECT x FROM "v w"; SELECT x FROM [v w];',

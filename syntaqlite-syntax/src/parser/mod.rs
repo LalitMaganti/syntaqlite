@@ -1142,14 +1142,16 @@ impl<'a> AnyParsedStatement<'a> {
     // without pre-checking.
 
     /// Expanded text of a span field, or `None` if the index is
-    /// [`crate::ast::FIELD_ABSENT`], the field is empty, or the field is
+    /// [`crate::ast::FIELD_ABSENT`], the span is absent, or the field is
     /// not a span.
     pub fn span_field_text(&self, fields: &crate::ast::NodeFields, idx: u8) -> Option<&'a str> {
         if idx == crate::ast::FIELD_ABSENT {
             return None;
         }
         match fields[idx as usize] {
-            crate::ast::FieldValue::Span(sp) if !sp.is_empty() => Some(self.span_expanded_text(sp)),
+            crate::ast::FieldValue::Span(sp) if !sp.is_absent() => {
+                Some(self.span_expanded_text(sp))
+            }
             _ => None,
         }
     }
@@ -1166,7 +1168,7 @@ impl<'a> AnyParsedStatement<'a> {
             return None;
         }
         match fields[idx as usize] {
-            crate::ast::FieldValue::Span(sp) if !sp.is_empty() => {
+            crate::ast::FieldValue::Span(sp) if !sp.is_absent() => {
                 let text = self.span_expanded_text(sp);
                 let (_, range) = self.span_text_abs(sp);
                 Some((text, range))
@@ -1199,7 +1201,7 @@ impl<'a> AnyParsedStatement<'a> {
         }
     }
 
-    /// First non-empty span anywhere in `node_id`'s fields. Used as a
+    /// First present span anywhere in `node_id`'s fields. Used as a
     /// generic "give me whatever identifier this node carries" probe.
     pub fn first_span_text(&self, node_id: AnyNodeId) -> Option<&'a str> {
         if node_id.is_null() {
@@ -1208,7 +1210,7 @@ impl<'a> AnyParsedStatement<'a> {
         let (_, fields) = self.extract_fields(node_id)?;
         for i in 0..fields.len() {
             if let crate::ast::FieldValue::Span(sp) = fields[i]
-                && !sp.is_empty()
+                && !sp.is_absent()
             {
                 return Some(self.span_expanded_text(sp));
             }
@@ -1226,7 +1228,9 @@ impl<'a> AnyParsedStatement<'a> {
             return None;
         }
         match fields[idx as usize] {
-            crate::ast::FieldValue::Span(sp) if !sp.is_empty() => Some(self.span_expanded_text(sp)),
+            crate::ast::FieldValue::Span(sp) if !sp.is_absent() => {
+                Some(self.span_expanded_text(sp))
+            }
             crate::ast::FieldValue::NodeId(id) if !id.is_null() => self.first_span_text(id),
             _ => None,
         }
@@ -1262,7 +1266,7 @@ impl<'a> AnyParsedStatement<'a> {
             return None;
         }
         match fields[idx as usize] {
-            crate::ast::FieldValue::Span(sp) if !sp.is_empty() => Some(self.span_ident_text(sp)),
+            crate::ast::FieldValue::Span(sp) if !sp.is_absent() => Some(self.span_ident_text(sp)),
             _ => None,
         }
     }
@@ -1297,7 +1301,7 @@ impl<'a> AnyParsedStatement<'a> {
         let (_, fields) = self.extract_fields(node_id)?;
         for i in 0..fields.len() {
             if let crate::ast::FieldValue::Span(sp) = fields[i]
-                && !sp.is_empty()
+                && !sp.is_absent()
             {
                 return Some(self.span_ident_text(sp));
             }
