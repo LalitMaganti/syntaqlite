@@ -749,8 +749,8 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
         visitor.on_source_ref(self.stmt, &mut cx, ev);
     }
 
-    /// Existence-check a `CREATE INDEX` target table, then walk the indexed
-    /// columns and partial-index WHERE.
+    /// Existence-check a `CREATE INDEX` target table, then resolve the
+    /// indexed columns and partial-index WHERE against it.
     fn walk_index_scope<V: SemanticVisitor>(
         &mut self,
         visitor: &mut V,
@@ -758,29 +758,35 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
         fields: &NodeFields,
         table_idx: u8,
     ) {
-        if V::WANTS_SOURCE_REF
-            && let Some((name, range)) = self.stmt.span_field_range(fields, table_idx)
-        {
+        self.scope.push();
+        if let Some((name, range)) = self.stmt.span_field_range(fields, table_idx) {
             let name_ident = self
                 .stmt
                 .span_field_ident_text(fields, table_idx)
                 .unwrap_or(Cow::Borrowed(name));
             self.key_scratch.set(&name_ident);
-            let ev = SourceRefEvent {
-                node_id,
-                name_idx: table_idx,
-                range,
-                name,
-                alias: None,
-                resolved: self.catalog.resolve_relation(&self.key_scratch),
-            };
-            let mut cx = WalkCtx {
-                catalog: self.catalog,
-                scope: &mut self.scope,
-            };
-            visitor.on_source_ref(self.stmt, &mut cx, ev);
+            if V::WANTS_SOURCE_REF {
+                let ev = SourceRefEvent {
+                    node_id,
+                    name_idx: table_idx,
+                    range,
+                    name,
+                    alias: None,
+                    resolved: self.catalog.resolve_relation(&self.key_scratch),
+                };
+                let mut cx = WalkCtx {
+                    catalog: self.catalog,
+                    scope: &mut self.scope,
+                };
+                visitor.on_source_ref(self.stmt, &mut cx, ev);
+            }
+            let (columns, _) = self.catalog.table_source_info(&self.key_scratch);
+            // Index expressions cannot reference rowid.
+            self.scope
+                .add_table(&name_ident, columns, RowIdPolicy::WithoutRowId);
         }
         self.walk_children(visitor, node_id);
+        self.scope.pop();
     }
 
     #[expect(clippy::too_many_arguments)]

@@ -57,3 +57,15 @@ class Rename(TestSuite):
             1:20..1:25 -> "accounts"
 """,
         )
+
+    def test_rename_column_renames_create_index_columns(self):
+        return LspDiffTestBlueprint(
+            sql="CREATE TABLE t (<|>id INT);\nCREATE INDEX i ON t (id) WHERE id > 0;",
+            op="rename",
+            new_name="key",
+            out="""\
+            0:16..0:18 -> "key"
+            1:21..1:23 -> "key"
+            1:31..1:33 -> "key"
+""",
+        )

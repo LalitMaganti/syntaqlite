@@ -85,3 +85,12 @@ target: 0:32..0:36
 target: 0:13..0:18
 """,
         )
+
+    def test_create_index_column(self):
+        return LspDiffTestBlueprint(
+            sql="CREATE TABLE t (id INTEGER); CREATE INDEX i ON t (<|>id);",
+            op="definition",
+            out="""\
+target: 0:16..0:18
+""",
+        )
