@@ -48,6 +48,7 @@ pub(crate) struct CheckOptions {
     pub cte_columns: Option<String>,
     pub qualified_ref: Option<String>,
     pub index_on_view: Option<String>,
+    pub drop_wrong_kind: Option<String>,
     /// Shorthand: sets all schema checks.
     pub schema: Option<String>,
     /// Shorthand: sets all checks.

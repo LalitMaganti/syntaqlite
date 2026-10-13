@@ -125,6 +125,14 @@ pub(crate) enum UncheckedRef {
     DropIfExists,
 }
 
+/// A `DROP TABLE` naming a view, or a `DROP VIEW` naming a table.
+#[derive(Copy, Clone)]
+pub(crate) struct DropWrongKindEvent<'a> {
+    pub(crate) name: &'a str,
+    pub(crate) range: DocRange,
+    pub(crate) is_view: bool,
+}
+
 /// A `CREATE INDEX` whose target is a view.
 #[derive(Copy, Clone)]
 pub(crate) struct IndexOnViewEvent<'a> {
@@ -168,6 +176,7 @@ pub(crate) trait SemanticVisitor {
     const WANTS_COLUMN_DEFINITION: bool = false;
     const WANTS_CTE_COLUMN_COUNT: bool = false;
     const WANTS_INDEX_ON_VIEW: bool = false;
+    const WANTS_DROP_WRONG_KIND: bool = false;
     const WANTS_CTE_BINDING: bool = false;
     const WANTS_SCOPED_SOURCE: bool = false;
     /// Return true to receive [`enter_query`](Self::enter_query) /
@@ -215,6 +224,13 @@ pub(crate) trait SemanticVisitor {
     }
 
     fn on_index_on_view(&mut self, _stmt: &mut AnyParsedStatement<'_>, _ev: IndexOnViewEvent<'_>) {}
+
+    fn on_drop_wrong_kind(
+        &mut self,
+        _stmt: &mut AnyParsedStatement<'_>,
+        _ev: DropWrongKindEvent<'_>,
+    ) {
+    }
 
     /// Called once per CTE binding, BEFORE its body is walked. The body
     /// will observe the binding's own name as a resolved catalog source
@@ -757,7 +773,7 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
         node_id: AnyNodeId,
         fields: &NodeFields,
         target_idx: u8,
-    ) -> Option<String> {
+    ) -> Option<(String, DocRange)> {
         // target → QualifiedName node; its object name is the first child.
         let target_id = fields.node_id_at(target_idx)?;
         let (_, qf) = self.stmt.extract_fields(target_id)?;
@@ -770,7 +786,7 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
         // the identifier value (escape-collapsed).
         let name_ident = self.stmt.name_ident_text(Some(obj_id)).0.into_owned();
         if !V::WANTS_SOURCE_REF {
-            return Some(name_ident);
+            return Some((name_ident, range));
         }
         self.key_scratch.set(&name_ident);
         let resolved = self.catalog.relation_defined(&self.key_scratch);
@@ -788,7 +804,7 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
             scope: &mut self.scope,
         };
         visitor.on_source_ref(self.stmt, &mut cx, ev);
-        Some(name_ident)
+        Some((name_ident, range))
     }
 
     /// Record a CREATE TABLE's definitions, then walk its body with the
@@ -1021,14 +1037,30 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
         else {
             unreachable!("not a drop role: {role:?}");
         };
-        if drop_kind_is_view(fields, kind).is_none() {
+        let Some(drops_view) = drop_kind_is_view(fields, kind) else {
             return;
-        }
+        };
         if matches!(fields[if_exists as usize], FieldValue::Bool(true)) {
             self.unchecked = Some(UncheckedRef::DropIfExists);
         }
-        self.walk_schema_target(visitor, node_id, fields, target);
+        let target = self.walk_schema_target(visitor, node_id, fields, target);
         self.unchecked = None;
+        if V::WANTS_DROP_WRONG_KIND
+            && let Some((name, range)) = target
+        {
+            self.key_scratch.set(&name);
+            if self.catalog.resolve_relation(&self.key_scratch) {
+                let is_view = self.catalog.is_view(&self.key_scratch);
+                if is_view != drops_view {
+                    let ev = DropWrongKindEvent {
+                        name: &name,
+                        range,
+                        is_view,
+                    };
+                    visitor.on_drop_wrong_kind(self.stmt, ev);
+                }
+            }
+        }
     }
 
     #[expect(clippy::too_many_arguments)]
@@ -1125,7 +1157,9 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
         else {
             unreachable!("not a trigger role: {role:?}");
         };
-        let target_name = self.walk_schema_target(visitor, node_id, fields, target);
+        let target_name = self
+            .walk_schema_target(visitor, node_id, fields, target)
+            .map(|(name, _)| name);
         self.scope.push();
         for row in ["OLD", "NEW"] {
             match &target_name {

@@ -51,6 +51,7 @@ function-arity = "warn"
 cte-columns = "deny"
 qualified-ref = "deny"
 index-on-view = "deny"
+drop-wrong-kind = "deny"
 # schema = "deny"           # shorthand for all 4 schema checks
 ```
 
@@ -140,6 +141,7 @@ Each field sets a diagnostic category to `"allow"` (suppress), `"warn"`, or
 | `cte-columns` | string | `"deny"` | CTE column count mismatches |
 | `qualified-ref` | string | `"deny"` | Qualified names like `t.a` in index expressions and generated columns |
 | `index-on-view` | string | `"deny"` | `CREATE INDEX` on a view |
+| `drop-wrong-kind` | string | `"deny"` | `DROP TABLE` on a view or `DROP VIEW` on a table |
 | `schema` | string | N/A | Shorthand for `unknown-table`, `unknown-column`, `unknown-function`, `function-arity` |
 | `all` | string | N/A | Shorthand for all categories |
 

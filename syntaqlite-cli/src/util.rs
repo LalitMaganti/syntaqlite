@@ -278,6 +278,9 @@ pub(crate) fn build_check_config(
         if let Some(ref v) = opts.index_on_view {
             checks = checks.with_index_on_view(CheckLevel::parse(v)?);
         }
+        if let Some(ref v) = opts.drop_wrong_kind {
+            checks = checks.with_drop_wrong_kind(CheckLevel::parse(v)?);
+        }
     }
 
     // CLI flags win (last-spec-wins per category).

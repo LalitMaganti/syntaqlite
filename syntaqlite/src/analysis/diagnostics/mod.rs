@@ -153,7 +153,7 @@ impl Diagnostic {
 ///             println!("parse error: {msg}");
 ///         }
 ///         other => {
-///             // FunctionArity, UnknownColumn, CteColumnCountMismatch, QualifiedRef, IndexOnView
+///             // FunctionArity, UnknownColumn, CteColumnCountMismatch, QualifiedRef, IndexOnView, DropWrongKind
 ///             println!("{other}");
 ///         }
 ///     }
@@ -211,6 +211,13 @@ pub enum DiagnosticMessage {
         /// The view name.
         name: String,
     },
+    /// `DROP TABLE` names a view, or `DROP VIEW` names a table.
+    DropWrongKind {
+        /// The relation name.
+        name: String,
+        /// Whether the relation is a view.
+        is_view: bool,
+    },
     /// Module import could not be resolved.
     UnknownModule {
         /// The unresolved module path (e.g. `slices.flow`).
@@ -266,6 +273,14 @@ impl std::fmt::Display for DiagnosticMessage {
                 "qualified name '{table}.{column}' is not allowed in {context}"
             ),
             Self::IndexOnView { name } => write!(f, "cannot index view '{name}'"),
+            Self::DropWrongKind {
+                name,
+                is_view: true,
+            } => write!(f, "use DROP VIEW to drop view '{name}'"),
+            Self::DropWrongKind {
+                name,
+                is_view: false,
+            } => write!(f, "use DROP TABLE to drop table '{name}'"),
             Self::UnknownModule { name } => write!(f, "unknown module '{name}'"),
             Self::ParseError(msg) => f.write_str(msg),
         }
@@ -418,6 +433,13 @@ impl serde::Serialize for DiagnosticMessage {
                 let mut m = serializer.serialize_map(Some(2))?;
                 m.serialize_entry("kind", "index_on_view")?;
                 m.serialize_entry("name", name)?;
+                m.end()
+            }
+            Self::DropWrongKind { name, is_view } => {
+                let mut m = serializer.serialize_map(Some(3))?;
+                m.serialize_entry("kind", "drop_wrong_kind")?;
+                m.serialize_entry("name", name)?;
+                m.serialize_entry("is_view", is_view)?;
                 m.end()
             }
             Self::UnknownModule { name } => {

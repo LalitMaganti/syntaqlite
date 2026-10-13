@@ -91,6 +91,7 @@ static const char* code_str(uint32_t code) {
     case SYNTAQLITE_DIAG_CTE_COLUMN_COUNT_MISMATCH: return "CTE_COLUMN_COUNT_MISMATCH";
     case SYNTAQLITE_DIAG_QUALIFIED_REF:             return "QUALIFIED_REF";
     case SYNTAQLITE_DIAG_INDEX_ON_VIEW:             return "INDEX_ON_VIEW";
+    case SYNTAQLITE_DIAG_DROP_WRONG_KIND:           return "DROP_WRONG_KIND";
     default:                                         return "?";
   }
 }

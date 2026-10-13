@@ -575,7 +575,13 @@ class DropTable(TestSuite):
         return DiffTestBlueprint(
             sql="CREATE VIEW v AS SELECT 1 AS x; DROP TABLE v; SELECT x FROM v;",
             strict_schema=True,
-            out="",
+            out="""\
+                error: use DROP VIEW to drop view 'v'
+                 --> <stdin>:1:44
+                  |
+                1 | CREATE VIEW v AS SELECT 1 AS x; DROP TABLE v; SELECT x FROM v;
+                  |                                            ^
+            """,
         )
 
     def test_builtin_table_survives_drop(self):
@@ -739,4 +745,30 @@ class CreateTrigger(TestSuite):
             sql="CREATE VIEW v AS SELECT 1 AS x; CREATE TRIGGER trg INSTEAD OF INSERT ON v BEGIN SELECT NEW.x; END;",
             strict_schema=True,
             out="",
+        )
+
+
+class DropWrongKind(TestSuite):
+    def test_drop_table_on_view(self):
+        return DiffTestBlueprint(
+            sql="CREATE VIEW v AS SELECT 1; DROP TABLE v;",
+            out="""\
+            error: use DROP VIEW to drop view 'v'
+             --> <stdin>:1:39
+              |
+            1 | CREATE VIEW v AS SELECT 1; DROP TABLE v;
+              |                                       ^
+            """,
+        )
+
+    def test_drop_view_on_table_if_exists(self):
+        return DiffTestBlueprint(
+            sql="CREATE TABLE t (a); DROP VIEW IF EXISTS t;",
+            out="""\
+            error: use DROP TABLE to drop table 't'
+             --> <stdin>:1:41
+              |
+            1 | CREATE TABLE t (a); DROP VIEW IF EXISTS t;
+              |                                         ^
+            """,
         )

@@ -67,6 +67,7 @@ typedef enum {
   SYNTAQLITE_DIAG_CTE_COLUMN_COUNT_MISMATCH = 6,
   SYNTAQLITE_DIAG_QUALIFIED_REF            = 7,
   SYNTAQLITE_DIAG_INDEX_ON_VIEW            = 8,
+  SYNTAQLITE_DIAG_DROP_WRONG_KIND             = 9,
 } SyntaqliteDiagnosticCode;
 
 // A single diagnostic from validation. Pointers are valid until the next
@@ -178,8 +179,8 @@ SYNTAQLITE_API void syntaqlite_analyzer_set_mode(SyntaqliteAnalyzer* v,
 //
 // Category names: "parse-errors", "unknown-table", "unknown-column",
 // "unknown-function", "function-arity", "cte-columns", "qualified-ref",
-// "index-on-view", plus the groups "schema" (schema-related categories) and
-// "all" (every category).
+// "index-on-view", "drop-wrong-kind", plus the groups "schema"
+// (schema-related categories) and "all" (every category).
 //
 // Returns 0 on success, or -1 when `name` is unknown or `level` is out
 // of range.
