@@ -1161,6 +1161,41 @@ mod tests {
     }
 
     #[test]
+    fn node_range_and_enum_name() {
+        let parser = Parser::with_config(&ParserConfig::default().with_collect_node_extents(true));
+        let source = "SELECT a FROM t UNION ALL SELECT b FROM u";
+        let mut session = parser.parse(source);
+        let statement = match session.next() {
+            ParseOutcome::Ok(stmt) => stmt,
+            ParseOutcome::Done => panic!("statement is missing"),
+            ParseOutcome::Err(err) => panic!("statement should parse: {err}"),
+        };
+        let stmt = statement.erase();
+        let root = stmt.root_id();
+        // CompoundSelect: op, left, right.
+        assert_eq!(stmt.enum_name(root, 0), "UNION_ALL");
+        let (_, fields) = stmt.extract_fields(root).expect("root has fields");
+        let right = fields.node_id_at(2).expect("right arm");
+        let range = stmt.node_range(right).expect("right arm has an extent");
+        assert_eq!(
+            &source[range.start.as_usize()..range.end.as_usize()],
+            "SELECT b FROM u"
+        );
+    }
+
+    #[test]
+    #[should_panic(expected = "is not an enum")]
+    fn enum_name_rejects_non_enum_fields() {
+        let parser = Parser::new();
+        let mut session = parser.parse("SELECT 1 UNION SELECT 2");
+        let ParseOutcome::Ok(statement) = session.next() else {
+            panic!("statement should parse");
+        };
+        let stmt = statement.erase();
+        let _ = stmt.enum_name(stmt.root_id(), 1);
+    }
+
+    #[test]
     fn parser_collect_tokens_includes_semi() {
         let parser = Parser::with_config(&ParserConfig::default().with_collect_tokens(true));
         let mut session = parser.parse("SELECT 1;");
