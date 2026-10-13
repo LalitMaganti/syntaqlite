@@ -144,7 +144,10 @@ impl<'a, 'stmt> StmtReader<'a, 'stmt> {
     /// Per-column `(lowercase_name, range)` pairs for a `CREATE TABLE`.
     pub(crate) fn column_spans(&self, root: AnyNodeId) -> Vec<(String, DocRange)> {
         let mut out = Vec::new();
-        let Some((SemanticRole::DefineTable { columns, .. }, fields)) = self.role_for_node(root)
+        let Some((
+            SemanticRole::DefineTable { columns, .. } | SemanticRole::DefineView { columns, .. },
+            fields,
+        )) = self.role_for_node(root)
         else {
             return out;
         };
@@ -158,7 +161,10 @@ impl<'a, 'stmt> StmtReader<'a, 'stmt> {
             if child_id.is_null() {
                 continue;
             }
-            if let Some((name, range)) = self.column_def_name_span(child_id) {
+            let span = self
+                .column_def_name_span(child_id)
+                .or_else(|| self.column_ref_name_span(child_id));
+            if let Some((name, range)) = span {
                 out.push((name.to_ascii_lowercase(), range));
             }
         }
@@ -189,6 +195,15 @@ impl<'a, 'stmt> StmtReader<'a, 'stmt> {
             }
         }
         None
+    }
+
+    /// Name of a bare column reference, as used in a view's column list.
+    fn column_ref_name_span(&self, node_id: AnyNodeId) -> Option<(Cow<'stmt, str>, DocRange)> {
+        let (SemanticRole::ColumnRef { column, .. }, fields) = self.role_for_node(node_id)? else {
+            return None;
+        };
+        let (_, range) = self.stmt.span_field_range(&fields, column)?;
+        Some((self.stmt.span_field_ident_text(&fields, column)?, range))
     }
 
     /// Relations defined by a DDL statement at `root` (`CREATE TABLE` or
@@ -239,7 +254,11 @@ impl<'a, 'stmt> StmtReader<'a, 'stmt> {
             return;
         };
         for &child_id in children {
-            if let Some((name, _)) = self.column_def_name_span(child_id) {
+            let name = self
+                .column_def_name_span(child_id)
+                .or_else(|| self.column_ref_name_span(child_id))
+                .map(|(name, _)| name);
+            if let Some(name) = name {
                 out.push(name.to_ascii_lowercase());
             }
         }
