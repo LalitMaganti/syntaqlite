@@ -59,6 +59,7 @@ on-clause-order = "deny"
 values-terms = "deny"
 insert-values = "deny"
 subquery-columns = "deny"
+row-value = "deny"
 # schema = "deny"           # shorthand for all 4 schema checks
 ```
 
@@ -156,6 +157,7 @@ Each field sets a diagnostic category to `"allow"` (suppress), `"warn"`, or
 | `values-terms` | string | `"deny"` | `VALUES` rows with a different number of terms than the first row |
 | `insert-values` | string | `"deny"` | `INSERT` statements supplying a different number of values than the columns they fill |
 | `subquery-columns` | string | `"deny"` | Subqueries returning a different number of columns than a value or `IN` takes |
+| `row-value` | string | `"deny"` | Row values used as a single value, or compared with a row value of a different width |
 | `schema` | string | N/A | Shorthand for `unknown-table`, `unknown-column`, `unknown-function`, `function-arity` |
 | `all` | string | N/A | Shorthand for all categories |
 

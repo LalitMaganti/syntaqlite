@@ -15,9 +15,9 @@ use crate::analysis::stmt_reader::StmtReader;
 use crate::dialect::{FIELD_ABSENT, SemanticRole};
 
 use super::visitor::{
-    CallEvent, ColumnRefEvent, CompoundColumnsEvent, OnClauseOrderEvent, ScopedSourceEvent,
-    SemanticVisitor, SourceRefEvent, SubqueryColumnsEvent, UnknownWindowEvent, ValuesTermsEvent,
-    WalkCtx,
+    CallEvent, ColumnRefEvent, CompoundColumnsEvent, OnClauseOrderEvent, RowValueEvent,
+    ScopedSourceEvent, SemanticVisitor, SourceRefEvent, SubqueryColumnsEvent, UnknownWindowEvent,
+    ValuesTermsEvent, WalkCtx,
 };
 use super::{OnClauseLimit, SemanticWalker};
 
@@ -579,6 +579,7 @@ impl<'b> SemanticWalker<'_, 'b> {
                 third,
             } => {
                 let operands = [first, second, third].map(|idx| fields.node_id_at(idx));
+                let op_name = (op != FIELD_ABSENT).then(|| self.stmt.enum_name(node_id, op));
                 let compares = op == FIELD_ABSENT || {
                     let op = self.stmt.enum_name(node_id, op);
                     // SQLite reads `x IS NULL` and its variants as a test of
@@ -594,12 +595,34 @@ impl<'b> SemanticWalker<'_, 'b> {
                     for operand in operands {
                         self.allow_row_value(operand);
                     }
+                    let widths: Vec<_> = operands
+                        .into_iter()
+                        .flatten()
+                        .map(|e| self.expr_width(e))
+                        .collect();
+                    if let Some(&Some(first)) = widths.first()
+                        && let Some(&Some(other)) = widths.iter().find(|w| **w != Some(first))
+                    {
+                        self.report_row_value(visitor, node_id, first, Some(other));
+                    } else if op_name.is_some_and(compares_elementwise)
+                        && let [Some(left), Some(right), None] = operands
+                    {
+                        self.allow_nested_row_values(visitor, left, right);
+                    }
                 }
             }
             SemanticRole::Case { operand, whens } => {
-                if fields.node_id_at(operand).is_some() {
-                    self.allow_row_value(fields.node_id_at(operand));
-                    self.allow_row_value_whens(fields, whens);
+                if let Some(operand) = fields.node_id_at(operand) {
+                    self.allow_row_value(Some(operand));
+                    let width = self.expr_width(operand);
+                    for value in self.case_when_values(fields, whens) {
+                        self.allow_row_value(Some(value));
+                        if let (Some(width), Some(other)) = (width, self.expr_width(value))
+                            && width != other
+                        {
+                            self.report_row_value(visitor, value, width, Some(other));
+                        }
+                    }
                 }
             }
             SemanticRole::In { operand, source } => {
@@ -621,20 +644,107 @@ impl<'b> SemanticWalker<'_, 'b> {
     }
 
     /// A CASE with an operand compares it to each WHEN value.
-    fn allow_row_value_whens(&mut self, fields: &NodeFields, whens: u8) {
+    /// `SQLite` compares two row values with `=` or `IS` element by element,
+    /// so their elements may be row values too, as long as they match.
+    fn allow_nested_row_values<V: SemanticVisitor>(
+        &mut self,
+        visitor: &mut V,
+        left: AnyNodeId,
+        right: AnyNodeId,
+    ) {
+        let (Some(left), Some(right)) = (self.row_value_items(left), self.row_value_items(right))
+        else {
+            return;
+        };
+        for (&l, &r) in left.iter().zip(right) {
+            let (Some(lw), Some(rw)) = (self.expr_width(l), self.expr_width(r)) else {
+                continue;
+            };
+            if lw == 1 && rw == 1 {
+                continue;
+            }
+            self.allow_row_value(Some(l));
+            self.allow_row_value(Some(r));
+            if lw == rw {
+                self.allow_nested_row_values(visitor, l, r);
+            } else {
+                self.report_row_value(visitor, l, lw, Some(rw));
+            }
+        }
+    }
+
+    /// The items of `expr` when it is a row value.
+    fn row_value_items(&self, expr: AnyNodeId) -> Option<&'b [AnyNodeId]> {
+        let expr = self.unparen(expr);
+        let reader = StmtReader::new(self.stmt, self.roles);
+        let (SemanticRole::RowValue { items }, fields) = reader.role_for_node(expr)? else {
+            return None;
+        };
+        self.stmt.list_children(fields.node_id_at(items)?)
+    }
+
+    /// The WHEN values a CASE compares its operand with.
+    fn case_when_values(&self, fields: &NodeFields, whens: u8) -> Vec<AnyNodeId> {
+        let reader = StmtReader::new(self.stmt, self.roles);
         let whens = fields
             .node_id_at(whens)
             .and_then(|id| self.stmt.list_children(id))
             .expect("a CASE has WHEN branches");
-        for &branch in whens {
-            let reader = StmtReader::new(self.stmt, self.roles);
-            let Some((SemanticRole::CaseWhen { when }, branch_fields)) =
-                reader.role_for_node(branch)
-            else {
-                unreachable!("a CASE holds WHEN branches");
-            };
-            self.allow_row_value(branch_fields.node_id_at(when));
+        whens
+            .iter()
+            .map(|&branch| {
+                let Some((SemanticRole::CaseWhen { when }, branch_fields)) =
+                    reader.role_for_node(branch)
+                else {
+                    unreachable!("a CASE holds WHEN branches");
+                };
+                branch_fields
+                    .node_id_at(when)
+                    .expect("a WHEN branch has a value")
+            })
+            .collect()
+    }
+
+    /// Walk a row value, which must be in a position that takes one.
+    pub(super) fn walk_row_value<V: SemanticVisitor>(
+        &mut self,
+        visitor: &mut V,
+        node_id: AnyNodeId,
+        fields: &NodeFields,
+        items: u8,
+    ) {
+        self.walk_children(visitor, node_id);
+        if self.row_value_positions.remove(&node_id) {
+            return;
         }
+        let width = fields
+            .node_id_at(items)
+            .and_then(|id| self.stmt.list_children(id))
+            .expect("a row value has items")
+            .len();
+        self.report_row_value(visitor, node_id, width, None);
+    }
+
+    fn report_row_value<V: SemanticVisitor>(
+        &mut self,
+        visitor: &mut V,
+        node: AnyNodeId,
+        width: usize,
+        compared_with: Option<usize>,
+    ) {
+        if !V::WANTS_ROW_VALUE {
+            return;
+        }
+        let range = self
+            .stmt
+            .node_range(node)
+            .expect("an expression spans source");
+        let ev = RowValueEvent {
+            range,
+            width,
+            compared_with,
+        };
+        visitor.on_row_value(self.stmt, ev);
     }
 
     /// Note that `expr`, or the expression it parenthesises, may be a row
@@ -922,6 +1032,12 @@ impl<'b> SemanticWalker<'_, 'b> {
         };
         visitor.on_compound_columns(self.stmt, ev);
     }
+}
+
+/// Whether `SQLite` compares row values with this operator element by
+/// element.
+fn compares_elementwise(name: &str) -> bool {
+    matches!(name, "EQ" | "EQ_DOUBLE" | "IS" | "IS_NOT_DISTINCT")
 }
 
 /// What a join's kind implies for ON clause ordering.

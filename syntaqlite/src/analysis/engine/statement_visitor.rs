@@ -23,8 +23,8 @@ use crate::dialect::SemanticRole;
 use super::walker::{
     BuiltinModifyEvent, CallEvent, ColumnRefEvent, CompoundColumnsEvent, CteBindingEvent,
     CteColumnCountMismatchEvent, DropWrongKindEvent, IndexOnViewEvent, InsertValuesEvent,
-    OnClauseOrderEvent, ScopedSourceEvent, SemanticVisitor, SourceRefEvent, SubqueryColumnsEvent,
-    UncheckedRef, UnknownWindowEvent, ValuesTermsEvent, WalkCtx,
+    OnClauseOrderEvent, RowValueEvent, ScopedSourceEvent, SemanticVisitor, SourceRefEvent,
+    SubqueryColumnsEvent, UncheckedRef, UnknownWindowEvent, ValuesTermsEvent, WalkCtx,
 };
 
 /// Whether `name` is an embedded-SQL interpolation placeholder: an identifier of
@@ -152,6 +152,7 @@ impl CheckConfig {
             DiagnosticMessage::ValuesTerms { .. } => self.values_terms,
             DiagnosticMessage::InsertValues { .. } => self.insert_values,
             DiagnosticMessage::SubqueryColumns { .. } => self.subquery_columns,
+            DiagnosticMessage::RowValue { .. } => self.row_value,
             DiagnosticMessage::ParseError(_) => self.parse_errors,
         }
     }
@@ -317,6 +318,7 @@ impl<V: SemanticVisitor> SemanticVisitor for StatementVisitor<'_, V> {
     const WANTS_VALUES_TERMS: bool = true;
     const WANTS_INSERT_VALUES: bool = true;
     const WANTS_SUBQUERY_COLUMNS: bool = true;
+    const WANTS_ROW_VALUE: bool = true;
     // LineageCapture wants source refs, scoped sources, CTE bindings,
     // and enter/exit — all forwarded below.
     const WANTS_CTE_BINDING: bool = true;
@@ -561,6 +563,18 @@ impl<V: SemanticVisitor> SemanticVisitor for StatementVisitor<'_, V> {
             None,
         );
         self.extra.on_subquery_columns(stmt, ev);
+    }
+
+    fn on_row_value(&mut self, stmt: &mut AnyParsedStatement<'_>, ev: RowValueEvent) {
+        self.emit_at(
+            ev.range,
+            DiagnosticMessage::RowValue {
+                width: ev.width,
+                compared_with: ev.compared_with,
+            },
+            None,
+        );
+        self.extra.on_row_value(stmt, ev);
     }
 
     fn on_cte_binding(&mut self, stmt: &mut AnyParsedStatement<'_>, ev: CteBindingEvent<'_>) {

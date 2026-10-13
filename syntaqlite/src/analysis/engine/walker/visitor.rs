@@ -146,6 +146,15 @@ pub(crate) struct SubqueryColumnsEvent {
     pub(crate) expected: usize,
 }
 
+/// A row value used as a single value, or compared with a row value of a
+/// different width.
+#[derive(Copy, Clone)]
+pub(crate) struct RowValueEvent {
+    pub(crate) range: DocRange,
+    pub(crate) width: usize,
+    pub(crate) compared_with: Option<usize>,
+}
+
 /// A compound SELECT whose arms have different numbers of columns.
 #[derive(Copy, Clone)]
 pub(crate) struct CompoundColumnsEvent<'a> {
@@ -222,6 +231,7 @@ pub(crate) trait SemanticVisitor {
     const WANTS_VALUES_TERMS: bool = false;
     const WANTS_INSERT_VALUES: bool = false;
     const WANTS_SUBQUERY_COLUMNS: bool = false;
+    const WANTS_ROW_VALUE: bool = false;
     const WANTS_CTE_BINDING: bool = false;
     const WANTS_SCOPED_SOURCE: bool = false;
     /// Return true to receive [`enter_query`](Self::enter_query) /
@@ -316,6 +326,8 @@ pub(crate) trait SemanticVisitor {
         _ev: SubqueryColumnsEvent,
     ) {
     }
+
+    fn on_row_value(&mut self, _stmt: &mut AnyParsedStatement<'_>, _ev: RowValueEvent) {}
 
     /// Called once per CTE binding, BEFORE its body is walked. The body
     /// will observe the binding's own name as a resolved catalog source

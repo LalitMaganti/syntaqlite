@@ -1155,6 +1155,12 @@ fn kind_code_subquery_columns() {
     v.analyze("SELECT (SELECT 1, 2);");
     assert!(v.has_code(DIAG_CODE_SUBQUERY_COLUMNS));
 }
+#[test]
+fn kind_code_row_value() {
+    let v = Validator::new();
+    v.analyze("SELECT 1 + (1, 2);");
+    assert!(v.has_code(DIAG_CODE_ROW_VALUE));
+}
 
 #[test]
 fn kind_code_per_statement_matches_aggregate() {
@@ -1188,6 +1194,7 @@ fn diagnostic_code_to_c_covers_all_variants() {
     check(M::ValuesTerms { first: 2, row: 1 }, DIAG_CODE_VALUES_TERMS);
     check(M::InsertValues { table: "t".into(), column_list: false, columns: 2, values: 1 }, DIAG_CODE_INSERT_VALUES);
     check(M::SubqueryColumns { got: 2, expected: 1 }, DIAG_CODE_SUBQUERY_COLUMNS);
+    check(M::RowValue { width: 2, compared_with: None }, DIAG_CODE_ROW_VALUE);
 }
 
 // ── Custom function / table-function registration ────────────────────

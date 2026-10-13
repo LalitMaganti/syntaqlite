@@ -40,6 +40,7 @@ pub(crate) const DIAG_CODE_ON_CLAUSE_ORDER: u32 = 13;
 pub(crate) const DIAG_CODE_VALUES_TERMS: u32 = 14;
 pub(crate) const DIAG_CODE_INSERT_VALUES: u32 = 15;
 pub(crate) const DIAG_CODE_SUBQUERY_COLUMNS: u32 = 16;
+pub(crate) const DIAG_CODE_ROW_VALUE: u32 = 17;
 
 pub(super) fn diagnostic_code_to_c(msg: &DiagnosticMessage) -> u32 {
     match msg {
@@ -60,6 +61,7 @@ pub(super) fn diagnostic_code_to_c(msg: &DiagnosticMessage) -> u32 {
         DiagnosticMessage::ValuesTerms { .. } => DIAG_CODE_VALUES_TERMS,
         DiagnosticMessage::InsertValues { .. } => DIAG_CODE_INSERT_VALUES,
         DiagnosticMessage::SubqueryColumns { .. } => DIAG_CODE_SUBQUERY_COLUMNS,
+        DiagnosticMessage::RowValue { .. } => DIAG_CODE_ROW_VALUE,
     }
 }
 

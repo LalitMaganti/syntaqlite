@@ -266,6 +266,15 @@ pub enum DiagnosticMessage {
         /// Columns its position takes.
         expected: usize,
     },
+    /// A row value is used where `SQLite` takes a single value, or compared
+    /// with a row value of a different width.
+    RowValue {
+        /// Values in the row value.
+        width: usize,
+        /// Values in what it is compared with; `None` when it is used as a
+        /// single value.
+        compared_with: Option<usize>,
+    },
     /// A VALUES row has a different number of terms than the first row.
     ValuesTerms {
         /// Terms in the first row.
@@ -283,21 +292,18 @@ pub enum DiagnosticMessage {
 }
 
 impl std::fmt::Display for DiagnosticMessage {
+    #[expect(clippy::too_many_lines, reason = "one arm per diagnostic")]
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::UnknownTable { name } => write!(f, "unknown table '{name}'"),
             Self::UnknownColumn {
                 column,
                 table: Some(t),
-            } => {
-                write!(f, "unknown column '{column}' in table '{t}'")
-            }
+            } => write!(f, "unknown column '{column}' in table '{t}'"),
             Self::UnknownColumn {
                 column,
                 table: None,
-            } => {
-                write!(f, "unknown column '{column}'")
-            }
+            } => write!(f, "unknown column '{column}'"),
             Self::UnknownFunction { name } => write!(f, "unknown function '{name}'"),
             Self::FunctionArity {
                 name,
@@ -336,14 +342,7 @@ impl std::fmt::Display for DiagnosticMessage {
                 name,
                 is_view: false,
             } => write!(f, "use DROP TABLE to drop table '{name}'"),
-            Self::BuiltinModify { name, change } => match change {
-                BuiltinChange::Drop => write!(f, "built-in table '{name}' may not be dropped"),
-                BuiltinChange::Alter => write!(f, "built-in table '{name}' may not be altered"),
-                BuiltinChange::Index => write!(f, "built-in table '{name}' may not be indexed"),
-                BuiltinChange::Trigger => {
-                    write!(f, "cannot create a trigger on built-in table '{name}'")
-                }
-            },
+            Self::BuiltinModify { name, change } => change.write_message(f, name),
             Self::CompoundColumns {
                 operator,
                 left,
@@ -353,12 +352,10 @@ impl std::fmt::Display for DiagnosticMessage {
                 "SELECTs to the left and right of {operator} have {left} and {right} result columns"
             ),
             Self::UnknownWindow { name } => write!(f, "unknown window '{name}'"),
-            Self::OnClauseOrder { name } => {
-                write!(
-                    f,
-                    "ON clause references '{name}', which is joined to its right"
-                )
-            }
+            Self::OnClauseOrder { name } => write!(
+                f,
+                "ON clause references '{name}', which is joined to its right"
+            ),
             Self::InsertValues {
                 table,
                 column_list,
@@ -377,6 +374,22 @@ impl std::fmt::Display for DiagnosticMessage {
             Self::SubqueryColumns { got, expected } => {
                 write!(f, "subquery returns {got} columns; expected {expected}")
             }
+            Self::RowValue {
+                width,
+                compared_with: None,
+            } => write!(
+                f,
+                "row value of {width} values used where one value is expected"
+            ),
+            Self::RowValue {
+                width,
+                compared_with: Some(other),
+            } => write!(
+                f,
+                "comparing {width} {} with {other} {}",
+                value_noun(*width),
+                value_noun(*other)
+            ),
             Self::ValuesTerms { first, row } => write!(
                 f,
                 "VALUES row has {row} terms, but the first row has {first}"
@@ -400,7 +413,21 @@ pub enum BuiltinChange {
     Trigger,
 }
 
+/// "value" or "values", to follow a count of `n`.
+fn value_noun(n: usize) -> &'static str {
+    if n == 1 { "value" } else { "values" }
+}
+
 impl BuiltinChange {
+    fn write_message(self, f: &mut std::fmt::Formatter<'_>, name: &str) -> std::fmt::Result {
+        match self {
+            Self::Drop => write!(f, "built-in table '{name}' may not be dropped"),
+            Self::Alter => write!(f, "built-in table '{name}' may not be altered"),
+            Self::Index => write!(f, "built-in table '{name}' may not be indexed"),
+            Self::Trigger => write!(f, "cannot create a trigger on built-in table '{name}'"),
+        }
+    }
+
     fn as_str(self) -> &'static str {
         match self {
             Self::Drop => "drop",
@@ -597,6 +624,16 @@ impl serde::Serialize for DiagnosticMessage {
                 kind_with(serializer, "subquery_columns", 2, |m| {
                     m.serialize_entry("got", got)?;
                     m.serialize_entry("expected", expected)
+                })
+            }
+            Self::RowValue {
+                width,
+                compared_with,
+            } => {
+                let len = 1 + usize::from(compared_with.is_some());
+                kind_with(serializer, "row_value", len, |m| {
+                    m.serialize_entry("width", width)?;
+                    compared_with.map_or(Ok(()), |w| m.serialize_entry("compared_with", &w))
                 })
             }
             Self::ValuesTerms { first, row } => kind_with(serializer, "values_terms", 2, |m| {
