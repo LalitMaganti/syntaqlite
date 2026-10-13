@@ -94,6 +94,7 @@ impl CheckLevel {
 /// | `on-clause-order` | [`on_clause_order`](Self::on_clause_order) | An outer join's `ON` clause referencing a table joined to its right | `deny` |
 /// | `values-terms` | [`values_terms`](Self::values_terms) | `VALUES` rows with a different number of terms than the first row | `deny` |
 /// | `insert-values` | [`insert_values`](Self::insert_values) | `INSERT` statements supplying a different number of values than the columns they fill | `deny` |
+/// | `subquery-columns` | [`subquery_columns`](Self::subquery_columns) | Subqueries returning a different number of columns than a value or `IN` takes | `deny` |
 ///
 /// The group name `schema` is a shorthand for `unknown-table`,
 /// `unknown-column`, `unknown-function`, and `function-arity`.
@@ -114,6 +115,7 @@ pub struct CheckConfig {
     pub(crate) on_clause_order: CheckLevel,
     pub(crate) values_terms: CheckLevel,
     pub(crate) insert_values: CheckLevel,
+    pub(crate) subquery_columns: CheckLevel,
 }
 
 impl Default for CheckConfig {
@@ -134,6 +136,7 @@ impl Default for CheckConfig {
             on_clause_order: CheckLevel::Deny,
             values_terms: CheckLevel::Deny,
             insert_values: CheckLevel::Deny,
+            subquery_columns: CheckLevel::Deny,
         }
     }
 }
@@ -200,6 +203,10 @@ impl CheckConfig {
     /// Level for INSERTs supplying a different number of values than columns.
     pub fn insert_values(&self) -> CheckLevel {
         self.insert_values
+    }
+    /// Level for subqueries returning a different number of columns than their position takes.
+    pub fn subquery_columns(&self) -> CheckLevel {
+        self.subquery_columns
     }
 
     // ── Builders ─────────────────────────────────────────────────────────
@@ -294,6 +301,12 @@ impl CheckConfig {
         self.insert_values = level;
         self
     }
+    /// Set the level for subqueries returning a different number of columns than their position takes.
+    #[must_use]
+    pub fn with_subquery_columns(mut self, level: CheckLevel) -> Self {
+        self.subquery_columns = level;
+        self
+    }
     /// Set all schema checks (`unknown-table`, `unknown-column`,
     /// `unknown-function`, `function-arity`).
     #[must_use]
@@ -322,6 +335,7 @@ impl CheckConfig {
         self.on_clause_order = level;
         self.values_terms = level;
         self.insert_values = level;
+        self.subquery_columns = level;
         self
     }
 
@@ -344,6 +358,7 @@ impl CheckConfig {
         "on-clause-order",
         "values-terms",
         "insert-values",
+        "subquery-columns",
     ];
 
     /// Group names that expand to multiple categories.
@@ -371,6 +386,7 @@ impl CheckConfig {
             "on-clause-order" => self.on_clause_order = level,
             "values-terms" => self.values_terms = level,
             "insert-values" => self.insert_values = level,
+            "subquery-columns" => self.subquery_columns = level,
             "schema" => self = self.with_schema(level),
             "all" => self = self.with_all(level),
             _ => return Err(format!("unknown check category: {name}")),
@@ -493,6 +509,7 @@ mod tests {
         assert_eq!(c.on_clause_order(), CheckLevel::Deny);
         assert_eq!(c.values_terms(), CheckLevel::Deny);
         assert_eq!(c.insert_values(), CheckLevel::Deny);
+        assert_eq!(c.subquery_columns(), CheckLevel::Deny);
     }
 
     #[test]

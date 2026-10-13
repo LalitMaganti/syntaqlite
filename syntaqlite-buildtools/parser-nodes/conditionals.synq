@@ -5,6 +5,8 @@ node IsExpr {
   left: index Expr
   right: index Expr
 
+  semantic { row_value_operands(op: op, first: left, second: right) }
+
   fmt_precedence(3)
   fmt_group(0)
 
@@ -26,6 +28,8 @@ node BetweenExpr {
   operand: index Expr
   low: index Expr
   high: index Expr
+
+  semantic { row_value_operands(first: operand, second: low, third: high) }
 
   fmt_precedence(3)
   fmt_group(0)
@@ -68,6 +72,8 @@ node CaseExpr {
   else_expr: index Expr
   whens: index CaseWhenList
 
+  semantic { case(operand: operand, whens: whens) }
+
   fmt {
     group {
       "CASE"
@@ -84,6 +90,8 @@ node CaseExpr {
 node CaseWhen {
   when_expr: index Expr
   then_expr: index Expr
+
+  semantic { case_when(when: when_expr) }
 
   fmt { line "WHEN" space child(when_expr) space "THEN" space child(then_expr) }
 }

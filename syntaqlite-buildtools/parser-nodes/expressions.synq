@@ -3,6 +3,8 @@ node BinaryExpr {
   left: index Expr
   right: index Expr
 
+  semantic { row_value_operands(op: op, first: left, second: right) }
+
   fmt {
     switch(op) {
       AND { child_prec(left, op) line "AND" space child_prec(right, op, right) }
@@ -41,6 +43,8 @@ node Literal {
   literal_type: inline LiteralType
   source: inline SyntaqliteTextSpan
 
+  semantic { literal(kind: literal_type, source: source) }
+
   fmt { span(source) }
 }
 
@@ -58,6 +62,8 @@ node Literal {
 // print here already satisfy any wrapping the child might need.
 node ParenExpr {
   expr: index Expr
+
+  semantic { paren(expr: expr) }
 
   fmt_precedence(255)
 
@@ -93,6 +99,8 @@ node Error {
 // context does not supply them, and nested lists splice into their parent.
 node RowValue {
   items: index ExprList
+
+  semantic { row_value(items: items) }
 
   fmt { group { "(" nest { softline child(items) } softline ")" } }
 }

@@ -663,6 +663,7 @@ def _test_diagnostic_code_enum_members(stq) -> bool:
         "ON_CLAUSE_ORDER",
         "VALUES_TERMS",
         "INSERT_VALUES",
+        "SUBQUERY_COLUMNS",
     }
     actual = {m.name for m in stq.DiagnosticCode}
     if actual != expected:

@@ -382,6 +382,7 @@ syntaqlite.RenderOptions(*, source_name="")
 | `ON_CLAUSE_ORDER` | `13` |
 | `VALUES_TERMS` | `14` |
 | `INSERT_VALUES` | `15` |
+| `SUBQUERY_COLUMNS` | `16` |
 
 ### `DefinedRelation`
 

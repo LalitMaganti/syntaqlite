@@ -487,6 +487,68 @@ fn role_to_bytes(
             bytes[4] = opt(columns);
             bytes[5] = fi(source);
         }
+        SynqRole::RowValueOperands {
+            op,
+            first,
+            second,
+            third,
+        } => {
+            bytes[0] = disc(SemanticRole::RowValueOperands {
+                op: 0,
+                first: 0,
+                second: 0,
+                third: 0,
+            });
+            bytes[1] = opt(op);
+            bytes[2] = fi(first);
+            bytes[3] = opt(second);
+            bytes[4] = opt(third);
+        }
+        SynqRole::Case { operand, whens } => {
+            bytes[0] = disc(SemanticRole::Case {
+                operand: 0,
+                whens: 0,
+            });
+            bytes[1] = opt(operand);
+            bytes[2] = fi(whens);
+        }
+        SynqRole::CaseWhen { when } => {
+            bytes[0] = disc(SemanticRole::CaseWhen { when: 0 });
+            bytes[1] = fi(when);
+        }
+        SynqRole::In { operand, source } => {
+            bytes[0] = disc(SemanticRole::In {
+                operand: 0,
+                source: 0,
+            });
+            bytes[1] = fi(operand);
+            bytes[2] = fi(source);
+        }
+        SynqRole::Assignment { columns, value } => {
+            bytes[0] = disc(SemanticRole::Assignment {
+                columns: 0,
+                value: 0,
+            });
+            bytes[1] = opt(columns);
+            bytes[2] = fi(value);
+        }
+        SynqRole::ScalarSubquery { select } => {
+            bytes[0] = disc(SemanticRole::ScalarSubquery { select: 0 });
+            bytes[1] = fi(select);
+        }
+        SynqRole::Paren { expr } => {
+            bytes[0] = disc(SemanticRole::Paren { expr: 0 });
+            bytes[1] = fi(expr);
+        }
+        SynqRole::RowValue { items } => {
+            bytes[0] = disc(SemanticRole::RowValue { items: 0 });
+            bytes[1] = fi(items);
+        }
+        SynqRole::Literal { kind, source } => {
+            bytes[0] = disc(SemanticRole::Literal { kind: 0, source: 0 });
+            bytes[1] = fi(kind);
+            bytes[2] = fi(source);
+        }
     }
 
     bytes

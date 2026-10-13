@@ -418,6 +418,76 @@ pub mod roles {
             /// Field index of the VALUES or SELECT source.
             source: FieldIdx,
         } = 30,
+
+        /// Operands that may be row values, such as a comparison's. With
+        /// `op`, only when the dialect names the operator as a comparison.
+        RowValueOperands {
+            /// Field index of the operator enum (`FIELD_ABSENT` if absent).
+            op: FieldIdx,
+            /// Field index of the first operand.
+            first: FieldIdx,
+            /// Field index of the second operand (`FIELD_ABSENT` if absent).
+            second: FieldIdx,
+            /// Field index of the third operand (`FIELD_ABSENT` if absent).
+            third: FieldIdx,
+        } = 31,
+
+        /// A CASE expression. With an operand, the operand is compared to
+        /// each WHEN value, so both may be row values.
+        Case {
+            /// Field index of the operand (`FIELD_ABSENT` if absent).
+            operand: FieldIdx,
+            /// Field index of the WHEN branch list.
+            whens: FieldIdx,
+        } = 32,
+
+        /// A CASE WHEN branch.
+        CaseWhen {
+            /// Field index of the WHEN value.
+            when: FieldIdx,
+        } = 33,
+
+        /// An IN expression, whose source must be as wide as its operand.
+        In {
+            /// Field index of the operand.
+            operand: FieldIdx,
+            /// Field index of the value list, subquery or table.
+            source: FieldIdx,
+        } = 34,
+
+        /// A SET assignment, which assigns a row value to a column list.
+        Assignment {
+            /// Field index of the column list (`FIELD_ABSENT` if absent).
+            columns: FieldIdx,
+            /// Field index of the assigned value.
+            value: FieldIdx,
+        } = 35,
+
+        /// A subquery used as a value.
+        ScalarSubquery {
+            /// Field index of the subquery.
+            select: FieldIdx,
+        } = 36,
+
+        /// A parenthesised expression.
+        Paren {
+            /// Field index of the inner expression.
+            expr: FieldIdx,
+        } = 37,
+
+        /// A row value, such as `(a, b)`.
+        RowValue {
+            /// Field index of the item list.
+            items: FieldIdx,
+        } = 38,
+
+        /// A literal value.
+        Literal {
+            /// Field index of the literal-kind enum.
+            kind: FieldIdx,
+            /// Field index of the literal's source text.
+            source: FieldIdx,
+        } = 39,
     }
 
     /// Metadata for a node type that defines a template macro.

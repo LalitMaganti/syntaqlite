@@ -98,6 +98,7 @@ class DiagnosticCode(IntEnum):
     ON_CLAUSE_ORDER = 13
     VALUES_TERMS = 14
     INSERT_VALUES = 15
+    SUBQUERY_COLUMNS = 16
 
 
 class AnalysisOutput(StrEnum):

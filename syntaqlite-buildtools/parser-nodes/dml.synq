@@ -70,6 +70,8 @@ node SetClause {
   columns: index ExprList
   value: index Expr
 
+  semantic { assignment(columns: columns, value: value) }
+
   fmt {
     if_span(column) { span(column) } else {
       if_set(columns) { group { "(" nest { softline child(columns) } softline ")" } }

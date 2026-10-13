@@ -55,6 +55,7 @@ pub(crate) struct CheckOptions {
     pub on_clause_order: Option<String>,
     pub values_terms: Option<String>,
     pub insert_values: Option<String>,
+    pub subquery_columns: Option<String>,
     /// Shorthand: sets all schema checks.
     pub schema: Option<String>,
     /// Shorthand: sets all checks.

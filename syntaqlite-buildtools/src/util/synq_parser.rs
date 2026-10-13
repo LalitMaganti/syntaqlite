@@ -196,6 +196,40 @@ pub(crate) enum SemanticRole {
         columns: Option<String>,
         source: String,
     },
+    RowValueOperands {
+        op: Option<String>,
+        first: String,
+        second: Option<String>,
+        third: Option<String>,
+    },
+    Case {
+        operand: Option<String>,
+        whens: String,
+    },
+    CaseWhen {
+        when: String,
+    },
+    In {
+        operand: String,
+        source: String,
+    },
+    Assignment {
+        columns: Option<String>,
+        value: String,
+    },
+    ScalarSubquery {
+        select: String,
+    },
+    Paren {
+        expr: String,
+    },
+    RowValue {
+        items: String,
+    },
+    Literal {
+        kind: String,
+        source: String,
+    },
 }
 
 /// A `semantic { ... }` annotation on a node.
@@ -845,6 +879,40 @@ impl Parser {
                 table: require_param(&params, "table", node_name, "insert_scope")?,
                 columns: get_param(&params, "columns").map(str::to_string),
                 source: require_param(&params, "source", node_name, "insert_scope")?,
+            },
+            "row_value_operands" => SemanticRole::RowValueOperands {
+                op: get_param(&params, "op").map(str::to_string),
+                first: require_param(&params, "first", node_name, "row_value_operands")?,
+                second: get_param(&params, "second").map(str::to_string),
+                third: get_param(&params, "third").map(str::to_string),
+            },
+            "case" => SemanticRole::Case {
+                operand: get_param(&params, "operand").map(str::to_string),
+                whens: require_param(&params, "whens", node_name, "case")?,
+            },
+            "case_when" => SemanticRole::CaseWhen {
+                when: require_param(&params, "when", node_name, "case_when")?,
+            },
+            "in" => SemanticRole::In {
+                operand: require_param(&params, "operand", node_name, "in")?,
+                source: require_param(&params, "source", node_name, "in")?,
+            },
+            "assignment" => SemanticRole::Assignment {
+                columns: get_param(&params, "columns").map(str::to_string),
+                value: require_param(&params, "value", node_name, "assignment")?,
+            },
+            "scalar_subquery" => SemanticRole::ScalarSubquery {
+                select: require_param(&params, "select", node_name, "scalar_subquery")?,
+            },
+            "paren" => SemanticRole::Paren {
+                expr: require_param(&params, "expr", node_name, "paren")?,
+            },
+            "row_value" => SemanticRole::RowValue {
+                items: require_param(&params, "items", node_name, "row_value")?,
+            },
+            "literal" => SemanticRole::Literal {
+                kind: require_param(&params, "kind", node_name, "literal")?,
+                source: require_param(&params, "source", node_name, "literal")?,
             },
             _ => {
                 return Err(format!(
