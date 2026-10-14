@@ -180,6 +180,19 @@ impl CWriter {
         self.line("uint8_t raw;");
         self.line("struct {");
         self.indent();
+        // List the bits in reverse on big-endian to keep them at their `raw` positions.
+        self.core
+            .raw_line("#if defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__");
+        let mut next_bit = 8u32;
+        for (bit_name, value) in bits.iter().rev() {
+            let bit_pos = value.trailing_zeros();
+            if bit_pos + 1 < next_bit {
+                self.line(&format!("uint8_t : {};", next_bit - bit_pos - 1));
+            }
+            self.line(&format!("uint8_t {bit_name} : 1;"));
+            next_bit = bit_pos;
+        }
+        self.core.raw_line("#else");
         let mut next_bit = 0u32;
         for (bit_name, value) in bits {
             let bit_pos = value.trailing_zeros();
@@ -189,6 +202,7 @@ impl CWriter {
             self.line(&format!("uint8_t {bit_name} : 1;"));
             next_bit = bit_pos + 1;
         }
+        self.core.raw_line("#endif");
         self.dedent();
         self.line("} bits;");
         self.dedent();
