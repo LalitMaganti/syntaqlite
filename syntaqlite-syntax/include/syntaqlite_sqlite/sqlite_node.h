@@ -320,42 +320,74 @@ typedef enum SyntaqliteFrameExclude {
 typedef union SyntaqliteAggregateFunctionCallFlags {
   uint8_t raw;
   struct {
+#if defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+    uint8_t : 5;
+    uint8_t all : 1;
+    uint8_t : 1;
+    uint8_t distinct : 1;
+#else
     uint8_t distinct : 1;
     uint8_t : 1;
     uint8_t all : 1;
+#endif
   } bits;
 } SyntaqliteAggregateFunctionCallFlags;
 
 typedef union SyntaqliteCreateTableStmtFlags {
   uint8_t raw;
   struct {
+#if defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+    uint8_t : 6;
+    uint8_t strict : 1;
+    uint8_t without_rowid : 1;
+#else
     uint8_t without_rowid : 1;
     uint8_t strict : 1;
+#endif
   } bits;
 } SyntaqliteCreateTableStmtFlags;
 
 typedef union SyntaqliteFunctionCallFlags {
   uint8_t raw;
   struct {
+#if defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+    uint8_t : 5;
+    uint8_t all : 1;
+    uint8_t star : 1;
+    uint8_t distinct : 1;
+#else
     uint8_t distinct : 1;
     uint8_t star : 1;
     uint8_t all : 1;
+#endif
   } bits;
 } SyntaqliteFunctionCallFlags;
 
 typedef union SyntaqliteResultColumnFlags {
   uint8_t raw;
   struct {
+#if defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+    uint8_t : 7;
     uint8_t star : 1;
+#else
+    uint8_t star : 1;
+#endif
   } bits;
 } SyntaqliteResultColumnFlags;
 
 typedef union SyntaqliteSelectStmtFlags {
   uint8_t raw;
   struct {
+#if defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+    uint8_t : 5;
+    uint8_t all : 1;
+    uint8_t : 1;
+    uint8_t distinct : 1;
+#else
     uint8_t distinct : 1;
     uint8_t : 1;
     uint8_t all : 1;
+#endif
   } bits;
 } SyntaqliteSelectStmtFlags;
 
