@@ -19,6 +19,10 @@
 //! macOS executables export symbols by default, so the test passes there
 //! regardless of the build.rs flag — but it still exercises the `OMIT_RUNTIME`
 //! .dylib loading path.
+//!
+//! Needs `codegen` (for `syntaqlite dialect generate`) and `dynload` (for
+//! `--dialect`), so it is skipped in builds without either.
+#![cfg(all(feature = "codegen", feature = "dynload"))]
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
