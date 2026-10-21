@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.13.1
+
+**Parser**
+- Fixed C flag bit-fields on big-endian hosts ([#475](https://github.com/LalitMaganti/syntaqlite/pull/475)).
+
+**C API**
+- `sqlite_tokens.h` now includes `<stdint.h>` itself ([#477](https://github.com/LalitMaganti/syntaqlite/pull/477)).
+
+**Licensing**
+- `LICENSE` now uses the verbatim Apache 2.0 text ([#476](https://github.com/LalitMaganti/syntaqlite/pull/476)).
+
 ## 0.13.0
 
 **Breaking: one schema shape everywhere**
