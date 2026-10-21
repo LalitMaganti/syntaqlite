@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.13.2
+
+**Licensing**
+- Published crates now include `LICENSE` ([#480](https://github.com/LalitMaganti/syntaqlite/pull/480)).
+
 ## 0.13.1
 
 **Parser**
