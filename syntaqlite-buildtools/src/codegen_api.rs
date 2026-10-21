@@ -123,13 +123,19 @@ impl DialectNaming {
     }
 
     /// Wrap `parse_h` content in a dialect-specific include guard.
+    ///
+    /// `parse_h` declares the `uint32_t`-typed parser extensions (e.g.
+    /// `...ParseExpectedTokens`), so `<stdint.h>` is included to keep the
+    /// header self-contained.
     #[must_use]
     pub fn guarded_tokens_header(&self, parse_h: &str) -> String {
         let guard = format!(
             "SYNTAQLITE_{}_TOKENS_H",
             self.name.to_uppercase().replace('-', "_")
         );
-        format!("#ifndef {guard}\n#define {guard}\n{parse_h}#endif /* {guard} */\n")
+        format!(
+            "#ifndef {guard}\n#define {guard}\n\n#include <stdint.h>\n\n{parse_h}#endif /* {guard} */\n"
+        )
     }
 }
 
