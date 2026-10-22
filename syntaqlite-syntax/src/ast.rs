@@ -381,7 +381,7 @@ mod serde_impl {
                 map.end()
             } else {
                 // { "type": "NodeName", "field1": value1, ... }
-                let metas: Vec<FieldMeta<'static>> = dialect.field_meta(tag).collect();
+                let metas: Vec<FieldMeta<'_>> = dialect.field_meta(tag).collect();
                 let field_count = metas.len().min(fields.len());
                 let mut map = serializer.serialize_map(Some(1 + field_count))?;
                 map.serialize_entry("type", name)?;
@@ -398,7 +398,7 @@ mod serde_impl {
     /// Serializes the value side of a single field — the right-hand side of
     /// `"field_name": <this>`.
     struct FieldValueSerializer<'a, 'b> {
-        meta: &'b FieldMeta<'static>,
+        meta: &'b FieldMeta<'b>,
         value: &'b FieldValue,
         stmt: &'b AnyParsedStatement<'a>,
     }
@@ -438,7 +438,7 @@ mod serde_impl {
                 // Flags: array of active flag-name strings (empty array when none set).
                 (FieldKind::Flags, FieldValue::Flags(bits)) => {
                     use serde::ser::SerializeSeq;
-                    let active: Vec<&'static str> = (0..self.meta.display_count())
+                    let active: Vec<&str> = (0..self.meta.display_count())
                         .filter(|&i| bits & (1u8 << i) != 0)
                         .filter_map(|i| self.meta.display_name(i))
                         .collect();

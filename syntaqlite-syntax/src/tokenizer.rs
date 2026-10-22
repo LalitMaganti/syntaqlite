@@ -147,17 +147,18 @@ impl<G: TypedDialect> TypedTokenizer<G> {
     ///
     /// Panics if tokenizer allocation fails (out of memory).
     pub fn new(dialect: G) -> Self {
-        // SAFETY: create(NULL, dialect.inner) allocates a new tokenizer with
-        // default malloc/free. The C side copies the dialect handle.
-        let raw = NonNull::new(unsafe {
-            ffi::CTokenizer::create(std::ptr::null(), Into::<AnyDialect>::into(dialect).inner)
-        })
-        .expect("tokenizer allocation failed");
+        let dialect: AnyDialect = dialect.into();
+        // SAFETY: create(NULL, ..) allocates a new tokenizer with default
+        // malloc/free. The C side copies the dialect handle; TokenizerInner
+        // keeps the dialect alive for as long as the tokenizer exists.
+        let raw = NonNull::new(unsafe { ffi::CTokenizer::create(std::ptr::null(), dialect.raw()) })
+            .expect("tokenizer allocation failed");
 
         TypedTokenizer {
             inner: Rc::new(RefCell::new(Some(TokenizerInner {
                 raw,
                 source_buf: Vec::new(),
+                _dialect: dialect,
             }))),
             _marker: PhantomData,
         }
@@ -368,6 +369,10 @@ impl<'a, G: TypedDialect> Iterator for TypedTokenCursor<'a, G> {
 pub(crate) struct TokenizerInner {
     raw: NonNull<ffi::CTokenizer>,
     source_buf: Vec<u8>,
+    /// Keeps the dialect `raw` was created with (and, for a loaded dialect,
+    /// its library) alive until `raw` is destroyed in `drop`, which runs
+    /// before fields are dropped.
+    _dialect: AnyDialect,
 }
 
 impl Drop for TokenizerInner {

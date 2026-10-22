@@ -221,6 +221,9 @@ impl Formatter {
     /// assert!(out.contains("SELECT 2"));
     /// ```
     pub fn format(&mut self, source: &str) -> Result<String, FormatError> {
+        // Outlives each statement's arena, which borrows keyword strings
+        // from the dialect's tables.
+        let dialect = self.dialect.clone();
         let mut session = self.parser.parse(source);
         let mut result = String::with_capacity(source.len());
         let mut stmt_num: usize = 0;
@@ -278,7 +281,7 @@ impl Formatter {
             );
 
             let ctx = FmtCtx {
-                dialect: self.dialect.clone(),
+                dialect: &dialect,
                 reader: erased,
                 comment_ctx,
                 rewrites: std::mem::take(&mut self.rewrites),
@@ -464,6 +467,7 @@ impl Formatter {
     /// Returns `FormatError` if the source cannot be parsed.
     pub fn dump_doc_tree(&mut self, source: &str) -> Result<String, FormatError> {
         use std::fmt::Write;
+        let dialect = self.dialect.clone();
         let mut session = self.parser.parse(source);
         let mut result = String::new();
         let mut stmt_num = 0usize;
@@ -525,7 +529,7 @@ impl Formatter {
             );
 
             let ctx = FmtCtx {
-                dialect: self.dialect.clone(),
+                dialect: &dialect,
                 reader: erased,
                 comment_ctx,
                 rewrites: std::mem::take(&mut self.rewrites),

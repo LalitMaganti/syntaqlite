@@ -950,7 +950,7 @@ mod tests {
         fn new() -> Self {
             let dialect: AnyDialect = crate::sqlite::dialect::dialect().into();
             // SAFETY: SQLite dialect handle is valid static dialect metadata.
-            let raw = unsafe { CParser::create(std::ptr::null(), dialect.inner) };
+            let raw = unsafe { CParser::create(std::ptr::null(), dialect.raw()) };
             let raw = NonNull::new(raw).expect("parser allocation failed");
             Self { raw }
         }

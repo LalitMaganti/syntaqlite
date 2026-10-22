@@ -417,8 +417,6 @@ impl syntaqlite_syntax::any::AnyDialect
 impl syntaqlite_syntax::any::AnyNodeId
 impl syntaqlite_syntax::any::AnyNodeTag
 impl syntaqlite_syntax::any::AnyTokenType
-impl syntaqlite_syntax::any::FieldMeta<'_>
-impl syntaqlite_syntax::any::KeywordEntry
 impl syntaqlite_syntax::any::MacroArgSegment<'_>
 impl syntaqlite_syntax::any::NodeFields
 impl syntaqlite_syntax::any::TextSpan
@@ -788,6 +786,8 @@ impl<'a> core::convert::From<syntaqlite_syntax::typed::TypedNodeList<'a, syntaql
 impl<'a> syntaqlite_syntax::Comment<'a>
 impl<'a> syntaqlite_syntax::ParserToken<'a>
 impl<'a> syntaqlite_syntax::any::AnyParsedStatement<'a>
+impl<'a> syntaqlite_syntax::any::FieldMeta<'a>
+impl<'a> syntaqlite_syntax::any::KeywordEntry<'a>
 impl<'a> syntaqlite_syntax::any::MacroCallArg<'a>
 impl<'a> syntaqlite_syntax::any::Rewrite<'a>
 impl<'a> syntaqlite_syntax::nodes::AggregateFunctionCall<'a>
@@ -1085,13 +1085,13 @@ pub fn syntaqlite_syntax::ParserTokenFlags::used_as_type(self) -> bool
 pub fn syntaqlite_syntax::TokenType::from_token_type(syntaqlite_syntax::any::AnyTokenType) -> core::option::Option<Self>
 pub fn syntaqlite_syntax::any::AnyDialect::cflags(&self) -> syntaqlite_syntax::util::SqliteSyntaxFlags
 pub fn syntaqlite_syntax::any::AnyDialect::classify_token(&self, syntaqlite_syntax::any::AnyTokenType, syntaqlite_syntax::ParserTokenFlags) -> syntaqlite_syntax::any::TokenCategory
-pub fn syntaqlite_syntax::any::AnyDialect::field_meta(&self, syntaqlite_syntax::any::AnyNodeTag) -> impl core::iter::traits::exact_size::ExactSizeIterator<Item = syntaqlite_syntax::any::FieldMeta<'static>>
+pub fn syntaqlite_syntax::any::AnyDialect::field_meta(&self, syntaqlite_syntax::any::AnyNodeTag) -> impl core::iter::traits::exact_size::ExactSizeIterator<Item = syntaqlite_syntax::any::FieldMeta<'_>> + '_
 pub fn syntaqlite_syntax::any::AnyDialect::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn syntaqlite_syntax::any::AnyDialect::from(syntaqlite_syntax::typed::Dialect) -> syntaqlite_syntax::any::AnyDialect
 pub fn syntaqlite_syntax::any::AnyDialect::has_macro_style(&self) -> bool
 pub fn syntaqlite_syntax::any::AnyDialect::is_list(&self, syntaqlite_syntax::any::AnyNodeTag) -> bool
-pub fn syntaqlite_syntax::any::AnyDialect::keywords(&self) -> impl core::iter::traits::exact_size::ExactSizeIterator<Item = syntaqlite_syntax::any::KeywordEntry> + '_
-pub fn syntaqlite_syntax::any::AnyDialect::node_name(&self, syntaqlite_syntax::any::AnyNodeTag) -> &'static str
+pub fn syntaqlite_syntax::any::AnyDialect::keywords(&self) -> impl core::iter::traits::exact_size::ExactSizeIterator<Item = syntaqlite_syntax::any::KeywordEntry<'_>> + '_
+pub fn syntaqlite_syntax::any::AnyDialect::node_name(&self, syntaqlite_syntax::any::AnyNodeTag) -> &str
 pub fn syntaqlite_syntax::any::AnyDialect::token_category(&self, syntaqlite_syntax::any::AnyTokenType) -> syntaqlite_syntax::any::TokenCategory
 pub fn syntaqlite_syntax::any::AnyDialect::version(&self) -> syntaqlite_syntax::util::SqliteVersion
 pub fn syntaqlite_syntax::any::AnyDialect::with_cflags(self, syntaqlite_syntax::util::SqliteSyntaxFlags) -> Self
@@ -1200,7 +1200,7 @@ pub fn syntaqlite_syntax::any::AnyNodeTag::from_raw(u32) -> Self
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::child_node_ids(&self, syntaqlite_syntax::any::AnyNodeId) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::any::AnyNodeId> + use<>
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::comment_spans(&self) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::CommentSpan> + use<'_>
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::comments(&self) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::Comment<'a>> + use<'_, 'a>
-pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::enum_name(&self, syntaqlite_syntax::any::AnyNodeId, u8) -> &'static str
+pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::enum_name(&self, syntaqlite_syntax::any::AnyNodeId, u8) -> &str
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::expanded_text(&self) -> &'a str
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::extract_fields(&self, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<(syntaqlite_syntax::any::AnyNodeTag, syntaqlite_syntax::any::NodeFields)>
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::extract_fields_into(&self, syntaqlite_syntax::any::AnyNodeId, &mut syntaqlite_syntax::any::NodeFields) -> core::option::Option<syntaqlite_syntax::any::AnyNodeTag>
@@ -1236,13 +1236,13 @@ pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::traceback(&self, syntaqli
 pub fn syntaqlite_syntax::any::AnyTokenType::from(syntaqlite_syntax::TokenType) -> syntaqlite_syntax::any::AnyTokenType
 pub fn syntaqlite_syntax::any::AnyTokenType::from_raw(u32) -> Self
 pub fn syntaqlite_syntax::any::AnyTokenType::from_token_type(syntaqlite_syntax::any::AnyTokenType) -> core::option::Option<Self>
-pub fn syntaqlite_syntax::any::FieldMeta<'_>::display_count(&self) -> usize
-pub fn syntaqlite_syntax::any::FieldMeta<'_>::display_name(&self, usize) -> core::option::Option<&'static str>
-pub fn syntaqlite_syntax::any::FieldMeta<'_>::kind(&self) -> syntaqlite_syntax::any::FieldKind
-pub fn syntaqlite_syntax::any::FieldMeta<'_>::name(&self) -> &'static str
-pub fn syntaqlite_syntax::any::FieldMeta<'_>::offset(&self) -> u16
-pub fn syntaqlite_syntax::any::KeywordEntry::keyword(&self) -> &'static str
-pub fn syntaqlite_syntax::any::KeywordEntry::token_type(&self) -> syntaqlite_syntax::any::AnyTokenType
+pub fn syntaqlite_syntax::any::FieldMeta<'a>::display_count(&self) -> usize
+pub fn syntaqlite_syntax::any::FieldMeta<'a>::display_name(&self, usize) -> core::option::Option<&'a str>
+pub fn syntaqlite_syntax::any::FieldMeta<'a>::kind(&self) -> syntaqlite_syntax::any::FieldKind
+pub fn syntaqlite_syntax::any::FieldMeta<'a>::name(&self) -> &'a str
+pub fn syntaqlite_syntax::any::FieldMeta<'a>::offset(&self) -> u16
+pub fn syntaqlite_syntax::any::KeywordEntry<'a>::keyword(&self) -> &'a str
+pub fn syntaqlite_syntax::any::KeywordEntry<'a>::token_type(&self) -> syntaqlite_syntax::any::AnyTokenType
 pub fn syntaqlite_syntax::any::MacroArgSegment<'_>::body_length(&self) -> syntaqlite_syntax::source::LayerLen
 pub fn syntaqlite_syntax::any::MacroArgSegment<'_>::body_offset(&self) -> syntaqlite_syntax::source::LayerOffset
 pub fn syntaqlite_syntax::any::MacroArgSegment<'_>::expansion_length(&self) -> syntaqlite_syntax::source::LayerLen
@@ -2218,7 +2218,7 @@ pub struct syntaqlite_syntax::any::AnyDialect
 pub struct syntaqlite_syntax::any::AnyNode<'a>
 pub struct syntaqlite_syntax::any::AnyParsedStatement<'a>
 pub struct syntaqlite_syntax::any::FieldMeta<'a>(_)
-pub struct syntaqlite_syntax::any::KeywordEntry
+pub struct syntaqlite_syntax::any::KeywordEntry<'a>
 pub struct syntaqlite_syntax::any::MacroArgSegment<'a>
 pub struct syntaqlite_syntax::any::MacroCallArg<'a>
 pub struct syntaqlite_syntax::any::NodeFields

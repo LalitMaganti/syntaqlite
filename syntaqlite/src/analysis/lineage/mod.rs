@@ -71,8 +71,8 @@ enum SourceKind {
 
 // ── LineageCapture ────────────────────────────────────────────────────────────
 
-pub(crate) struct LineageCapture {
-    roles: &'static [SemanticRole],
+pub(crate) struct LineageCapture<'r> {
+    roles: &'r [SemanticRole],
     /// Outer-WITH CTE bindings by lowercase name. Populated from
     /// `on_cte_binding` events fired at stack depth 0 (matches legacy
     /// scope — nested WITH clauses are deliberately excluded).
@@ -87,8 +87,8 @@ pub(crate) struct LineageCapture {
     outer_query: Option<AnyNodeId>,
 }
 
-impl LineageCapture {
-    pub(crate) fn new(roles: &'static [SemanticRole]) -> Self {
+impl<'r> LineageCapture<'r> {
+    pub(crate) fn new(roles: &'r [SemanticRole]) -> Self {
         Self {
             roles,
             cte_bodies: HashMap::new(),
@@ -124,7 +124,7 @@ impl LineageCapture {
     }
 }
 
-impl SemanticVisitor for LineageCapture {
+impl SemanticVisitor for LineageCapture<'_> {
     const WANTS_SOURCE_REF: bool = true;
     const WANTS_CTE_BINDING: bool = true;
     const WANTS_SCOPED_SOURCE: bool = true;
@@ -233,7 +233,7 @@ impl SemanticVisitor for LineageCapture {
 /// fresh inside `exit_query`; holds references to the already-finalized
 /// nested summaries plus this Query's captured sources.
 struct Finalizer<'a, 'b> {
-    roles: &'static [SemanticRole],
+    roles: &'a [SemanticRole],
     stmt: &'a AnyParsedStatement<'b>,
     catalog: &'a Catalog,
     per_query: &'a HashMap<AnyNodeId, QuerySummary>,
@@ -491,7 +491,7 @@ impl<'a, 'b> Finalizer<'a, 'b> {
 /// Extract the outer Query's finalized lineage from a completed
 /// [`LineageCapture`]. Returns `None` when the statement wasn't a query
 /// (no `enter_query` fired).
-pub(super) fn build_lineage(capture: &LineageCapture) -> Option<QueryLineage> {
+pub(super) fn build_lineage(capture: &LineageCapture<'_>) -> Option<QueryLineage> {
     let outer = capture.outer_query?;
     capture.per_query.get(&outer).map(|s| s.lineage.clone())
 }

@@ -3,8 +3,6 @@
 
 //! Dialect handle, semantic role types, and function catalog types.
 
-use std::sync::Arc;
-
 use syntaqlite_syntax::any::AnyDialect as SyntaxDialect;
 
 #[cfg(feature = "dynload")]
@@ -170,25 +168,22 @@ pub trait TypedDialect: Into<AnyDialect> + Clone + 'static {}
 /// ```
 #[derive(Clone)]
 pub struct AnyDialect {
+    /// The syntax dialect, which also owns the `SyntaqliteDialectTemplate`
+    /// this handle reads formatter/analysis tables from (and, for loaded
+    /// dialects, keeps the library alive).
     inner: SyntaxDialect,
-    /// Pointer to the static `SyntaqliteDialectTemplate` C struct for this dialect.
-    /// For built-in dialects this points to a symbol in the binary; for
-    /// dynamically loaded dialects the library is kept alive via `_keep_alive`.
-    data: *const ffi::CDialectTemplate,
     /// Rust-side cflag set (all 42 flags, u64 bitset). Distinct from the
     /// C-ABI `SqliteSyntaxFlags` stored in the dialect — this covers
     /// non-parser flags like `SQLITE_ENABLE_MATH_FUNCTIONS`.
     ext_cflags: crate::util::SqliteFlags,
-    /// Keeps a dynamically loaded library alive for the lifetime of this handle.
-    /// `None` for built-in dialects.
-    _keep_alive: Option<Arc<dyn Send + Sync>>,
 }
 
-// SAFETY: AnyDialect holds a pointer to immutable static C data and an
-// Arc-guarded library handle; both are safe to send and share across threads.
-unsafe impl Send for AnyDialect {}
-// SAFETY: same as Send above.
-unsafe impl Sync for AnyDialect {}
+// Dialect handles are shared across threads (LSP, RPC); keep that true now
+// that it follows from the fields rather than an `unsafe impl`.
+const _: () = {
+    const fn assert_send_sync<T: Send + Sync>() {}
+    assert_send_sync::<AnyDialect>();
+};
 
 impl AnyDialect {
     /// Construct from a pointer to the dialect's static template data.
@@ -206,9 +201,7 @@ impl AnyDialect {
         let inner = unsafe { (*data).syntax_dialect() };
         AnyDialect {
             inner,
-            data,
             ext_cflags: crate::util::SqliteFlags::default(),
-            _keep_alive: None,
         }
     }
 
@@ -231,17 +224,17 @@ impl AnyDialect {
             ));
         AnyDialect {
             inner,
-            data: dialect.template,
             ext_cflags: crate::util::SqliteFlags::default(),
-            _keep_alive: None,
         }
     }
 
-    /// Return a reference to the static dialect template.
+    /// Return a reference to the dialect template.
     #[inline]
-    fn template(&self) -> &'static ffi::CDialectTemplate {
-        // SAFETY: data is valid for 'static (built-in) or kept alive via _keep_alive (dynload).
-        unsafe { &*self.data }
+    fn template(&self) -> &ffi::CDialectTemplate {
+        // SAFETY: `inner` keeps its template valid for as long as it is
+        // alive (statically, or via its library owner for loaded dialects),
+        // and the borrow of `self` keeps `inner` alive.
+        unsafe { &*self.inner.template_ptr() }
     }
 
     /// The syntax dialect handle for this dialect.
@@ -250,7 +243,7 @@ impl AnyDialect {
     }
 
     /// The semantic role table for this dialect, indexed by node tag.
-    pub(crate) fn roles(&self) -> &'static [SemanticRole] {
+    pub(crate) fn roles(&self) -> &[SemanticRole] {
         // SAFETY: template() is valid for the lifetime of self.
         unsafe { self.template().roles() }
     }
@@ -259,7 +252,7 @@ impl AnyDialect {
     ///
     /// Each entry describes an AST node type that defines a template macro
     /// (e.g. `CREATE PERFETTO MACRO`). Empty for dialects without macros.
-    pub(crate) fn macro_defs(&self) -> &'static [MacroDef] {
+    pub(crate) fn macro_defs(&self) -> &[MacroDef] {
         // SAFETY: template() is valid for the lifetime of self.
         unsafe { self.template().macro_defs() }
     }
@@ -280,7 +273,7 @@ impl AnyDialect {
 
     /// Look up a string from the fmt string table by index (CSR encoding).
     #[inline]
-    pub(crate) fn fmt_string(&self, idx: u16) -> &'static str {
+    pub(crate) fn fmt_string(&self, idx: u16) -> &str {
         // SAFETY: template() is valid; idx is bounds-checked at codegen time.
         unsafe { self.template().fmt_string(idx as usize) }
     }
@@ -383,11 +376,12 @@ impl AnyDialect {
     /// # Errors
     /// Returns `Err` if the library cannot be opened or the dialect symbol is absent.
     ///
-    /// Dropping the last clone of the returned handle unloads the library.
+    /// The library stays loaded while any clone of the returned handle, or
+    /// any parser/tokenizer/formatter built from one, is alive.
     #[cfg(feature = "dynload")]
     pub fn load(path: &str, name: Option<&str>) -> Result<Self, String> {
-        // SAFETY: We keep `lib` alive in an `Arc` so the data pointer returned
-        // by the dialect symbol lives as long as this `AnyDialect`.
+        // SAFETY: loading runs the library's initializers; the library is
+        // then owned by the returned dialect (see below).
         let lib = unsafe {
             libloading::Library::new(path).map_err(|e| format!("failed to load {path:?}: {e}"))?
         };
@@ -399,7 +393,7 @@ impl AnyDialect {
 
         // Resolve the single dialect symbol and call it to get the data pointer.
         // SAFETY: symbol is called immediately; the pointer it returns lives in
-        // the library which we keep alive via `keep_alive` below.
+        // the library, which the dialect built below owns.
         let data: *const ffi::CDialectTemplate = unsafe {
             let func: libloading::Symbol<
                 '_,
@@ -410,15 +404,14 @@ impl AnyDialect {
             func()
         };
 
-        // SAFETY: data is valid and kept alive by `keep_alive` below.
-        let inner = unsafe { (*data).syntax_dialect() };
-
-        let keep_alive: Arc<dyn Send + Sync> = Arc::new(lib);
+        let owner: std::sync::Arc<dyn Send + Sync> = std::sync::Arc::new(lib);
+        // SAFETY: data points into the library, which `owner` keeps loaded;
+        // every clone of the syntax dialect (and anything built from it)
+        // holds `owner`.
+        let inner = unsafe { SyntaxDialect::from_dialect_template_with_owner(data, owner) };
         Ok(AnyDialect {
             inner,
-            data,
             ext_cflags: crate::util::SqliteFlags::default(),
-            _keep_alive: Some(keep_alive),
         })
     }
 }
@@ -509,13 +502,13 @@ pub(crate) trait CDialectTemplateExt {
     ///
     /// # Safety
     /// `self` must be a valid, fully-initialized `CDialectTemplate`.
-    unsafe fn roles(&self) -> &'static [SemanticRole];
+    unsafe fn roles(&self) -> &[SemanticRole];
 
     /// The macro definition descriptors for this dialect.
     ///
     /// # Safety
     /// `self` must be a valid, fully-initialized `CDialectTemplate`.
-    unsafe fn macro_defs(&self) -> &'static [MacroDef];
+    unsafe fn macro_defs(&self) -> &[MacroDef];
 
     /// Whether this template has formatter data.
     fn has_fmt_data(&self) -> bool;
@@ -530,7 +523,7 @@ pub(crate) trait CDialectTemplateExt {
     ///
     /// # Safety
     /// `self` must be a valid template and `idx` must be in bounds.
-    unsafe fn fmt_string(&self, idx: usize) -> &'static str;
+    unsafe fn fmt_string(&self, idx: usize) -> &str;
 
     /// Look up a value in the enum display table.
     ///
@@ -557,8 +550,9 @@ impl CDialectTemplateExt for ffi::CDialectTemplate {
         unsafe { SyntaxDialect::from_dialect_template(std::ptr::from_ref(self)) }
     }
 
-    unsafe fn roles(&self) -> &'static [SemanticRole] {
-        // SAFETY: roles_data points to roles_count valid SemanticRole values in static storage.
+    unsafe fn roles(&self) -> &[SemanticRole] {
+        // SAFETY: roles_data points to roles_count valid SemanticRole values
+        // that live as long as the template.
         unsafe {
             std::slice::from_raw_parts(
                 self.roles_data.cast::<SemanticRole>(),
@@ -571,9 +565,9 @@ impl CDialectTemplateExt for ffi::CDialectTemplate {
         self.fmt_str_count > 0
     }
 
-    unsafe fn macro_defs(&self) -> &'static [MacroDef] {
+    unsafe fn macro_defs(&self) -> &[MacroDef] {
         // SAFETY: macro_defs_data points to macro_defs_count valid MacroDef values
-        // in static storage.
+        // that live as long as the template.
         unsafe {
             std::slice::from_raw_parts(
                 self.macro_defs_data.cast::<MacroDef>(),
@@ -600,7 +594,7 @@ impl CDialectTemplateExt for ffi::CDialectTemplate {
         Some((slice, length as usize))
     }
 
-    unsafe fn fmt_string(&self, idx: usize) -> &'static str {
+    unsafe fn fmt_string(&self, idx: usize) -> &str {
         // SAFETY: offsets has fmt_str_count+1 entries; fmt_str_data covers the range.
         let (start, end) = unsafe {
             (

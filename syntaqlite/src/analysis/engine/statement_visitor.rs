@@ -166,7 +166,7 @@ impl CheckConfig {
 pub(super) struct StatementVisitor<'a, V: SemanticVisitor> {
     config: &'a AnalysisConfig,
     diagnostics: &'a mut Vec<Diagnostic>,
-    lineage: LineageCapture,
+    lineage: LineageCapture<'a>,
     extra: &'a mut V,
 }
 
@@ -174,7 +174,7 @@ impl<'a, V: SemanticVisitor> StatementVisitor<'a, V> {
     pub(super) fn new(
         config: &'a AnalysisConfig,
         diagnostics: &'a mut Vec<Diagnostic>,
-        roles: &'static [SemanticRole],
+        roles: &'a [SemanticRole],
         extra: &'a mut V,
     ) -> Self {
         Self {
@@ -185,7 +185,7 @@ impl<'a, V: SemanticVisitor> StatementVisitor<'a, V> {
         }
     }
 
-    pub(super) fn into_lineage(self) -> LineageCapture {
+    pub(super) fn into_lineage(self) -> LineageCapture<'a> {
         self.lineage
     }
 

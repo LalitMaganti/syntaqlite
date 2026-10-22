@@ -256,9 +256,10 @@ impl<G: TypedDialect> TypedParser<G> {
     /// Panics if parser allocation fails (out of memory).
     pub fn with_config(dialect: G, config: &ParserConfig) -> Self {
         let dialect_raw: AnyDialect = dialect.into();
-        // SAFETY: create(NULL, dialect_raw.inner) allocates a new parser with
-        // default malloc/free. The C side copies the dialect handle.
-        let mut raw = NonNull::new(unsafe { CParser::create(std::ptr::null(), dialect_raw.inner) })
+        // SAFETY: create(NULL, ..) allocates a new parser with default
+        // malloc/free. The C side copies the dialect handle; ParserInner
+        // keeps the dialect alive for as long as the parser exists.
+        let mut raw = NonNull::new(unsafe { CParser::create(std::ptr::null(), dialect_raw.raw()) })
             .expect("parser allocation failed");
 
         // SAFETY: raw is freshly created (not sealed), so these calls always return 0.
@@ -277,6 +278,7 @@ impl<G: TypedDialect> TypedParser<G> {
                 raw,
                 source_buf: Vec::new(),
                 macro_handler: None,
+                _dialect: dialect_raw.clone(),
             }))),
             dialect: dialect_raw,
             _marker: PhantomData,
@@ -1031,7 +1033,7 @@ impl<'a> AnyParsedStatement<'a> {
     ///
     /// # Panics
     /// If `id` is null, or `field` is not an enum field of the node.
-    pub fn enum_name(&self, id: AnyNodeId, field: u8) -> &'static str {
+    pub fn enum_name(&self, id: AnyNodeId, field: u8) -> &str {
         let (tag, fields) = self.extract_fields(id).expect("enum_name on a null node");
         let crate::ast::FieldValue::Enum(value) = fields[usize::from(field)] else {
             panic!("field {field} of node tag {} is not an enum", tag.0);
@@ -1861,6 +1863,10 @@ pub(crate) struct ParserInner {
     /// Raw pointer to the boxed macro handler closure, if installed.
     /// Freed on drop.
     pub(crate) macro_handler: Option<*mut c_void>,
+    /// Keeps the dialect `raw` was created with (and, for a loaded dialect,
+    /// its library) alive until `raw` is destroyed in `drop`, which runs
+    /// before fields are dropped.
+    _dialect: AnyDialect,
 }
 
 impl Drop for ParserInner {

@@ -583,7 +583,8 @@ impl<'b> SemanticWalker<'_, 'b> {
                 third,
             } => {
                 let operands = [first, second, third].map(|idx| fields.node_id_at(idx));
-                let op_name = (op != FIELD_ABSENT).then(|| self.stmt.enum_name(node_id, op));
+                let op_name =
+                    (op != FIELD_ABSENT).then(|| self.stmt.enum_name(node_id, op).to_owned());
                 let compares = op == FIELD_ABSENT || {
                     let op = self.stmt.enum_name(node_id, op);
                     // SQLite reads `x IS NULL` and its variants as a test of
@@ -608,7 +609,7 @@ impl<'b> SemanticWalker<'_, 'b> {
                         && let Some(&Some(other)) = widths.iter().find(|w| **w != Some(first))
                     {
                         self.report_row_value(visitor, node_id, first, Some(other));
-                    } else if op_name.is_some_and(compares_elementwise)
+                    } else if op_name.as_deref().is_some_and(compares_elementwise)
                         && self.where_terms.contains(&node_id)
                         && let [Some(left), Some(right), None] = operands
                     {
