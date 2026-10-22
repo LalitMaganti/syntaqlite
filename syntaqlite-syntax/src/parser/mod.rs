@@ -387,14 +387,7 @@ impl<G: TypedDialect> TypedParser<G> {
         // SAFETY: inner.raw is valid (owned via ParserInner); source is
         // copied into source_buf.
         unsafe { reset_parser(inner.raw.as_ptr(), &mut inner.source_buf, source) };
-        let c_text_ptr =
-            NonNull::new(inner.source_buf.as_mut_ptr()).expect("source_buf is non-empty");
-        TypedIncrementalParseSession::new(
-            c_text_ptr,
-            self.dialect.clone(),
-            inner,
-            Rc::clone(&self.inner),
-        )
+        TypedIncrementalParseSession::new(self.dialect.clone(), inner, Rc::clone(&self.inner))
     }
 }
 

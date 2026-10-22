@@ -61,6 +61,9 @@ extern "C" {
 // Feed a single token. TK_SPACE is silently skipped. TK_COMMENT is recorded
 // as a comment only when collect_tokens is enabled, and is not fed to parser.
 //
+// `text` must point into the source bound by the last reset(), and
+// `text + len` must not extend past its end; this is not checked.
+//
 // Returns a SYNTAQLITE_PARSE_* code:
 //   DONE      = keep going (statement not yet complete)
 //   OK        = statement completed cleanly
