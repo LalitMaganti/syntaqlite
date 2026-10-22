@@ -188,15 +188,25 @@ void synq_macro_state_free(SynqMacroState* m, SyntaqliteMemMethods mem) {
 
 void synq_rewrite_state_init(SynqRewriteState* r) {
   syntaqlite_vec_init(&r->layers);
-  syntaqlite_vec_init(&r->traceback_buf);
-  syntaqlite_vec_init(&r->node_expanded_buf);
+  syntaqlite_vec_init(&r->expanded_texts);
+  syntaqlite_vec_init(&r->tracebacks);
 }
 
 void synq_rewrite_state_free(SynqRewriteState* r, SyntaqliteMemMethods mem) {
   synq_layers_free_owned(&r->layers, mem);
   syntaqlite_vec_free(&r->layers, mem);
-  syntaqlite_vec_free(&r->traceback_buf, mem);
-  syntaqlite_vec_free(&r->node_expanded_buf, mem);
+  synq_rewrite_results_free(r, mem);
+  syntaqlite_vec_free(&r->expanded_texts, mem);
+  syntaqlite_vec_free(&r->tracebacks, mem);
+}
+
+void synq_rewrite_results_free(SynqRewriteState* r, SyntaqliteMemMethods mem) {
+  for (uint32_t i = 0; i < syntaqlite_vec_len(&r->expanded_texts); i++)
+    mem.xFree(r->expanded_texts.data[i]);
+  syntaqlite_vec_clear(&r->expanded_texts);
+  for (uint32_t i = 0; i < syntaqlite_vec_len(&r->tracebacks); i++)
+    mem.xFree(r->tracebacks.data[i]);
+  syntaqlite_vec_clear(&r->tracebacks);
 }
 
 void synq_layers_free_owned(SynqExpansionLayerVec* layers,

@@ -310,13 +310,11 @@ impl CParser {
 
     /// Post-expansion source text — the bound source with every
     /// currently-active macro call replaced by its expansion.
-    /// Materialized into the parser's scratch buffer; the returned
-    /// slice is valid until the next call to `expanded_text` /
-    /// `node_expanded_text` or until the parser advances.
+    /// Materialized into a fresh parser-owned buffer that stays valid
+    /// until the parser advances to the next statement.
     ///
     /// # Safety
-    /// The returned slice must not outlive the borrow underlying
-    /// `self` and is invalidated by the next call.
+    /// The returned slice must not outlive the current statement.
     pub(crate) unsafe fn expanded_text<'a>(&self) -> &'a str {
         let mut out_len: u32 = 0;
         // SAFETY: self is a valid, non-null CParser pointer owned by the caller.
@@ -330,7 +328,7 @@ impl CParser {
             return "";
         }
         // SAFETY: C guarantees `ptr` points to `out_len` bytes of valid
-        // UTF-8 within the parser's scratch buffer.
+        // UTF-8 in a buffer that lives until the statement is reset.
         unsafe { std::str::from_utf8_unchecked(std::slice::from_raw_parts(ptr, out_len as usize)) }
     }
 
@@ -603,13 +601,14 @@ impl CParser {
         }
     }
 
-    pub(crate) unsafe fn traceback(&self, span: crate::ast::TextSpan) -> &[CTracebackFrame] {
+    /// # Safety
+    /// The returned slice must not outlive the current statement.
+    pub(crate) unsafe fn traceback<'a>(&self, span: crate::ast::TextSpan) -> &'a [CTracebackFrame] {
         let mut count: u32 = 0;
         // SAFETY: self is a valid CParser pointer; span is a copy of an
         // arena value with the SyntaqliteTextSpan layout.  The returned
-        // pointer is backed by the parser's owned `traceback_buf` vec and
-        // remains valid until the next call to this function or until the
-        // parser is mutated through another `&mut` method.
+        // pointer is a fresh parser-owned array that stays valid until the
+        // parser advances to the next statement.
         let ptr = unsafe {
             syntaqlite_parser_traceback(
                 std::ptr::from_ref::<Self>(self).cast_mut(),
@@ -621,7 +620,7 @@ impl CParser {
             return &[];
         }
         // SAFETY: ptr + count describe a valid slice of CTracebackFrame
-        // values owned by the parser for the duration of the next call.
+        // values owned by the parser until the statement is reset.
         unsafe { std::slice::from_raw_parts(ptr, count as usize) }
     }
 

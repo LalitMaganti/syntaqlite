@@ -188,15 +188,12 @@ SYNTAQLITE_API const SyntaqliteTracebackFrame* syntaqlite_parser_traceback(
     uint32_t* out_count) {
   if (out_count)
     *out_count = 0;
-  // Clear the scratch buffer from any previous call.  Keeps the
-  // allocation so repeat calls reuse the same heap block.
-  syntaqlite_vec_clear(&p->rewrites.traceback_buf);
   if (!sp || sp->length == 0)
     return NULL;
 
   // Walk the layer chain, emitting one frame per layer into a small
-  // on-stack buffer (innermost first).  Then reverse into the parser's
-  // owned vec so the caller sees outermost first.
+  // on-stack buffer (innermost first).  Then reverse into a fresh
+  // allocation so the caller sees outermost first.
   SyntaqliteTracebackFrame tmp[SYNQ_MAX_MACRO_DEPTH + 2];
   uint32_t count = 0;
   uint32_t off = sp->offset;
@@ -253,15 +250,17 @@ SYNTAQLITE_API const SyntaqliteTracebackFrame* syntaqlite_parser_traceback(
   if (count == 0)
     return NULL;
 
-  // Reverse into the parser's owned buffer so frame[0] is outermost.
-  syntaqlite_vec_ensure(&p->rewrites.traceback_buf, count, p->mem);
+  // Reverse into a fresh allocation so frame[0] is outermost.  It stays
+  // valid until the parser advances, independent of later calls.
+  SyntaqliteTracebackFrame* frames = (SyntaqliteTracebackFrame*)p->mem.xMalloc(
+      (size_t)count * sizeof(SyntaqliteTracebackFrame));
   for (uint32_t i = 0; i < count; i++) {
-    p->rewrites.traceback_buf.data[i] = tmp[count - 1 - i];
+    frames[i] = tmp[count - 1 - i];
   }
-  p->rewrites.traceback_buf.count = count;
+  syntaqlite_vec_push(&p->rewrites.tracebacks, frames, p->mem);
   if (out_count)
     *out_count = count;
-  return p->rewrites.traceback_buf.data;
+  return frames;
 }
 
 #endif  // !SYNTAQLITE_OMIT_MACROS

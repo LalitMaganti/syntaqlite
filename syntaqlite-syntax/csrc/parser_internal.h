@@ -210,11 +210,16 @@ typedef struct SynqRewriteState {
   // directly into this vector.
   SynqExpansionLayerVec layers;
 
-  // ── Scratch buffers for span/text APIs ─────────────────────────────────
-  // Scratch for `syntaqlite_parser_traceback`.
-  SYNQ_VEC(SyntaqliteTracebackFrame) traceback_buf;
-  // Scratch for `syntaqlite_parser_node_expanded_text`.
-  SYNQ_VEC(uint8_t) node_expanded_buf;
+  // ── Results handed out by span/text APIs ───────────────────────────────
+  // Each call returns a fresh allocation (via p->mem) recorded here, so
+  // earlier results stay valid across later calls.  Freed in reset_stmt /
+  // synq_rewrite_state_free, like layer `expansion_data`.
+  //
+  // `syntaqlite_parser_expanded_text` and the materialized path of
+  // `syntaqlite_parser_node_expanded_text`.
+  SYNQ_VEC(char*) expanded_texts;
+  // `syntaqlite_parser_traceback`.
+  SYNQ_VEC(SyntaqliteTracebackFrame*) tracebacks;
 } SynqRewriteState;
 
 #endif  // !SYNTAQLITE_OMIT_MACROS
@@ -389,6 +394,8 @@ int synq_parser_expand_nodes(SyntaqliteParser* p);
 // Initialize and free the rewrite layer tree and its scratch.
 void synq_rewrite_state_init(SynqRewriteState* r);
 void synq_rewrite_state_free(SynqRewriteState* r, SyntaqliteMemMethods mem);
+// Free `expanded_texts` and `tracebacks` entries (keeps the vecs).
+void synq_rewrite_results_free(SynqRewriteState* r, SyntaqliteMemMethods mem);
 
 // Free owned expansion data and arg segments on layers 1..N (skip sentinel).
 void synq_layers_free_owned(SynqExpansionLayerVec* layers,

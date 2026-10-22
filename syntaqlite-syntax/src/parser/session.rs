@@ -358,8 +358,14 @@ impl<'a> ParsedStatement<'a> {
     /// Convert this result into the dialect-agnostic [`AnyParsedStatement`].
     ///
     /// Use this when handing statement data to dialect-independent tooling.
-    pub fn erase(&self) -> AnyParsedStatement<'a> {
-        self.0.clone().erase()
+    pub fn erase(self) -> AnyParsedStatement<'a> {
+        self.0.erase()
+    }
+
+    /// Borrowed dialect-agnostic view, for tests in this module.
+    #[cfg(test)]
+    fn any(&self) -> &AnyParsedStatement<'a> {
+        &self.0.any
     }
 
     /// Returns `true` if all tokens of AST node `id` live in layer 0.
@@ -815,7 +821,7 @@ mod tests {
             ParseOutcome::Err(err) => panic!("statement should parse: {err}"),
         };
 
-        let root_id = statement.erase().root_id();
+        let root_id = statement.any().root_id();
         let (text, offset) = statement
             .node_text(root_id)
             .expect("root node should have recorded text");
@@ -836,7 +842,7 @@ mod tests {
         let ParseOutcome::Ok(statement) = session.next() else {
             panic!("expected Ok");
         };
-        let root_id = statement.erase().root_id();
+        let root_id = statement.any().root_id();
         let (text, _) = statement
             .node_text(root_id)
             .expect("root node should have recorded text");
@@ -849,7 +855,7 @@ mod tests {
         let ParseOutcome::Ok(statement) = session.next() else {
             panic!("expected Ok");
         };
-        let root_id = statement.erase().root_id();
+        let root_id = statement.any().root_id();
         let (text, _) = statement
             .node_text(root_id)
             .expect("root node should have recorded text");
@@ -864,7 +870,7 @@ mod tests {
         let ParseOutcome::Ok(statement) = session.next() else {
             panic!("expected Ok");
         };
-        let root_id = statement.erase().root_id();
+        let root_id = statement.any().root_id();
         let (text, _) = statement
             .node_text(root_id)
             .expect("root node should have recorded text");
@@ -900,7 +906,7 @@ mod tests {
             let ParseOutcome::Ok(statement) = session.next() else {
                 panic!("expected Ok for {source:?}");
             };
-            let root_id = statement.erase().root_id();
+            let root_id = statement.any().root_id();
             let (text, offset) = statement
                 .node_text(root_id)
                 .expect("root node should have recorded text");
@@ -915,7 +921,7 @@ mod tests {
                 "node_expanded_text for {source:?}",
             );
             let (first, _) = statement
-                .erase()
+                .any()
                 .node_token_range(root_id)
                 .expect("root node should have a token range");
             assert_eq!(
@@ -930,8 +936,8 @@ mod tests {
         let ParseOutcome::Ok(statement) = session.next() else {
             panic!("expected Ok");
         };
-        let root_id = statement.erase().root_id();
-        let leading: Vec<_> = statement.erase().node_leading_comments(root_id).collect();
+        let root_id = statement.any().root_id();
+        let leading: Vec<_> = statement.any().node_leading_comments(root_id).collect();
         assert_eq!(leading.len(), 1);
         assert!(leading[0].text().contains("why"));
     }
@@ -961,7 +967,7 @@ mod tests {
             ParseOutcome::Err(err) => panic!("statement should parse: {err}"),
         };
 
-        let root_id = statement.erase().root_id();
+        let root_id = statement.any().root_id();
         let (text, offset) = statement
             .node_text(root_id)
             .expect("root node should have recorded text");
@@ -995,7 +1001,7 @@ mod tests {
             ParseOutcome::Err(err) => panic!("statement should parse: {err}"),
         };
 
-        let root_id = statement.erase().root_id();
+        let root_id = statement.any().root_id();
         // The root SELECT node crosses layers (SELECT/CASE/WHEN/THEN/END in
         // layer 0, CAST(y AS TEXT) in layer 1).  node_expanded_text must
         // return the post-expansion view, NOT the raw authored source.
@@ -1086,7 +1092,7 @@ mod tests {
             ParseOutcome::Err(err) => panic!("statement should parse: {err}"),
         };
 
-        let root_id = statement.erase().root_id();
+        let root_id = statement.any().root_id();
         assert_eq!(statement.node_expanded_text(root_id), Some("SELECT 1"));
     }
 
@@ -1114,7 +1120,7 @@ mod tests {
             ParseOutcome::Err(err) => panic!("statement should parse: {err}"),
         };
 
-        let root_id = statement.erase().root_id();
+        let root_id = statement.any().root_id();
         assert_eq!(statement.node_expanded_text(root_id), Some("SELECT 1"));
         let (authored, _) = statement
             .node_text(root_id)
@@ -1146,6 +1152,36 @@ mod tests {
     }
 
     #[test]
+    fn node_expanded_text_survives_later_expanded_text_calls() {
+        // Materialized results used to share one scratch buffer, so a
+        // later `*_expanded_text` call overwrote (or reallocated) the
+        // bytes behind an earlier `&'a str`.
+        let mut parser = Parser::with_config(
+            &ParserConfig::default()
+                .with_collect_node_extents(true)
+                .with_macro_fallback(true),
+        );
+        let mut registry = TestMacroRegistry::new();
+        registry.register("bounded", &[], "CHECK(a > 0)");
+        parser.set_macro_lookup(Some(Box::new(registry)));
+        let mut session =
+            parser.parse("CREATE TABLE t(a, CONSTRAINT c bounded!() CHECK(a < 9), CHECK(a > 1));");
+        let stmt = ok_stmt!(session);
+        let Some(crate::sqlite::ast::Stmt::CreateTableStmt(table)) = stmt.root() else {
+            panic!("expected CREATE TABLE");
+        };
+        let groups = table.table_constraints().expect("table constraint groups");
+        let id = groups.get(0).expect("first group").node_id().into();
+
+        let group = stmt.node_expanded_text(id).expect("expanded group text");
+        let snapshot = group.to_owned();
+        let whole: Vec<&str> = (0..8).map(|_| stmt.expanded_text()).collect();
+        assert_eq!(group, snapshot);
+        assert!(whole.iter().all(|w| *w == whole[0]));
+        assert!(whole[0].len() > group.len(), "{}", whole[0]);
+    }
+
+    #[test]
     fn parser_collect_node_extents_off_returns_none() {
         let parser = Parser::with_config(&ParserConfig::default());
         let mut session = parser.parse("SELECT 1;");
@@ -1156,7 +1192,7 @@ mod tests {
             ParseOutcome::Err(err) => panic!("statement should parse: {err}"),
         };
 
-        let root_id = statement.erase().root_id();
+        let root_id = statement.any().root_id();
         assert!(statement.node_text(root_id).is_none());
     }
 
@@ -2042,6 +2078,68 @@ mod tests {
         walk(stmt, root)
     }
 
+    // Every non-empty Span field in the tree, depth-first.
+    fn all_span_fields(stmt: &AnyParsedStatement<'_>) -> Vec<(crate::ast::AnyNodeId, u8)> {
+        use crate::ast::FieldValue;
+        let mut out = Vec::new();
+        let mut stack = vec![stmt.root_id()];
+        while let Some(id) = stack.pop() {
+            if id.is_null() {
+                continue;
+            }
+            if let Some((_, fields)) = stmt.extract_fields(id) {
+                for i in 0..fields.len() {
+                    if matches!(fields[i], FieldValue::Span { .. })
+                        && let Ok(field_idx) = u8::try_from(i)
+                        && stmt
+                            .field_span(id, field_idx)
+                            .is_some_and(|sp| !sp.is_empty())
+                    {
+                        out.push((id, field_idx));
+                    }
+                }
+            }
+            stack.extend(stmt.child_node_ids(id));
+        }
+        out
+    }
+
+    #[test]
+    fn traceback_frames_survive_later_traceback_calls() {
+        // Frames used to live in one scratch buffer that every call
+        // overwrote, so a still-live iterator saw the newer frames.
+        let mut parser = Parser::with_config(&ParserConfig::default().with_macro_fallback(true));
+        let mut reg = TestMacroRegistry::new();
+        reg.register("idmac", &[], "inner");
+        parser.set_macro_lookup(Some(Box::new(reg)));
+        let source = "SELECT idmac!(), bar FROM baz";
+        let mut session = parser.parse(source);
+        let stmt = match session.next() {
+            ParseOutcome::Ok(stmt) => stmt,
+            ParseOutcome::Done => panic!("expected statement"),
+            ParseOutcome::Err(e) => panic!("unexpected error: {}", e.message()),
+        };
+        let erased = stmt.erase();
+        let fields = all_span_fields(&erased);
+        let depth = |&(n, f): &(crate::ast::AnyNodeId, u8)| erased.traceback(n, f).count();
+        let plain = *fields
+            .iter()
+            .find(|f| depth(f) == 1)
+            .expect("root-only span");
+        let in_macro = *fields.iter().find(|f| depth(f) == 2).expect("macro span");
+
+        let held = erased.traceback(plain.0, plain.1);
+        let later: Vec<_> = erased.traceback(in_macro.0, in_macro.1).collect();
+        let held: Vec<_> = held.collect();
+
+        assert_eq!(held.len(), 1);
+        let range =
+            LayerRange::from_offset_len(held[0].offset_in_snippet, held[0].length_in_snippet);
+        assert!(["bar", "baz"].contains(&&held[0].snippet[range]));
+        assert_eq!(later.len(), 2);
+        assert_eq!(later[1].name, Some("idmac"));
+    }
+
     #[test]
     fn traceback_macro_free_yields_single_root_frame() {
         let parser = Parser::new();
@@ -2052,7 +2150,7 @@ mod tests {
             ParseOutcome::Done => panic!("expected statement"),
             ParseOutcome::Err(e) => panic!("unexpected error: {}", e.message()),
         };
-        let mut erased = stmt.erase();
+        let erased = stmt.erase();
         let (nid, fidx) = first_span_field(&erased).expect("span field");
 
         let frames: Vec<_> = erased.traceback(nid, fidx).collect();
@@ -2078,7 +2176,7 @@ mod tests {
             ParseOutcome::Done => panic!("expected statement"),
             ParseOutcome::Err(e) => panic!("unexpected error: {}", e.message()),
         };
-        let mut erased = stmt.erase();
+        let erased = stmt.erase();
         let (nid, fidx) = first_span_field(&erased).expect("span field");
 
         let frames: Vec<_> = erased.traceback(nid, fidx).collect();
@@ -2109,7 +2207,7 @@ mod tests {
             ParseOutcome::Done => panic!("expected statement"),
             ParseOutcome::Err(e) => panic!("unexpected error: {}", e.message()),
         };
-        let mut erased = stmt.erase();
+        let erased = stmt.erase();
         let (nid, fidx) = first_span_field(&erased).expect("span field");
 
         let frames: Vec<_> = erased.traceback(nid, fidx).collect();
@@ -2341,7 +2439,7 @@ mod tests {
         };
 
         // The expanded text should contain `$y` verbatim and `42` substituted.
-        let root_id = stmt.erase().root_id();
+        let root_id = stmt.any().root_id();
         let expanded = stmt
             .node_expanded_text(root_id)
             .expect("should have expanded text");
@@ -2661,9 +2759,9 @@ mod tests {
         let mut session = parser.parse("SELECT 1 FROM t;");
         let stmt = ok_stmt!(session);
 
-        let root_id = stmt.erase().root_id();
+        let root_id = stmt.any().root_id();
         let (first, last) = stmt
-            .erase()
+            .any()
             .node_token_range(root_id)
             .expect("root should have a token range");
         assert_eq!(first.as_u32(), 0, "first token = SELECT");
@@ -2676,8 +2774,8 @@ mod tests {
         let parser = Parser::with_config(&ParserConfig::default().with_collect_tokens(true));
         let mut session = parser.parse("SELECT 1;");
         let stmt = ok_stmt!(session);
-        let root_id = stmt.erase().root_id();
-        assert!(stmt.erase().node_token_range(root_id).is_none());
+        let root_id = stmt.any().root_id();
+        assert!(stmt.any().node_token_range(root_id).is_none());
     }
 
     // `AnyNodeId` has no public constructor for the null sentinel, so
@@ -2697,8 +2795,8 @@ mod tests {
         let mut session = parser.parse("-- header\nSELECT 1 FROM t;");
         let stmt = ok_stmt!(session);
 
-        let root_id = stmt.erase().root_id();
-        let (first, _last) = stmt.erase().node_token_range(root_id).expect("root range");
+        let root_id = stmt.any().root_id();
+        let (first, _last) = stmt.any().node_token_range(root_id).expect("root range");
 
         let leading: Vec<_> = stmt.leading_comments(first).collect();
         assert_eq!(leading.len(), 1);
@@ -2750,9 +2848,9 @@ mod tests {
         let mut session = parser.parse(source);
         let stmt = ok_stmt!(session);
 
-        let root_id = stmt.erase().root_id();
+        let root_id = stmt.any().root_id();
         let (first, last) = stmt
-            .erase()
+            .any()
             .node_token_range(root_id)
             .expect("root range even with macros");
 
@@ -2794,8 +2892,8 @@ mod tests {
         let mut session = parser.parse(source);
         let stmt = ok_stmt!(session);
 
-        let root_id = stmt.erase().root_id();
-        let (first, last) = stmt.erase().node_token_range(root_id).expect("root range");
+        let root_id = stmt.any().root_id();
+        let (first, last) = stmt.any().node_token_range(root_id).expect("root range");
         assert_eq!(first.as_u32(), 0, "SELECT at index 0");
         assert!(
             last.as_u32() > 0,
@@ -2922,15 +3020,15 @@ mod tests {
         let mut session = parser.parse(source);
         let stmt = ok_stmt!(session);
 
-        let root_id = stmt.erase().root_id();
-        let leading: Vec<_> = stmt.erase().node_leading_comments(root_id).collect();
+        let root_id = stmt.any().root_id();
+        let leading: Vec<_> = stmt.any().node_leading_comments(root_id).collect();
         assert_eq!(leading.len(), 1);
         assert!(leading[0].text().contains("header"));
 
         // The `/* after keyword */` comment trails the SELECT token
         // and is therefore interior to the root node — not surfaced by
         // node_leading / node_trailing.
-        let trailing: Vec<_> = stmt.erase().node_trailing_comments(root_id).collect();
+        let trailing: Vec<_> = stmt.any().node_trailing_comments(root_id).collect();
         assert_eq!(
             trailing.len(),
             0,
@@ -2949,8 +3047,8 @@ mod tests {
         let mut session = parser.parse(source);
         let stmt = ok_stmt!(session);
 
-        let root_id = stmt.erase().root_id();
-        let trailing: Vec<_> = stmt.erase().node_trailing_comments(root_id).collect();
+        let root_id = stmt.any().root_id();
+        let trailing: Vec<_> = stmt.any().node_trailing_comments(root_id).collect();
         assert_eq!(trailing.len(), 1);
         assert!(trailing[0].text().contains("after node"));
     }
@@ -2961,9 +3059,9 @@ mod tests {
         let source = "-- header\nSELECT 1;";
         let mut session = parser.parse(source);
         let stmt = ok_stmt!(session);
-        let root_id = stmt.erase().root_id();
-        assert_eq!(stmt.erase().node_leading_comments(root_id).count(), 0);
-        assert_eq!(stmt.erase().node_trailing_comments(root_id).count(), 0);
+        let root_id = stmt.any().root_id();
+        assert_eq!(stmt.any().node_leading_comments(root_id).count(), 0);
+        assert_eq!(stmt.any().node_trailing_comments(root_id).count(), 0);
     }
 
     #[test]
@@ -2982,8 +3080,8 @@ mod tests {
         let mut session = parser.parse(source);
         let stmt = ok_stmt!(session);
 
-        let root_id = stmt.erase().root_id();
-        let (first, last) = stmt.erase().node_token_range(root_id).expect("root range");
+        let root_id = stmt.any().root_id();
+        let (first, last) = stmt.any().node_token_range(root_id).expect("root range");
         // Tokens: SELECT (0), foo!(a) (1, TK_ID via fallback),
         // FROM (2), t (3), ; (4).  Root range = [0, 3] (up to `t`).
         assert_eq!(first.as_u32(), 0);

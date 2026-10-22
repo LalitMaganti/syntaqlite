@@ -1232,7 +1232,7 @@ pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::span_text_abs(&self, synt
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::statement_base(&self) -> syntaqlite_syntax::source::StatementBase
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::text(&self) -> &'a syntaqlite_syntax::source::StmtText
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::tokens(&self) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::any::AnyParserToken<'a>> + use<'_, 'a>
-pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::traceback(&mut self, syntaqlite_syntax::any::AnyNodeId, u8) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::any::TracebackFrame<'a>> + use<'_, 'a>
+pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::traceback(&self, syntaqlite_syntax::any::AnyNodeId, u8) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::any::TracebackFrame<'a>> + use<'a>
 pub fn syntaqlite_syntax::any::AnyTokenType::from(syntaqlite_syntax::TokenType) -> syntaqlite_syntax::any::AnyTokenType
 pub fn syntaqlite_syntax::any::AnyTokenType::from_raw(u32) -> Self
 pub fn syntaqlite_syntax::any::AnyTokenType::from_token_type(syntaqlite_syntax::any::AnyTokenType) -> core::option::Option<Self>

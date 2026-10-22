@@ -526,9 +526,9 @@ SYNTAQLITE_API const char* syntaqlite_parser_full_text(
 
 // Post-expansion text for the current statement — materializes the
 // statement's source with every currently-active macro call replaced
-// by its expansion into a parser-owned scratch buffer.  The returned
-// pointer is valid until the next `*_expanded_text` call on the same
-// parser or until the parser advances to the next statement.
+// by its expansion into a parser-owned buffer.  Each call returns a
+// fresh buffer, valid until the parser advances to the next statement;
+// later calls do not invalidate it.
 //
 // `*out_len` receives the byte length of the materialized buffer,
 // which may differ from the authored statement length.
@@ -582,10 +582,8 @@ typedef struct SyntaqliteTracebackFrame {
 // `name == NULL`.  Returns NULL (and writes 0 to `*out_count`) for
 // empty or invalid spans.
 //
-// The returned pointer is valid until the next call to
-// `syntaqlite_parser_traceback` on the same parser or until the next
-// `syntaqlite_parser_next` resets the current statement — callers
-// that need to retain frames across such calls must copy them out.
+// Each call returns a fresh array, valid until the parser advances to
+// the next statement; later calls do not invalidate it.
 SYNTAQLITE_API const SyntaqliteTracebackFrame* syntaqlite_parser_traceback(
     SyntaqliteParser* p,
     const SyntaqliteTextSpan* span,
@@ -654,12 +652,10 @@ SYNTAQLITE_API const char* syntaqlite_parser_node_text(
 //
 // For nodes whose tokens cross layers (e.g. `SELECT id!(42)` where
 // `SELECT` lives in the root source and `42` lives in `id`'s
-// expansion), the result is materialized into a parser-owned scratch
+// expansion), the result is materialized into a fresh parser-owned
 // buffer by walking the node's root range and inlining each enclosed
-// macro call's expansion.  The returned pointer is valid until the
-// next call to `syntaqlite_parser_node_expanded_text` on the same
-// parser or until the parser advances to the next statement — copy
-// the bytes out if you need them to outlive that.
+// macro call's expansion.  The buffer is valid until the parser
+// advances to the next statement; later calls do not invalidate it.
 //
 // Returns NULL (and writes 0 to `*out_len`) when extent tracking is
 // disabled, the node id is unknown, or no extent was recorded for it.
