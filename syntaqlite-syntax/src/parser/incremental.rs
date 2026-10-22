@@ -4,7 +4,6 @@
 use std::cell::RefCell;
 use std::marker::PhantomData;
 use std::ops::Range;
-use std::ptr::NonNull;
 use std::rc::Rc;
 
 use crate::ast::GrammarTokenType;
@@ -25,9 +24,6 @@ use super::{ParseError, ParsedStatement};
 ///
 /// Obtained from [`super::TypedParser::incremental_parse`].
 pub struct TypedIncrementalParseSession<G: TypedDialect> {
-    /// Base pointer into the internal source buffer. `feed_token` uses this
-    /// to compute the C-side token pointer from byte-offset spans.
-    c_text_ptr: NonNull<u8>,
     dialect: AnyDialect,
     /// Checked-out parser state. Returned to `slot` on drop.
     inner: Option<ParserInner>,
@@ -47,13 +43,11 @@ impl<G: TypedDialect> Drop for TypedIncrementalParseSession<G> {
 
 impl<G: TypedDialect> TypedIncrementalParseSession<G> {
     pub(crate) fn new(
-        c_text_ptr: NonNull<u8>,
         dialect: AnyDialect,
         inner: ParserInner,
         slot: Rc<RefCell<Option<ParserInner>>>,
     ) -> Self {
         TypedIncrementalParseSession {
-            c_text_ptr,
             dialect,
             inner: Some(inner),
             slot,
@@ -114,6 +108,11 @@ impl<G: TypedDialect> TypedIncrementalParseSession<G> {
     /// `span` is a byte range into the source text bound by this session.
     /// `token_type` is the dialect's typed token enum.
     ///
+    /// # Panics
+    ///
+    /// Panics if `span` is reversed, extends past the end of the bound
+    /// source, or does not start and end on UTF-8 character boundaries.
+    ///
     /// # Examples
     ///
     /// ```rust
@@ -134,13 +133,24 @@ impl<G: TypedDialect> TypedIncrementalParseSession<G> {
         span: Range<DocOffset>,
     ) -> Option<Result<TypedParsedStatement<'_, G>, TypedParseError<'_, G>>> {
         self.assert_not_finished();
-        // SAFETY: c_text_ptr is valid for the source length; raw is valid.
-        let rc = unsafe {
-            let c_text = self.c_text_ptr.as_ptr().add(span.start.as_usize());
-            let raw_token_type: u32 = token_type.into();
-            let length = (span.end - span.start).as_u32();
-            (*self.raw_ptr()).feed_token(raw_token_type, c_text as *const _, length)
-        };
+        let inner = self.inner.as_ref().expect("inner taken after finish()");
+        // `source_buf` is the bound source followed by a NUL terminator.
+        let source = &inner.source_buf[..inner.source_buf.len() - 1];
+        let (start, end) = (span.start.as_usize(), span.end.as_usize());
+        assert!(
+            start <= end
+                && end <= source.len()
+                && is_char_boundary(source, start)
+                && is_char_boundary(source, end),
+            "feed_token span {start}..{end} is not a valid range of the {}-byte source",
+            source.len(),
+        );
+        let text = source[start..end].as_ptr();
+        let length = (span.end - span.start).as_u32();
+        let raw_token_type: u32 = token_type.into();
+        // SAFETY: raw is valid; `text..text + length` was checked above to
+        // lie within the bound source, which C reads from.
+        let rc = unsafe { (*self.raw_ptr()).feed_token(raw_token_type, text.cast(), length) };
         self.result_from_rc(rc)
     }
 
@@ -356,5 +366,59 @@ impl From<TypedIncrementalParseSession<crate::sqlite::dialect::Dialect>>
 {
     fn from(inner: TypedIncrementalParseSession<crate::sqlite::dialect::Dialect>) -> Self {
         IncrementalParseSession(inner)
+    }
+}
+
+/// Whether byte offset `idx` of UTF-8 `bytes` starts a character (or is the
+/// end), mirroring [`str::is_char_boundary`].
+fn is_char_boundary(bytes: &[u8], idx: usize) -> bool {
+    // Continuation bytes are 0b10xx_xxxx.
+    idx == bytes.len() || bytes.get(idx).is_some_and(|&b| b & 0xC0 != 0x80)
+}
+
+#[cfg(all(test, feature = "sqlite"))]
+mod tests {
+    use crate::source::DocOffset;
+    use crate::{Parser, TokenType};
+
+    fn feed_select(source: &str, start: u32, end: u32) -> bool {
+        let parser = Parser::new();
+        let mut session = parser.incremental_parse(source);
+        session
+            .feed_token(
+                TokenType::Select,
+                DocOffset::from_raw(start)..DocOffset::from_raw(end),
+            )
+            .is_none()
+    }
+
+    #[test]
+    fn feed_token_accepts_span_ending_at_source_end() {
+        assert!(feed_select("SELECT", 0, 6));
+    }
+
+    #[test]
+    #[should_panic(expected = "not a valid range")]
+    fn feed_token_rejects_end_past_source() {
+        feed_select("SELECT", 0, 7);
+    }
+
+    #[test]
+    #[should_panic(expected = "not a valid range")]
+    fn feed_token_rejects_start_past_source() {
+        feed_select("SELECT", 10, 12);
+    }
+
+    #[test]
+    #[should_panic(expected = "not a valid range")]
+    fn feed_token_rejects_reversed_span() {
+        feed_select("SELECT 1", 6, 2);
+    }
+
+    #[test]
+    #[should_panic(expected = "not a valid range")]
+    fn feed_token_rejects_span_splitting_a_character() {
+        // "é" occupies bytes 8..10.
+        feed_select("SELECT 'é'", 0, 9);
     }
 }
