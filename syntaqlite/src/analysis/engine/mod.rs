@@ -313,7 +313,8 @@ impl Analyzer {
         // Wrap the user's visitor with the analyzer's own diagnostic
         // emission. DDL definition events (CREATE TABLE / VIEW names and
         // columns) are emitted by the walker itself.
-        let roles = self.dialect.roles();
+        let dialect = self.dialect.clone();
+        let roles = dialect.roles();
         let config = ctx.config;
         let mut visitor = StatementVisitor::new(&config, &mut diagnostics, roles, extra);
         SemanticWalker::new(erased, ctx.catalog, roles).run(&mut visitor, root_id);

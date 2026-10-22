@@ -159,7 +159,7 @@ fn format_arg(
 
     let mut sub_arena: DocArena<'_> = DocArena::new();
     let sub_ctx = FmtCtx {
-        dialect: dialect.clone(),
+        dialect,
         reader: stmt,
         comment_ctx: None,
         rewrites: Vec::new(),

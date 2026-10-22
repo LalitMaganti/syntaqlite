@@ -16,8 +16,6 @@ impl core::fmt::Display for syntaqlite::analysis::DiagnosticMessage
 impl core::fmt::Display for syntaqlite::analysis::Help
 impl core::fmt::Display for syntaqlite::analysis::QualifiedRefContext
 impl core::fmt::Display for syntaqlite::fmt::FormatError
-impl core::marker::Send for syntaqlite::any::AnyDialect
-impl core::marker::Sync for syntaqlite::any::AnyDialect
 impl core::ops::deref::Deref for syntaqlite::Dialect
 impl core::ops::deref::Deref for syntaqlite::any::AnyDialect
 impl core::ops::deref::DerefMut for syntaqlite::Dialect

@@ -91,7 +91,7 @@ impl From<ffi::CTokenCategory> for TokenCategory {
 /// walk arbitrary dialects.
 pub struct FieldMeta<'a>(pub(crate) &'a ffi::CFieldMeta);
 
-impl FieldMeta<'_> {
+impl<'a> FieldMeta<'a> {
     /// Byte offset of this field within its parent AST node struct.
     pub fn offset(&self) -> u16 {
         self.0.offset
@@ -107,8 +107,8 @@ impl FieldMeta<'_> {
     /// # Panics
     /// Panics if the dialect table contains invalid UTF-8 in the field name
     /// (which would indicate a codegen bug).
-    pub fn name(&self) -> &'static str {
-        // SAFETY: `FieldMeta` is only constructed from static dialect tables
+    pub fn name(&self) -> &'a str {
+        // SAFETY: `FieldMeta<'a>` is only constructed from dialect tables valid for 'a
         // where `name` is always a valid, NUL-terminated UTF-8 C string.
         unsafe {
             let cstr = std::ffi::CStr::from_ptr(self.0.name);
@@ -121,12 +121,12 @@ impl FieldMeta<'_> {
     /// # Panics
     /// Panics if the dialect table contains invalid UTF-8 in a display name
     /// (which would indicate a codegen bug).
-    pub fn display_name(&self, idx: usize) -> Option<&'static str> {
+    pub fn display_name(&self, idx: usize) -> Option<&'a str> {
         if self.0.display.is_null() || idx >= self.0.display_count as usize {
             return None;
         }
-        // SAFETY: `FieldMeta` is only constructed from static dialect tables;
-        // `display` and its entries are valid static C strings.
+        // SAFETY: `FieldMeta<'a>` is only constructed from dialect tables valid
+        // for 'a; `display` and its entries are valid C strings in them.
         unsafe {
             let ptr = *self.0.display.add(idx);
             if ptr.is_null() {
@@ -205,12 +205,14 @@ pub trait TypedDialect: Clone + Into<AnyDialect> {
 /// LSP hosts, multi-dialect test harnesses). It carries version/cflag knobs
 /// and introspection metadata, while remaining cheap to clone.
 ///
-/// Built-in dialects hold `&'static` C data directly. Dynamically loaded
-/// dialects transmute library-memory pointers to `&'static` and keep the
-/// library alive via an [`Arc`](std::sync::Arc). Use `AnyDialect::load` to create one.
+/// Built-in dialects point at `'static` C data. Dynamically loaded dialects
+/// point into their shared library, which every clone keeps loaded via an
+/// [`Arc`](std::sync::Arc); data read from the dialect therefore borrows
+/// from `&self` rather than being `'static`. Use `AnyDialect::load` to
+/// create one.
 #[derive(Clone)]
 pub struct AnyDialect {
-    pub(crate) inner: ffi::CDialect,
+    inner: ffi::CDialect,
     /// Keeps the shared library alive for dynamically-loaded dialects.
     /// `None` for built-in (static) dialects.
     _keep_alive: Option<std::sync::Arc<dyn Send + Sync>>,
@@ -224,9 +226,10 @@ impl std::fmt::Debug for AnyDialect {
     }
 }
 
-// SAFETY: The dialect wraps an immutable reference to static C data.
+// SAFETY: The dialect wraps immutable C data (kept alive by `_keep_alive`
+// for loaded dialects, which is itself Send + Sync).
 unsafe impl Send for AnyDialect {}
-// SAFETY: AnyDialect wraps a *const CDialect to a static C dialect object; it is safe to share across threads.
+// SAFETY: as above; the C data is never mutated, so sharing is safe.
 unsafe impl Sync for AnyDialect {}
 
 impl AnyDialect {
@@ -262,6 +265,46 @@ impl AnyDialect {
             inner,
             _keep_alive: None,
         }
+    }
+
+    /// Construct an `AnyDialect` from a dialect template owned by `owner`.
+    ///
+    /// Every clone keeps `owner` alive, so `template` stays valid for as
+    /// long as any handle (or parser/tokenizer built from one) exists.
+    /// Used by dialect loaders that keep the backing library in `owner`.
+    ///
+    /// # Safety
+    /// `template` must point to a valid `SyntaqliteDialectTemplate` that
+    /// stays valid for as long as `owner` is alive.
+    #[doc(hidden)]
+    pub unsafe fn from_dialect_template_with_owner(
+        template: *const ffi::CDialectTemplate,
+        owner: std::sync::Arc<dyn Send + Sync>,
+    ) -> Self {
+        // SAFETY: forwarded from the caller; `owner` extends the lifetime.
+        let inner = unsafe { Self::from_dialect_template(template) }.inner;
+        AnyDialect {
+            inner,
+            _keep_alive: Some(owner),
+        }
+    }
+
+    /// The dialect template this handle points at.
+    ///
+    /// Valid for as long as `self` (or any clone) is alive; dereferencing it
+    /// beyond that is undefined behaviour.
+    #[doc(hidden)]
+    pub fn template_ptr(&self) -> *const ffi::CDialectTemplate {
+        self.inner.template
+    }
+
+    /// The raw C dialect handle, for passing to C constructors.
+    ///
+    /// It points into this dialect's tables (and, for loaded dialects, its
+    /// shared library), so whatever hands it to C must also hold a clone of
+    /// `self` for as long as C may use it.
+    pub(crate) fn raw(&self) -> ffi::CDialect {
+        self.inner
     }
 
     /// Load a dialect from a shared library (`.so` / `.dylib` / `.dll`).
@@ -340,7 +383,7 @@ impl AnyDialect {
 
     /// Return a reference to the underlying C dialect template.
     #[inline]
-    fn template(&self) -> &'static ffi::CDialectTemplate {
+    fn template(&self) -> &ffi::CDialectTemplate {
         // SAFETY: `inner.template` points to a valid `SyntaqliteDialectTemplate`.
         unsafe { &*self.inner.template }
     }
@@ -349,7 +392,7 @@ impl AnyDialect {
     ///
     /// # Panics
     /// Panics if `tag` is out of bounds for this dialect.
-    pub fn node_name(&self, tag: AnyNodeTag) -> &'static str {
+    pub fn node_name(&self, tag: AnyNodeTag) -> &str {
         let raw = self.template();
         let idx = tag.0 as usize;
         assert!(
@@ -379,12 +422,12 @@ impl AnyDialect {
     }
 
     /// Return field metadata for nodes with tag `tag`.
-    pub fn field_meta(&self, tag: AnyNodeTag) -> impl ExactSizeIterator<Item = FieldMeta<'static>> {
+    pub fn field_meta(&self, tag: AnyNodeTag) -> impl ExactSizeIterator<Item = FieldMeta<'_>> + '_ {
         let raw = self.template();
         let idx = tag.0 as usize;
         // SAFETY: idx is bounds-checked; field_meta_counts and field_meta are
         // parallel static arrays of length node_count populated by codegen.
-        let slice: &'static [ffi::CFieldMeta] = unsafe {
+        let slice: &[ffi::CFieldMeta] = unsafe {
             if idx >= raw.node_count as usize {
                 &[]
             } else {
@@ -437,7 +480,7 @@ impl AnyDialect {
     ///
     /// The iterator implements [`ExactSizeIterator`], so `.len()` gives the
     /// total keyword count without consuming the iterator.
-    pub fn keywords(&self) -> impl ExactSizeIterator<Item = KeywordEntry> + '_ {
+    pub fn keywords(&self) -> impl ExactSizeIterator<Item = KeywordEntry<'_>> + '_ {
         let raw = self.template();
         let count = if raw.keyword_text.is_null()
             || raw.keyword_offsets.is_null()
@@ -468,20 +511,20 @@ impl TypedDialect for AnyDialect {
 ///
 /// Yielded by [`AnyDialect::keywords`] for completions, lexers, and tooling.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct KeywordEntry {
+pub struct KeywordEntry<'a> {
     /// The token type for this keyword.
     token_type: AnyTokenType,
     /// The keyword lexeme (e.g. `"SELECT"`, `"WHERE"`).
-    keyword: &'static str,
+    keyword: &'a str,
 }
 
-impl KeywordEntry {
+impl<'a> KeywordEntry<'a> {
     /// The token type for this keyword.
     pub fn token_type(&self) -> AnyTokenType {
         self.token_type
     }
     /// The keyword lexeme (e.g. `"SELECT"`, `"WHERE"`).
-    pub fn keyword(&self) -> &'static str {
+    pub fn keyword(&self) -> &'a str {
         self.keyword
     }
 }
@@ -492,10 +535,10 @@ struct KeywordIter<'a> {
     count: usize,
 }
 
-impl Iterator for KeywordIter<'_> {
-    type Item = KeywordEntry;
+impl<'a> Iterator for KeywordIter<'a> {
+    type Item = KeywordEntry<'a>;
 
-    fn next(&mut self) -> Option<KeywordEntry> {
+    fn next(&mut self) -> Option<KeywordEntry<'a>> {
         if self.idx >= self.count {
             return None;
         }
@@ -705,5 +748,62 @@ pub(crate) mod ffi {
         pub(crate) name: *const std::ffi::c_char,
         pub(crate) display: *const *const std::ffi::c_char,
         pub(crate) display_count: u8,
+    }
+}
+
+#[cfg(all(test, feature = "sqlite"))]
+mod tests {
+    use std::sync::Arc;
+    use std::sync::atomic::{AtomicBool, Ordering};
+
+    use super::AnyDialect;
+    use crate::any::{AnyParser, AnyTokenizer};
+
+    /// Stands in for a loaded library: records when it is released.
+    struct Owner(Arc<AtomicBool>);
+
+    impl Drop for Owner {
+        fn drop(&mut self) {
+            self.0.store(true, Ordering::SeqCst);
+        }
+    }
+
+    /// The built-in `SQLite` template, but owned by an `Owner`, the way a
+    /// dynamically loaded dialect is owned by its library.
+    fn owned_dialect() -> (AnyDialect, Arc<AtomicBool>) {
+        let released = Arc::new(AtomicBool::new(false));
+        let template = AnyDialect::from(crate::sqlite::dialect::dialect()).template_ptr();
+        // SAFETY: the built-in template is 'static, so it outlives any owner.
+        let dialect = unsafe {
+            AnyDialect::from_dialect_template_with_owner(
+                template,
+                Arc::new(Owner(Arc::clone(&released))),
+            )
+        };
+        (dialect, released)
+    }
+
+    #[test]
+    fn tokenizer_keeps_dialect_owner_alive() {
+        let (dialect, released) = owned_dialect();
+        let tokenizer = AnyTokenizer::new(dialect);
+        assert!(!released.load(Ordering::SeqCst));
+        assert!(tokenizer.tokenize("SELECT 1").count() > 0);
+        drop(tokenizer);
+        assert!(released.load(Ordering::SeqCst));
+    }
+
+    #[test]
+    fn parser_internals_keep_dialect_owner_alive() {
+        let (dialect, released) = owned_dialect();
+        let parser = AnyParser::new(dialect);
+        let mut session = parser.parse("SELECT 1;");
+        // The session holds the C parser after the parser handle is gone;
+        // destroying it calls back into the dialect.
+        drop(parser);
+        assert!(!released.load(Ordering::SeqCst));
+        assert!(matches!(session.next(), crate::ParseOutcome::Ok(_)));
+        drop(session);
+        assert!(released.load(Ordering::SeqCst));
     }
 }

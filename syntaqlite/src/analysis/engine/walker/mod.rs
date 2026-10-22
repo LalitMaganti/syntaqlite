@@ -42,7 +42,7 @@ pub(crate) struct SemanticWalker<'a, 'b> {
     stmt: &'a mut AnyParsedStatement<'b>,
     catalog: &'a mut Catalog,
     scope: QueryScope,
-    roles: &'static [SemanticRole],
+    roles: &'a [SemanticRole],
     /// Depth of nested CREATE VIEW bodies currently being walked.
     view_body_depth: u32,
     /// The table whose CREATE TABLE column list is being walked.
@@ -84,7 +84,7 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
     pub(crate) fn new(
         stmt: &'a mut AnyParsedStatement<'b>,
         catalog: &'a mut Catalog,
-        roles: &'static [SemanticRole],
+        roles: &'a [SemanticRole],
     ) -> Self {
         Self {
             stmt,

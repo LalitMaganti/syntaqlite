@@ -12,7 +12,9 @@ use syntaqlite_common::fmt::bytecode::opcodes;
 
 /// Shared context threaded through the iterative formatting traversal.
 pub(crate) struct FmtCtx<'a> {
-    pub dialect: AnyDialect,
+    /// Borrowed so keyword strings from the dialect's tables can live in a
+    /// `DocArena<'a>`.
+    pub dialect: &'a AnyDialect,
     pub reader: AnyParsedStatement<'a>,
     /// Absent when the statement has no comments and no macros.
     pub comment_ctx: Option<CommentCtx>,
