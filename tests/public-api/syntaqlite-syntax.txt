@@ -2117,7 +2117,6 @@ pub fn syntaqlite_syntax::source::StmtText::new(&str) -> &syntaqlite_syntax::sou
 pub fn syntaqlite_syntax::source::TokenIdx::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn syntaqlite_syntax::source::Utf16Col::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn syntaqlite_syntax::source::Utf16Line::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn syntaqlite_syntax::typed::Dialect::from_raw(syntaqlite_syntax::any::AnyDialect) -> Self
 pub fn syntaqlite_syntax::typed::Dialect::into_raw(self) -> syntaqlite_syntax::any::AnyDialect
 pub fn syntaqlite_syntax::typed::Dialect::with_cflags(self, syntaqlite_syntax::util::SqliteSyntaxFlags) -> Self
 pub fn syntaqlite_syntax::typed::Dialect::with_version(self, syntaqlite_syntax::util::SqliteVersion) -> Self
