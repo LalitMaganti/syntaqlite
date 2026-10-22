@@ -94,8 +94,7 @@ static void reset_stmt(SyntaqliteParser* p) {
   syntaqlite_vec_clear(&p->token_comments);
   p->pending_orphan_leading = SYNQ_TOKEN_COMMENTS_EMPTY;
 #ifndef SYNTAQLITE_OMIT_MACROS
-  syntaqlite_vec_clear(&p->rewrites.traceback_buf);
-  syntaqlite_vec_clear(&p->rewrites.node_expanded_buf);
+  synq_rewrite_results_free(&p->rewrites, p->mem);
   synq_layers_free_owned(&p->rewrites.layers, p->mem);
   syntaqlite_vec_clear(&p->rewrites.layers);
   if (p->source)
@@ -1093,12 +1092,10 @@ SYNTAQLITE_API uint32_t syntaqlite_parser_node_count(SyntaqliteParser* p) {
 }
 
 #ifndef SYNTAQLITE_OMIT_MACROS
-static void append_expanded_range(SyntaqliteParser* p,
-                                  uint32_t layer_id,
-                                  const char* buf,
-                                  uint32_t buf_len,
-                                  uint32_t start,
-                                  uint32_t end);
+static const char* materialize_expanded(SyntaqliteParser* p,
+                                        uint32_t start,
+                                        uint32_t end,
+                                        uint32_t* out_len);
 #endif
 
 SYNTAQLITE_API const char* syntaqlite_parser_full_text(SyntaqliteParser* p,
@@ -1179,12 +1176,7 @@ SYNTAQLITE_API const char* syntaqlite_parser_expanded_text(SyntaqliteParser* p,
     return "";
   }
   uint32_t stmt_len = p->stmt_end_offset - p->stmt_start_offset;
-  syntaqlite_vec_clear(&p->rewrites.node_expanded_buf);
-  append_expanded_range(p, 0, p->stmt_source, stmt_len, 0, stmt_len);
-  if (out_len) {
-    *out_len = syntaqlite_vec_len(&p->rewrites.node_expanded_buf);
-  }
-  return (const char*)p->rewrites.node_expanded_buf.data;
+  return materialize_expanded(p, 0, stmt_len, out_len);
 #endif
 }
 
@@ -1368,7 +1360,10 @@ SYNTAQLITE_API const char* syntaqlite_parser_node_text(SyntaqliteParser* p,
 }
 
 #ifndef SYNTAQLITE_OMIT_MACROS
+typedef SYNQ_VEC(char) SynqTextBuf;
+
 static void append_expanded_range(SyntaqliteParser* p,
+                                  SynqTextBuf* out,
                                   uint32_t layer_id,
                                   const char* buf,
                                   uint32_t buf_len,
@@ -1409,18 +1404,37 @@ static void append_expanded_range(SyntaqliteParser* p,
     const SynqExpansionLayer* child = &p->rewrites.layers.data[best_child];
     if (best_offset > cursor) {
       uint32_t n = best_offset - cursor;
-      syntaqlite_vec_push_n(&p->rewrites.node_expanded_buf, buf + cursor, n,
-                            p->mem);
+      syntaqlite_vec_push_n(out, buf + cursor, n, p->mem);
     }
-    append_expanded_range(p, best_child, child->expansion_data,
+    append_expanded_range(p, out, best_child, child->expansion_data,
                           child->expansion_len, 0, child->expansion_len);
     cursor = best_offset + child->call_length;
   }
   if (end > cursor) {
     uint32_t n = end - cursor;
-    syntaqlite_vec_push_n(&p->rewrites.node_expanded_buf, buf + cursor, n,
-                          p->mem);
+    syntaqlite_vec_push_n(out, buf + cursor, n, p->mem);
   }
+}
+
+// Materializes the statement-relative range [start, end) with every
+// enclosed macro call inlined, into a fresh buffer that stays valid until
+// the parser advances to the next statement.
+static const char* materialize_expanded(SyntaqliteParser* p,
+                                        uint32_t start,
+                                        uint32_t end,
+                                        uint32_t* out_len) {
+  uint32_t stmt_len = p->stmt_end_offset > p->stmt_start_offset
+                          ? p->stmt_end_offset - p->stmt_start_offset
+                          : 0;
+  SynqTextBuf out;
+  syntaqlite_vec_init(&out);
+  append_expanded_range(p, &out, 0, p->stmt_source, stmt_len, start, end);
+  if (out_len) {
+    *out_len = syntaqlite_vec_len(&out);
+  }
+  if (out.data)
+    syntaqlite_vec_push(&p->rewrites.expanded_texts, out.data, p->mem);
+  return out.data;
 }
 #endif  // !SYNTAQLITE_OMIT_MACROS
 
@@ -1464,13 +1478,7 @@ SYNTAQLITE_API const char* syntaqlite_parser_node_expanded_text(
   if (r.root_start > r.root_end || r.root_end > stmt_len) {
     return NULL;
   }
-  syntaqlite_vec_clear(&p->rewrites.node_expanded_buf);
-  append_expanded_range(p, 0, p->stmt_source, stmt_len, r.root_start,
-                        r.root_end);
-  if (out_len) {
-    *out_len = syntaqlite_vec_len(&p->rewrites.node_expanded_buf);
-  }
-  return (const char*)p->rewrites.node_expanded_buf.data;
+  return materialize_expanded(p, r.root_start, r.root_end, out_len);
 #endif
 }
 

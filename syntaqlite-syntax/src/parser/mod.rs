@@ -528,9 +528,8 @@ impl<G: TypedDialect> TypedParseSession<G> {
 
     /// Post-expansion source — the bound source with every
     /// currently-active macro call replaced by its expansion.
-    /// Materialized into a parser-owned scratch buffer; the returned
-    /// slice is invalidated by the next `*_expanded_text` call or
-    /// when the session advances to the next statement.
+    /// Materialized into a fresh parser-owned buffer that stays valid
+    /// until the session advances to the next statement.
     ///
     /// # Panics
     ///
@@ -540,8 +539,8 @@ impl<G: TypedDialect> TypedParseSession<G> {
             .inner
             .as_ref()
             .expect("inner is Some while session is not finished");
-        // SAFETY: inner.raw is valid for `&self`; the returned slice
-        // borrows from the parser's scratch buffer.
+        // SAFETY: inner.raw is valid for `&self`; the returned buffer
+        // lives until the session advances, which needs `&mut self`.
         unsafe { inner.raw.as_ref().expanded_text() }
     }
 
@@ -575,7 +574,7 @@ pub type AnyParseSession = TypedParseSession<AnyDialect>;
 /// Cheap to borrow — holds a raw parser pointer and dialect handle.  Nodes
 /// and lists store `&'a AnyParsedStatement<'a>` rather than an owned copy,
 /// making them `Copy` and eliminating dialect-handle clones.
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct AnyParsedStatement<'a> {
     pub(crate) raw: NonNull<CParser>,
     pub(crate) dialect: AnyDialect,
@@ -622,18 +621,16 @@ impl<'a> AnyParsedStatement<'a> {
     /// For nodes whose tokens all live in a single layer, returns a
     /// direct slice of that layer's buffer (input source or macro
     /// expansion).  For mixed-layer nodes, the text is materialized
-    /// into a parser-owned scratch buffer by inlining each enclosed
-    /// macro call's expansion; the returned slice is valid until the
-    /// next `*_expanded_text` call on the same parser or until the
-    /// parser advances to the next statement.  Requires
+    /// into a fresh parser-owned buffer by inlining each enclosed
+    /// macro call's expansion.  Requires
     /// [`ParserConfig::with_collect_node_extents`].
     pub fn node_expanded_text(&self, id: AnyNodeId) -> Option<&'a str> {
         if id.is_null() {
             return None;
         }
         // SAFETY: self.raw is valid for 'a; the returned slice borrows
-        // from either a layer buffer or the parser's scratch buffer,
-        // both of which outlive 'a.
+        // from either a layer buffer or a fresh materialized buffer, both
+        // of which live until the statement is reset, i.e. outlive 'a.
         unsafe { self.raw.as_ref().node_expanded_text(id.0) }
     }
 
@@ -654,12 +651,10 @@ impl<'a> AnyParsedStatement<'a> {
     /// Post-expansion text for the whole bound source — the
     /// parser-level analogue of [`Self::node_expanded_text`].
     /// Materializes the source with every currently-active macro call
-    /// replaced by its expansion into a parser-owned scratch buffer;
-    /// the returned slice is valid until the next `*_expanded_text`
-    /// call on the same parser or until the parser advances.
+    /// replaced by its expansion into a fresh parser-owned buffer.
     pub fn expanded_text(&self) -> &'a str {
-        // SAFETY: self.raw is valid for 'a; the returned slice borrows
-        // from the parser's scratch buffer which outlives 'a.
+        // SAFETY: self.raw is valid for 'a; the returned buffer lives
+        // until the statement is reset, i.e. outlives 'a.
         unsafe { self.raw.as_ref().expanded_text() }
     }
 
@@ -766,22 +761,15 @@ impl<'a> AnyParsedStatement<'a> {
     /// `foo!(…)` call site.
     ///
     /// Yields no frames for invalid or non-span fields.
-    ///
-    /// Frames live in a parser-owned scratch buffer that is overwritten
-    /// on every call, so this method takes `&mut self`; `.collect()` the
-    /// iterator before calling `traceback` again if you need to retain
-    /// frames across calls.
     pub fn traceback(
-        &mut self,
+        &self,
         node_id: AnyNodeId,
         field_idx: u8,
-    ) -> impl Iterator<Item = TracebackFrame<'a>> + use<'_, 'a> {
+    ) -> impl Iterator<Item = TracebackFrame<'a>> + use<'a> {
         let sp = self.field_span(node_id, field_idx);
-        // The returned slice borrows from the parser's internal
-        // `traceback_buf` vec.  The `&mut self` receiver on this method
-        // ensures no other traceback call can overwrite that buffer
-        // while the returned iterator is live.
-        let raw_frames: &[ffi::CTracebackFrame] = match sp {
+        // Each call returns a fresh parser-owned array that lives until
+        // the statement is reset, so it outlives 'a.
+        let raw_frames: &'a [ffi::CTracebackFrame] = match sp {
             // SAFETY: self.raw is valid for 'a; sp is a copy of an arena value.
             Some(sp) => unsafe { self.raw.as_ref().traceback(sp) },
             None => &[],
@@ -1422,7 +1410,7 @@ impl<'a> AnyParsedStatement<'a> {
 /// - AST traversal (`root()`).
 /// - Token/comment-aware tooling (`tokens()`, `comments()`).
 /// - Dialect-agnostic pipelines (`erase()`).
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct TypedParsedStatement<'a, G: TypedDialect> {
     pub(crate) any: AnyParsedStatement<'a>,
     _marker: PhantomData<G>,
