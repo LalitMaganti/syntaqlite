@@ -52,7 +52,10 @@ impl Dialect {
 
     /// Return the syntax dialect handle for this dialect.
     pub fn syntax_dialect(&self) -> SyntaxDialect {
-        SyntaxDialect::from_raw(self.raw.syntax_dialect().clone())
+        // SAFETY: `raw` is always this grammar's own dialect: it is only
+        // built by `dialect()` and its `with_*` adjustments, and is never
+        // handed out mutably.
+        unsafe { SyntaxDialect::from_raw(self.raw.syntax_dialect().clone()) }
     }
 
     /// Return a copy targeting a specific `SQLite` version.
@@ -90,12 +93,6 @@ impl std::ops::Deref for Dialect {
     type Target = AnyDialect;
     fn deref(&self) -> &AnyDialect {
         &self.raw
-    }
-}
-
-impl std::ops::DerefMut for Dialect {
-    fn deref_mut(&mut self) -> &mut AnyDialect {
-        &mut self.raw
     }
 }
 

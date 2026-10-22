@@ -18,7 +18,6 @@ impl core::fmt::Display for syntaqlite::analysis::QualifiedRefContext
 impl core::fmt::Display for syntaqlite::fmt::FormatError
 impl core::ops::deref::Deref for syntaqlite::Dialect
 impl core::ops::deref::Deref for syntaqlite::any::AnyDialect
-impl core::ops::deref::DerefMut for syntaqlite::Dialect
 impl core::ops::deref::DerefMut for syntaqlite::any::AnyDialect
 impl serde_core::ser::Serialize for syntaqlite::Diagnostic
 impl serde_core::ser::Serialize for syntaqlite::analysis::DiagnosticMessage
@@ -157,7 +156,6 @@ pub fn syntaqlite::Diagnostic::severity(&self) -> syntaqlite::analysis::Severity
 pub fn syntaqlite::Diagnostic::start(&self) -> syntaqlite_syntax::source::DocOffset
 pub fn syntaqlite::Dialect::default() -> Self
 pub fn syntaqlite::Dialect::deref(&self) -> &syntaqlite::any::AnyDialect
-pub fn syntaqlite::Dialect::deref_mut(&mut self) -> &mut syntaqlite::any::AnyDialect
 pub fn syntaqlite::Dialect::erase(self) -> syntaqlite::any::AnyDialect
 pub fn syntaqlite::Dialect::new() -> Self
 pub fn syntaqlite::Dialect::syntax_dialect(&self) -> syntaqlite_syntax::sqlite::dialect::Dialect

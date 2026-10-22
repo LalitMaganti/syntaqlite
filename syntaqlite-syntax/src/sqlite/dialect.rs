@@ -26,7 +26,13 @@ impl Dialect {
     ///
     /// Used by dialect loading infrastructure to build a typed dialect handle
     /// from the dialect embedded in a `CDialectTemplate`.
-    pub fn from_raw(raw: AnyDialect) -> Self {
+    ///
+    /// # Safety
+    /// `raw` must be built from this grammar's generated tables: the typed
+    /// AST reinterprets arena nodes as this grammar's node structs based on
+    /// their tag alone.
+    #[doc(hidden)]
+    pub unsafe fn from_raw(raw: AnyDialect) -> Self {
         Self { raw }
     }
 
