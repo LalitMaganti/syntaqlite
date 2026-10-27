@@ -497,6 +497,7 @@ def _run(fix: bool, verbosity: int, run_all: bool, cargo: Callable[..., list[str
                 ("tools/format-c", [_tool("format-c")]),
                 ("tools/check-c-deps", [_tool("check-c-deps")]),
                 ("tools/check-c-exports", [_tool("check-c-exports")]),
+                ("tools/check-c-symbol-prefix", [_tool("check-c-symbol-prefix")]),
             ])
         else:
             _skip("tools/format-c")
@@ -548,6 +549,7 @@ def _run(fix: bool, verbosity: int, run_all: bool, cargo: Callable[..., list[str
                 ("tools/format-c --check", [_tool("format-c"), "--check"]),
                 ("tools/check-c-deps", [_tool("check-c-deps")]),
                 ("tools/check-c-exports", [_tool("check-c-exports")]),
+                ("tools/check-c-symbol-prefix", [_tool("check-c-symbol-prefix")]),
             ])
         else:
             _skip("tools/format-c --check")

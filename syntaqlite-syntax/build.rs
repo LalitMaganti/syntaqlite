@@ -10,6 +10,7 @@ use std::path::PathBuf;
 
 #[expect(clippy::too_many_lines)]
 fn main() {
+    println!("cargo::rustc-check-cfg=cfg(syntaqlite_symbol_prefix)");
     let manifest_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR"));
     let csrc = manifest_dir.join("csrc");
     let include_dir = manifest_dir.join("include");
@@ -73,6 +74,13 @@ fn main() {
         return;
     }
 
+    // Optional prefix for every global C symbol; see symbol_prefix.h.
+    let symbol_prefix = env::var("SYNTAQLITE_SYMBOL_PREFIX").unwrap_or_default();
+    if !symbol_prefix.is_empty() {
+        println!("cargo:rustc-cfg=syntaqlite_symbol_prefix");
+        println!("cargo:rustc-env=SYNTAQLITE_SYMBOL_PREFIX={symbol_prefix}");
+    }
+
     // ── Grammar-agnostic engine sources ─────────────────────────────────
     //
     // Always compiled: tokenizer.c and the parser runtime engine
@@ -102,6 +110,9 @@ fn main() {
     }
     if target_os == "emscripten" {
         engine_build.flag("-fPIC");
+    }
+    if !symbol_prefix.is_empty() {
+        engine_build.define("SYNTAQLITE_SYMBOL_PREFIX", symbol_prefix.as_str());
     }
     engine_build.compile("syntaqlite_engine");
 
@@ -178,6 +189,9 @@ fn main() {
             }
         }
 
+        if !symbol_prefix.is_empty() {
+            build.define("SYNTAQLITE_SYMBOL_PREFIX", symbol_prefix.as_str());
+        }
         build.compile("syntaqlite_sqlite");
     }
 
@@ -185,6 +199,7 @@ fn main() {
     println!("cargo:rerun-if-changed=csrc");
     println!("cargo:rerun-if-changed=include");
     println!("cargo:rerun-if-env-changed=SYNTAQLITE_SQLITE_VERSION");
+    println!("cargo:rerun-if-env-changed=SYNTAQLITE_SYMBOL_PREFIX");
 }
 
 /// Copy a generated header into `OUT_DIR` so `embedded_sources.rs` can

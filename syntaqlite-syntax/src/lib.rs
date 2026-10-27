@@ -170,6 +170,24 @@ pub use parser::{MacroArg, MacroLookup, MacroOutput};
 
 // ==== Internal modules ====
 
+/// Declares C functions, linking against `SYNTAQLITE_SYMBOL_PREFIX`-prefixed
+/// names when built with `--cfg syntaqlite_symbol_prefix`.
+#[cfg(feature = "sqlite-minimal")]
+macro_rules! c_extern {
+    ($($(#[$attr:meta])* $vis:vis fn $name:ident($($args:tt)*) $(-> $ret:ty)?;)*) => {
+        unsafe extern "C" {
+            $(
+                $(#[$attr])*
+                #[cfg_attr(
+                    syntaqlite_symbol_prefix,
+                    link_name = concat!(env!("SYNTAQLITE_SYMBOL_PREFIX"), stringify!($name))
+                )]
+                $vis fn $name($($args)*) $(-> $ret)?;
+            )*
+        }
+    };
+}
+
 #[cfg(feature = "sqlite-minimal")]
 pub(crate) mod ast;
 #[cfg(feature = "sqlite-minimal")]

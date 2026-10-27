@@ -430,7 +430,7 @@ mod ffi {
         pub(crate) type_: u32,
     }
 
-    unsafe extern "C" {
+    c_extern! {
         fn syntaqlite_tokenizer_create_with_dialect(
             mem: *const std::ffi::c_void,
             dialect: crate::dialect::ffi::CDialect,

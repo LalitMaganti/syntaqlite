@@ -6,6 +6,8 @@
 #ifndef SYNTAQLITE_TYPES_H
 #define SYNTAQLITE_TYPES_H
 
+#include "syntaqlite/symbol_prefix.h"
+
 #include <stdint.h>
 
 #ifdef __cplusplus
