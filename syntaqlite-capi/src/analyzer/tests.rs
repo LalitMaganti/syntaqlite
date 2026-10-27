@@ -1192,7 +1192,7 @@ fn kind_code_per_statement_matches_aggregate() {
 #[rustfmt::skip]
 #[test]
 fn diagnostic_code_to_c_covers_all_variants() {
-    use super::super::diagnostics::DiagnosticMessage as M;
+    use syntaqlite::analysis::DiagnosticMessage as M;
     let check = |msg: M, code: u32| assert_eq!(diagnostic_code_to_c(&msg), code);
     check(M::ParseError("x".into()), DIAG_CODE_PARSE_ERROR);
     check(M::UnknownTable { name: "t".into() }, DIAG_CODE_UNKNOWN_TABLE);
@@ -1201,10 +1201,10 @@ fn diagnostic_code_to_c_covers_all_variants() {
     check(M::UnknownModule { name: "m".into() }, DIAG_CODE_UNKNOWN_MODULE);
     check(M::FunctionArity { name: "f".into(), expected: vec![1], got: 0 }, DIAG_CODE_FUNCTION_ARITY);
     check(M::CteColumnCountMismatch { name: "c".into(), declared: 1, actual: 2 }, DIAG_CODE_CTE_COLUMN_COUNT_MISMATCH);
-    check(M::QualifiedRef { table: "t".into(), column: "c".into(), context: super::super::QualifiedRefContext::IndexExpression }, DIAG_CODE_QUALIFIED_REF);
+    check(M::QualifiedRef { table: "t".into(), column: "c".into(), context: syntaqlite::analysis::QualifiedRefContext::IndexExpression }, DIAG_CODE_QUALIFIED_REF);
     check(M::IndexOnView { name: "v".into() }, DIAG_CODE_INDEX_ON_VIEW);
     check(M::DropWrongKind { name: "v".into(), is_view: true }, DIAG_CODE_DROP_WRONG_KIND);
-    check(M::BuiltinModify { name: "sqlite_schema".into(), change: super::super::BuiltinChange::Drop }, DIAG_CODE_BUILTIN_MODIFY);
+    check(M::BuiltinModify { name: "sqlite_schema".into(), change: syntaqlite::analysis::BuiltinChange::Drop }, DIAG_CODE_BUILTIN_MODIFY);
     check(M::CompoundColumns { operator: "UNION".into(), left: 1, right: 2 }, DIAG_CODE_COMPOUND_COLUMNS);
     check(M::UnknownWindow { name: "w".into() }, DIAG_CODE_UNKNOWN_WINDOW);
     check(M::OnClauseOrder { name: "c".into() }, DIAG_CODE_ON_CLAUSE_ORDER);

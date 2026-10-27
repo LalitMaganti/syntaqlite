@@ -17,6 +17,7 @@ CARGO_TOMLS = [
     "syntaqlite-common/Cargo.toml",
     "syntaqlite-syntax/Cargo.toml",
     "syntaqlite/Cargo.toml",
+    "syntaqlite-capi/Cargo.toml",
     "syntaqlite-cli/Cargo.toml",
     "syntaqlite-wasm/Cargo.toml",
     "syntaqlite-buildtools/Cargo.toml",

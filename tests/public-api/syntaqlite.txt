@@ -178,6 +178,7 @@ pub fn syntaqlite::analysis::CatalogLayerContents::insert_function_overload(&mut
 pub fn syntaqlite::analysis::CatalogLayerContents::insert_table(&mut self, syntaqlite::analysis::TableDef)
 pub fn syntaqlite::analysis::CatalogLayerContents::insert_table_function(&mut self, impl core::convert::Into<alloc::string::String>, syntaqlite::analysis::AritySpec, alloc::vec::Vec<alloc::string::String>)
 pub fn syntaqlite::analysis::CatalogLayerContents::insert_view(&mut self, syntaqlite::analysis::ViewDef)
+pub fn syntaqlite::analysis::CatalogLayerContents::merge_from(&mut self, &Self)
 pub fn syntaqlite::analysis::CatalogLayerContents::relation_names(&self) -> impl core::iter::traits::iterator::Iterator<Item = &str>
 pub fn syntaqlite::analysis::Column::deserialize<D: serde_core::de::Deserializer<'de>>(D) -> core::result::Result<Self, <D as serde_core::de::Deserializer>::Error>
 pub fn syntaqlite::analysis::Column::from(&str) -> Self

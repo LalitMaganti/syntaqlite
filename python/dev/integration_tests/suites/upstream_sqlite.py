@@ -154,7 +154,7 @@ def _build_extension(ctx: SuiteContext, verbose: bool) -> Path | None:
     # Build syntaqlite as a static library (staticlib for C FFI linking).
     print("  Building syntaqlite static lib...", end=" ", flush=True)
     proc = subprocess.run(
-        ["cargo", "build", "-p", "syntaqlite", "--release"],
+        ["cargo", "build", "-p", "syntaqlite-capi", "--release"],
         cwd=root, capture_output=True, text=True,
     )
     if proc.returncode != 0:
@@ -172,7 +172,7 @@ def _build_extension(ctx: SuiteContext, verbose: bool) -> Path | None:
     output = root / "target" / f"tclsyntaqlite{ext}"
 
     syntax_include = root / "syntaqlite-syntax" / "include"
-    lib_include = root / "syntaqlite" / "include"
+    lib_include = root / "syntaqlite-capi" / "include"
     sqlite_amalg = root / "third_party" / "src" / "sqlite-amalgamation"
 
     tcl_lib_flags = _find_tcl_lib_flags()

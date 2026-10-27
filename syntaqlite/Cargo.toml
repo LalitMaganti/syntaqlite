@@ -8,9 +8,6 @@ repository.workspace = true
 homepage.workspace = true
 readme = "README.md"
 
-[lib]
-crate-type = ["rlib", "staticlib", "cdylib"]
-
 [features]
 default = ["sqlite", "fmt", "analysis"]
 fmt = ["syntaqlite-syntax/fmt"]                     # formatter (bytecode interpreter)

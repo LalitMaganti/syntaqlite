@@ -51,7 +51,7 @@ jobs:
           cargo +nightly build \
             -Zbuild-std \
             --target x86_64-unknown-linux-gnu \
-            -p syntaqlite
+            -p syntaqlite-capi
 
       - name: Run c-api suite with sanitizers
         env:
@@ -83,7 +83,7 @@ jobs:
               'rustup toolchain install nightly --component rust-src',
               'RUSTFLAGS="-Zsanitizer=address -Cforce-frame-pointers=yes" \\',
               '  cargo +nightly build -Zbuild-std \\',
-              '  --target x86_64-unknown-linux-gnu -p syntaqlite',
+              '  --target x86_64-unknown-linux-gnu -p syntaqlite-capi',
               'SYNTAQLITE_CAPI_SANITIZE=1 \\',
               '  SYNTAQLITE_STATIC_LIB="$PWD/target/x86_64-unknown-linux-gnu/debug/libsyntaqlite.a" \\',
               '  CC=clang tools/run-integration-tests --suite c-api -v',

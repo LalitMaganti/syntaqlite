@@ -1,7 +1,7 @@
 // Copyright 2025 The syntaqlite Authors. All rights reserved.
 // Licensed under the Apache License, Version 2.0.
 
-//! C-compatible struct definitions mirrored from `syntaqlite/include/syntaqlite/analysis.h`.
+//! C-compatible struct definitions mirrored from `include/syntaqlite/analysis.h`.
 
 use std::ffi::c_char;
 

@@ -114,10 +114,11 @@ wrappers around the C parser and tokenizer. These are the only place raw C
 pointers are handled. The rest of the Rust code sees safe `Parser`,
 `Tokenizer`, and `ParseSession` types.
 
-**Outbound** (Rust → C): `syntaqlite/src/fmt/ffi.rs` and
-`syntaqlite/src/analysis/ffi/` export the formatter and analyzer as opaque
-C handles (`SyntaqliteFormatter*`, `SyntaqliteAnalyzer*`) with lifecycle
-functions (create, use, destroy).
+**Outbound** (Rust → C): the `syntaqlite-capi` crate exports the formatter,
+analyzer, and JSON-RPC session as opaque C handles (`SyntaqliteFormatter*`,
+`SyntaqliteAnalyzer*`, `SyntaqliteRpc*`) with lifecycle functions (create,
+use, destroy). It is a separate crate so that Rust users of `syntaqlite` do
+not also export these C symbols.
 
 ## Crates
 
@@ -125,6 +126,7 @@ functions (create, use, destroy).
 |-------|------|
 | `syntaqlite-syntax` | Tokenizer, parser, AST arena, grammar system (Rust + C) |
 | `syntaqlite` | Formatter, semantic analyzer, LSP, dialect interface (Rust) |
+| `syntaqlite-capi` | C API for the formatter, analyzer, and JSON-RPC (`libsyntaqlite`) |
 | `syntaqlite-common` | Shared types (semantic roles) (Rust) |
 | `syntaqlite-buildtools` | Code generation from `.synq` grammar definitions |
 | `syntaqlite-cli` | Command-line interface |

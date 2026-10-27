@@ -6,7 +6,7 @@
 
 use std::ffi::{CStr, CString, c_char};
 
-use crate::analysis::{AnalysisMode, CheckConfig};
+use syntaqlite::analysis::{AnalysisMode, CheckConfig};
 
 use super::SyntaqliteAnalyzer;
 use super::codes::check_level_from_c;
@@ -137,7 +137,7 @@ unsafe impl Send for CCallbackResolver {}
 // SAFETY: same as Send.
 unsafe impl Sync for CCallbackResolver {}
 
-impl crate::analysis::ModuleResolver for CCallbackResolver {
+impl syntaqlite::analysis::ModuleResolver for CCallbackResolver {
     fn resolve(&self, module_path: &str) -> Option<String> {
         let c_path = CString::new(module_path).ok()?;
         // SAFETY: `resolve_fn` is a valid C function pointer provided by the caller.
@@ -177,7 +177,7 @@ pub unsafe extern "C" fn syntaqlite_analyzer_set_module_resolver(
 ) {
     // SAFETY: caller guarantees `v` is a valid pointer from `syntaqlite_analyzer_create_*`.
     let state = unsafe { SyntaqliteAnalyzer::state_mut(v) };
-    state.resolver = resolve_fn.map(|f| -> Box<dyn crate::analysis::ModuleResolver> {
+    state.resolver = resolve_fn.map(|f| -> Box<dyn syntaqlite::analysis::ModuleResolver> {
         Box::new(CCallbackResolver {
             resolve_fn: f,
             user_data,

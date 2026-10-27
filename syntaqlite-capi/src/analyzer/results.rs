@@ -7,7 +7,7 @@
 
 use std::ffi::{CStr, CString, c_char};
 
-use crate::analysis::diagnostics::render::DiagnosticRenderer;
+use syntaqlite::util::DiagnosticRenderer;
 
 use super::{
     SyntaqliteAnalyzer, SyntaqliteColumnLineage, SyntaqliteDiagnostic,

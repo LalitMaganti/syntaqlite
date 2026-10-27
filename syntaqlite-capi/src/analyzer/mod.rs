@@ -10,12 +10,10 @@
 
 use std::ffi::CString;
 
-use crate::dialect::AnyDialect;
-
-use super::AnalysisConfig;
-use super::catalog::Catalog;
-use super::engine::Analyzer;
-use super::model::Analysis;
+use syntaqlite::analysis::{
+    Analysis, AnalysisConfig, Analyzer, Catalog, Diagnostic, ModuleResolver,
+};
+use syntaqlite::any::AnyDialect;
 
 use types::{
     SyntaqliteColumnLineage, SyntaqliteColumnOrigin, SyntaqliteDefinedRelation,
@@ -52,11 +50,11 @@ pub(super) struct AnalyzerState {
     pub(super) user_catalog: Catalog,
     pub(super) dialect: AnyDialect,
     pub(super) analysis_config: AnalysisConfig,
-    pub(super) resolver: Option<Box<dyn super::ModuleResolver>>,
+    pub(super) resolver: Option<Box<dyn ModuleResolver>>,
     pub(super) c_diagnostics: Vec<SyntaqliteDiagnostic>,
     pub(super) rendered_messages: Vec<CString>,
     pub(super) last_source: String,
-    pub(super) last_diagnostics: Vec<super::diagnostics::Diagnostic>,
+    pub(super) last_diagnostics: Vec<Diagnostic>,
     pub(super) rendered_output: CString,
     pub(super) lineage_complete: bool,
     pub(super) c_column_lineage: Vec<SyntaqliteColumnLineage>,

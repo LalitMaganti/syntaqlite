@@ -120,7 +120,7 @@ def _ensure_static_lib(root_dir: Path, verbose: int) -> Path:
     if verbose >= 1:
         print(f"Building {lib.name} via cargo...")
     subprocess.check_call(
-        ["cargo", "build", "-p", "syntaqlite"],
+        ["cargo", "build", "-p", "syntaqlite-capi"],
         cwd=root_dir,
     )
     if not lib.exists():
@@ -158,7 +158,7 @@ def _compile_driver(
     out_bin = out_dir / (Path(driver.source).stem + (".exe" if sys.platform == "win32" else ""))
     src = root_dir / driver.source
     inc_dirs = [
-        root_dir / "syntaqlite" / "include",
+        root_dir / "syntaqlite-capi" / "include",
         root_dir / "syntaqlite-syntax" / "include",
     ]
     cmd = ["cc", "-std=c11", "-Wall", "-Wextra", "-Werror", "-O0", "-g",

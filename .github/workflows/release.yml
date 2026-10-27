@@ -64,7 +64,7 @@ jobs:
       - name: Build CLI + static library
         if: matrix.staticlib
         shell: bash
-        run: cargo build --release -p syntaqlite-cli -p syntaqlite
+        run: cargo build --release -p syntaqlite-cli -p syntaqlite-capi
 
       - name: Build CLI (cross-compiled)
         if: ${{ !matrix.staticlib }}
@@ -268,7 +268,7 @@ jobs:
 
       - name: Build cdylib (in-process transport)
         shell: bash
-        run: cargo build --release -p syntaqlite --features rpc,dynload
+        run: cargo build --release -p syntaqlite-capi --features dynload
 
       - name: Build wheel
         shell: bash
@@ -408,7 +408,7 @@ jobs:
         run: |
           bin/syntaqlite-buildtools amalgamate \
             --syntax-dir syntaqlite-syntax \
-            --lib-dir syntaqlite \
+            --lib-dir syntaqlite-capi \
             --output staging/syntaqlite.h
 
       - name: Download all platform libraries

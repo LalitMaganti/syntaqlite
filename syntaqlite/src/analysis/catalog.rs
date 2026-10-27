@@ -349,7 +349,7 @@ impl CatalogLayerContents {
     /// `other`'s tombstones are applied as concrete removals: a name `other`
     /// masked is deleted from this layer's relations, so promoting a Document
     /// layer that renamed/dropped a relation actually retires it here.
-    pub(crate) fn merge_from(&mut self, other: &Self) {
+    pub fn merge_from(&mut self, other: &Self) {
         for name in &other.removed_relations {
             self.relations.remove(name);
         }
