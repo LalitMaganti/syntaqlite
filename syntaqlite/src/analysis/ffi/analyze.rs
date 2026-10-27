@@ -21,7 +21,8 @@ use super::{
 /// # Safety
 ///
 /// - `v` must be a valid pointer from `syntaqlite_analyzer_create_sqlite`.
-/// - `source` must point to `len` bytes of valid UTF-8.
+/// - `source` must be NULL (treated as empty) or point to `len` bytes of
+///   valid UTF-8.
 #[unsafe(no_mangle)]
 #[expect(clippy::cast_possible_truncation)]
 pub unsafe extern "C" fn syntaqlite_analyzer_analyze(
@@ -33,10 +34,9 @@ pub unsafe extern "C" fn syntaqlite_analyzer_analyze(
     let v = unsafe { &mut *v };
     let state = v.state_mut();
 
-    // SAFETY: caller guarantees `source` points to `len` bytes of valid UTF-8.
-    let src = unsafe {
-        std::str::from_utf8_unchecked(std::slice::from_raw_parts(source.cast(), len as usize))
-    };
+    // SAFETY: caller guarantees `source` is NULL or points to `len` bytes of
+    // valid UTF-8.
+    let src = unsafe { crate::dialect::ffi::source_str(source, len) };
 
     let mut ctx = AnalysisContext::new(&mut state.user_catalog).with_config(state.analysis_config);
     if let Some(r) = state.resolver.as_deref() {

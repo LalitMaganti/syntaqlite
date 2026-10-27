@@ -68,6 +68,18 @@ fn config_from_c(c: &SyntaqliteFormatConfig) -> FormatConfig {
     }
 }
 
+/// # Safety
+///
+/// `config` must be NULL or a valid pointer to a `SyntaqliteFormatConfig`.
+unsafe fn config_from_c_or_default(config: *const SyntaqliteFormatConfig) -> FormatConfig {
+    if config.is_null() {
+        FormatConfig::default()
+    } else {
+        // SAFETY: caller guarantees non-NULL `config` is valid.
+        config_from_c(unsafe { &*config })
+    }
+}
+
 fn new_state(formatter: Formatter) -> *mut SyntaqliteFormatter {
     let state = Box::new(FormatterState {
         formatter,
@@ -108,7 +120,8 @@ pub unsafe extern "C" fn syntaqlite_formatter_destroy(f: *mut SyntaqliteFormatte
 /// # Safety
 ///
 /// - `f` must be a valid pointer from `syntaqlite_formatter_create_*`.
-/// - `source` must point to `len` bytes of valid UTF-8.
+/// - `source` must be NULL (treated as empty) or point to `len` bytes of
+///   valid UTF-8.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn syntaqlite_formatter_format(
     f: *mut SyntaqliteFormatter,
@@ -119,10 +132,9 @@ pub unsafe extern "C" fn syntaqlite_formatter_format(
     let f = unsafe { &mut *f };
     let state = f.state_mut();
 
-    // SAFETY: caller guarantees `source` points to `len` bytes of valid UTF-8.
-    let src = unsafe {
-        std::str::from_utf8_unchecked(std::slice::from_raw_parts(source.cast(), len as usize))
-    };
+    // SAFETY: caller guarantees `source` is NULL or points to `len` bytes of
+    // valid UTF-8.
+    let src = unsafe { crate::dialect::ffi::source_str(source, len) };
 
     match state.formatter.format(src) {
         Ok(output) => {
@@ -212,12 +224,8 @@ pub unsafe extern "C" fn syntaqlite_formatter_create_with_dialect(
 ) -> *mut SyntaqliteFormatter {
     // SAFETY: caller guarantees `dialect.tmpl` is valid.
     let any = unsafe { crate::dialect::AnyDialect::from_c_dialect(dialect) };
-    let cfg = if config.is_null() {
-        FormatConfig::default()
-    } else {
-        // SAFETY: caller guarantees `config` is valid.
-        config_from_c(unsafe { &*config })
-    };
+    // SAFETY: caller guarantees `config` is NULL or valid.
+    let cfg = unsafe { config_from_c_or_default(config) };
     new_state(Formatter::with_dialect_config(any, &cfg))
 }
 
@@ -231,14 +239,20 @@ pub extern "C" fn syntaqlite_formatter_create_sqlite() -> *mut SyntaqliteFormatt
 }
 
 /// Create a formatter for the built-in `SQLite` dialect with custom config.
+///
+/// # Safety
+///
+/// `config` must be NULL (default config) or a valid pointer to a
+/// `SyntaqliteFormatConfig`.
 #[cfg(feature = "sqlite")]
 #[unsafe(no_mangle)]
-pub extern "C" fn syntaqlite_formatter_create_sqlite_with_config(
+pub unsafe extern "C" fn syntaqlite_formatter_create_sqlite_with_config(
     config: *const SyntaqliteFormatConfig,
 ) -> *mut SyntaqliteFormatter {
-    // SAFETY: caller guarantees `config` is a valid pointer.
-    let cfg = config_from_c(unsafe { &*config });
-    new_state(Formatter::with_config(&cfg))
+    // SAFETY: caller guarantees `config` is NULL or valid.
+    new_state(Formatter::with_config(&unsafe {
+        config_from_c_or_default(config)
+    }))
 }
 
 #[cfg(test)]
@@ -442,7 +456,30 @@ mod tests {
         unsafe { syntaqlite_formatter_destroy(f) };
     }
 
+    #[test]
+    fn format_null_source_is_empty_input() {
+        let f = syntaqlite_formatter_create_sqlite();
+        // SAFETY: FFI test — NULL source is documented as empty input.
+        let rc = unsafe { syntaqlite_formatter_format(f, std::ptr::null(), 0) };
+        assert_eq!(rc, 0);
+        // SAFETY: FFI test — pointer obtained from `syntaqlite_formatter_create_sqlite`.
+        assert_eq!(unsafe { syntaqlite_formatter_output_len(f) }, 0);
+        // SAFETY: FFI test — pointer obtained from `syntaqlite_formatter_create_sqlite`.
+        unsafe { syntaqlite_formatter_destroy(f) };
+    }
+
     // ── Config ────────────────────────────────────────────────────────────
+
+    #[test]
+    fn config_null_uses_default() {
+        // SAFETY: FFI test — NULL config is documented as the default config.
+        let f = unsafe { syntaqlite_formatter_create_sqlite_with_config(std::ptr::null()) };
+        // SAFETY: FFI test — pointer obtained from `syntaqlite_formatter_create_sqlite_with_config`.
+        let out = unsafe { format_ok(f, "select 1") };
+        assert_eq!(out, "SELECT 1;\n");
+        // SAFETY: FFI test — pointer obtained from `syntaqlite_formatter_create_sqlite_with_config`.
+        unsafe { syntaqlite_formatter_destroy(f) };
+    }
 
     #[test]
     fn config_keyword_lower() {
@@ -452,7 +489,8 @@ mod tests {
             keyword_case: 1, // Lower
             semicolons: 1,
         };
-        let f = syntaqlite_formatter_create_sqlite_with_config(&raw const config);
+        // SAFETY: FFI test — `config` is a valid local.
+        let f = unsafe { syntaqlite_formatter_create_sqlite_with_config(&raw const config) };
         // SAFETY: FFI test — pointer obtained from `syntaqlite_formatter_create_sqlite`.
         let out = unsafe { format_ok(f, "SELECT 1 FROM x") };
         assert!(out.contains("select"), "expected lowercase keywords: {out}");
@@ -469,7 +507,8 @@ mod tests {
             keyword_case: 0, // Upper
             semicolons: 0,   // No semicolons
         };
-        let f = syntaqlite_formatter_create_sqlite_with_config(&raw const config);
+        // SAFETY: FFI test — `config` is a valid local.
+        let f = unsafe { syntaqlite_formatter_create_sqlite_with_config(&raw const config) };
         // SAFETY: FFI test — pointer obtained from `syntaqlite_formatter_create_sqlite`.
         let out = unsafe { format_ok(f, "SELECT 1") };
         assert!(!out.contains(';'), "semicolon should be omitted: {out}");
@@ -485,7 +524,8 @@ mod tests {
             keyword_case: 0,
             semicolons: 1,
         };
-        let f = syntaqlite_formatter_create_sqlite_with_config(&raw const config);
+        // SAFETY: FFI test — `config` is a valid local.
+        let f = unsafe { syntaqlite_formatter_create_sqlite_with_config(&raw const config) };
         // SAFETY: FFI test — pointer obtained from `syntaqlite_formatter_create_sqlite`.
         let out = unsafe { format_ok(f, "SELECT column_a, column_b, column_c FROM my_table") };
         // With line_width=10, the formatter must break across multiple lines.

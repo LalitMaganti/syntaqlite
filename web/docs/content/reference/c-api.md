@@ -153,7 +153,7 @@ Return codes from `syntaqlite_formatter_format()`:
 | Function | Description |
 |----------|-------------|
 | `syntaqlite_formatter_create_sqlite()` | Create with default config |
-| `syntaqlite_formatter_create_sqlite_with_config(config)` | Create with custom `SyntaqliteFormatConfig` |
+| `syntaqlite_formatter_create_sqlite_with_config(config)` | Create with custom `SyntaqliteFormatConfig` (NULL for defaults) |
 | `syntaqlite_formatter_format(f, sql, len)` | Format SQL source (`len` bytes). Returns `0` on success, `-1` on error |
 | `syntaqlite_formatter_output(f)` | NUL-terminated formatted output, or `NULL` after error |
 | `syntaqlite_formatter_output_len(f)` | Length of formatted output in bytes (excl. NUL) |

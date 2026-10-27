@@ -67,6 +67,7 @@ SYNTAQLITE_API void syntaqlite_formatter_destroy(SyntaqliteFormatter* f);
 // Returns SYNTAQLITE_FORMAT_OK (0) on success, SYNTAQLITE_FORMAT_ERROR (-1)
 // on parse error.
 // The source buffer must remain valid only for the duration of this call.
+// A NULL source is treated as empty input.
 SYNTAQLITE_API int32_t syntaqlite_formatter_format(SyntaqliteFormatter* f,
                                                     const char* source,
                                                     SyntaqliteLength len);
@@ -110,6 +111,7 @@ SYNTAQLITE_API SyntaqliteFormatter* syntaqlite_formatter_create_with_dialect(
 SYNTAQLITE_API SyntaqliteFormatter* syntaqlite_formatter_create_sqlite(void);
 
 // Create a formatter for the built-in SQLite dialect with custom config.
+// Pass NULL for config to use defaults.
 SYNTAQLITE_API SyntaqliteFormatter* syntaqlite_formatter_create_sqlite_with_config(
     const SyntaqliteFormatConfig* config);
 

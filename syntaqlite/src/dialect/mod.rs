@@ -481,9 +481,29 @@ mod tests {
 
 // ── ffi ───────────────────────────────────────────────────────────────────────
 
-/// C-ABI types re-exported from `syntaqlite-syntax`.
+/// C-ABI types re-exported from `syntaqlite-syntax`, plus helpers shared by
+/// the formatter and analyzer C APIs.
 pub(crate) mod ffi {
+    use std::ffi::c_char;
+
     pub(crate) use syntaqlite_syntax::typed::{CDialect, CDialectTemplate};
+
+    /// Borrow a C `(source, len)` buffer as a `&str`, treating NULL as "".
+    ///
+    /// # Safety
+    ///
+    /// If `source` is non-NULL it must point to `len` bytes of valid UTF-8
+    /// that stay alive and unmodified for `'a`.
+    pub(crate) unsafe fn source_str<'a>(source: *const c_char, len: u32) -> &'a str {
+        if source.is_null() {
+            return "";
+        }
+        // SAFETY: caller guarantees non-NULL `source` points to `len` bytes
+        // of valid UTF-8 that live for `'a`.
+        unsafe {
+            std::str::from_utf8_unchecked(std::slice::from_raw_parts(source.cast(), len as usize))
+        }
+    }
 }
 
 /// Extension methods on [`ffi::CDialectTemplate`] for fmt/validation access.

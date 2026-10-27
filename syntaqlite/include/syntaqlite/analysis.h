@@ -264,6 +264,7 @@ SYNTAQLITE_API void syntaqlite_analyzer_set_module_resolver(
 // Returns the number of diagnostics produced. Diagnostic offsets are
 // document-absolute (measured from `source[0]`).
 // The source buffer must remain valid only for the duration of this call.
+// A NULL source is treated as empty input.
 SYNTAQLITE_API uint32_t syntaqlite_analyzer_analyze(SyntaqliteAnalyzer* v,
                                                       const char* source,
                                                       SyntaqliteLength len);
@@ -290,6 +291,7 @@ SYNTAQLITE_API void syntaqlite_analyzer_add_views(
 // Load schema from DDL statements (CREATE TABLE, CREATE VIEW, etc.).
 // Parses `source` as SQL and accumulates all DDL into the catalog.
 // Returns the number of parse errors encountered (0 on success).
+// A NULL source is treated as empty input.
 SYNTAQLITE_API uint32_t syntaqlite_analyzer_load_schema_ddl(
     SyntaqliteAnalyzer* v,
     const char* source,

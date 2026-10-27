@@ -364,6 +364,23 @@ fn null_destroy_is_noop() {
     unsafe { syntaqlite_analyzer_destroy(std::ptr::null_mut()) };
 }
 
+#[test]
+fn null_source_is_empty_input() {
+    let v = Validator::new();
+    // SAFETY: handle from `syntaqlite_analyzer_create_sqlite`; NULL source is
+    // documented as empty input.
+    unsafe {
+        assert_eq!(
+            syntaqlite_analyzer_analyze(v.as_ptr(), std::ptr::null(), 0),
+            0
+        );
+        assert_eq!(
+            syntaqlite_analyzer_load_schema_ddl(v.as_ptr(), std::ptr::null(), 0),
+            0
+        );
+    }
+}
+
 // ── Analysis: clean SQL ───────────────────────────────────────────────
 
 #[test]
