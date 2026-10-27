@@ -33,6 +33,10 @@ pub const RUNTIME_HEADERS: &[(&str, &str)] = &[
     ("config.h", include_str!("../include/syntaqlite/config.h")),
     ("parser.h", include_str!("../include/syntaqlite/parser.h")),
     (
+        "symbol_prefix.h",
+        include_str!("../include/syntaqlite/symbol_prefix.h"),
+    ),
+    (
         "incremental.h",
         include_str!("../include/syntaqlite/incremental.h"),
     ),

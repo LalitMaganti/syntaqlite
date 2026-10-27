@@ -1,0 +1,11 @@
+#!/bin/sh
+# Copyright 2026 The syntaqlite Authors. All rights reserved.
+# Licensed under the Apache License, Version 2.0.
+
+# Check that SYNTAQLITE_SYMBOL_PREFIX renames every global C symbol.
+# See python/dev/checks/c_symbol_prefix.py for details.
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+ROOT_DIR="$(dirname "$SCRIPT_DIR")"
+
+exec python3 "$ROOT_DIR/python/dev/checks/c_symbol_prefix.py" "$@"

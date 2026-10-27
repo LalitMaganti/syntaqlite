@@ -73,7 +73,7 @@ pub fn dialect() -> Dialect {
 // ── ffi ───────────────────────────────────────────────────────────────────────
 
 mod ffi {
-    unsafe extern "C" {
+    c_extern! {
         pub(super) fn syntaqlite_sqlite_dialect() -> crate::typed::CDialect;
     }
 }

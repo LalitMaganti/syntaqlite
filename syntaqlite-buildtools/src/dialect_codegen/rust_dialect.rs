@@ -60,8 +60,14 @@ fn emit_grammar_module(
     token_type: &str,
     syntax_crate: &str,
 ) {
+    // Inside syntaqlite-syntax, `c_extern!` applies the optional symbol prefix.
+    let extern_open = if syntax_crate == "crate" {
+        "c_extern!"
+    } else {
+        "unsafe extern \"C\""
+    };
     w.lines(&format!(
-        r#"
+        r"
 use {syntax_crate}::any::AnyDialect;
 use {syntax_crate}::typed::TypedDialect;
 use {syntax_crate}::util::{{SqliteSyntaxFlags, SqliteVersion}};
@@ -132,11 +138,11 @@ pub fn dialect() -> {dialect_struct} {{
 // ── ffi ───────────────────────────────────────────────────────────────────────
 
 mod ffi {{
-    unsafe extern "C" {{
+    {extern_open} {{
         pub(super) fn {dialect_fn}() -> {syntax_crate}::typed::CDialect;
     }}
 }}
-"#
+"
     ));
 }
 

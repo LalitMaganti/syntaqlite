@@ -229,6 +229,14 @@ impl AnyDialect {
         }
     }
 
+    /// Wrap a syntax-level dialect handle, with no extra cflags.
+    pub(crate) fn from_syntax_dialect(inner: SyntaxDialect) -> Self {
+        AnyDialect {
+            inner,
+            ext_cflags: crate::util::SqliteFlags::default(),
+        }
+    }
+
     /// Return a reference to the dialect template.
     #[inline]
     fn template(&self) -> &ffi::CDialectTemplate {

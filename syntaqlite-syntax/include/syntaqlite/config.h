@@ -20,6 +20,8 @@
 #ifndef SYNTAQLITE_CONFIG_H
 #define SYNTAQLITE_CONFIG_H
 
+#include "syntaqlite/symbol_prefix.h"
+
 #include <stddef.h>
 #include <stdlib.h>
 

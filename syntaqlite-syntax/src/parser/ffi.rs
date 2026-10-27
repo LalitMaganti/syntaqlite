@@ -769,7 +769,7 @@ impl CParser {
     }
 }
 
-unsafe extern "C" {
+c_extern! {
     // Parser lifecycle
     fn syntaqlite_parser_create_with_dialect(
         mem: *const CMemMethods,

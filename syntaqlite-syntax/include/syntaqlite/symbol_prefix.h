@@ -1,0 +1,131 @@
+// Copyright 2026 The syntaqlite Authors. All rights reserved.
+// Licensed under the Apache License, Version 2.0.
+
+// Optional prefix for every global C symbol in syntaqlite-syntax.
+//
+// Building with -DSYNTAQLITE_SYMBOL_PREFIX=foo_ renames each global symbol
+// below from `name` to `foo_name`, so two copies of the library can be linked
+// into one binary. Rust code calling these symbols must be built with
+// `--cfg syntaqlite_symbol_prefix` and SYNTAQLITE_SYMBOL_PREFIX=foo_ set in
+// its environment. Without the define this header does nothing.
+//
+// Every global symbol must be listed here; tools/check-c-symbol-prefix fails
+// if one is missing.
+
+#ifndef SYNTAQLITE_SYMBOL_PREFIX_H
+#define SYNTAQLITE_SYMBOL_PREFIX_H
+
+#ifdef SYNTAQLITE_SYMBOL_PREFIX
+
+#define SYNQ_PREFIXED_CAT_(a, b) a##b
+#define SYNQ_PREFIXED_CAT(a, b) SYNQ_PREFIXED_CAT_(a, b)
+#define SYNQ_PREFIXED(name) SYNQ_PREFIXED_CAT(SYNTAQLITE_SYMBOL_PREFIX, name)
+
+// clang-format off
+#define sqlite3UpperToLower SYNQ_PREFIXED(sqlite3UpperToLower)
+#define synq_body_call_range SYNQ_PREFIXED(synq_body_call_range)
+#define synq_extent_fold_below_into_top SYNQ_PREFIXED(synq_extent_fold_below_into_top)
+#define synq_extent_on_reduce SYNQ_PREFIXED(synq_extent_on_reduce)
+#define synq_extent_on_shift SYNQ_PREFIXED(synq_extent_on_shift)
+#define synq_extent_record_list_append SYNQ_PREFIXED(synq_extent_record_list_append)
+#define synq_layers_free_owned SYNQ_PREFIXED(synq_layers_free_owned)
+#define synq_layers_push_sentinel SYNQ_PREFIXED(synq_layers_push_sentinel)
+#define synq_macro_state_free SYNQ_PREFIXED(synq_macro_state_free)
+#define synq_macro_state_init SYNQ_PREFIXED(synq_macro_state_init)
+#define synq_node_site SYNQ_PREFIXED(synq_node_site)
+#define synq_parser_expand_and_feed_macro SYNQ_PREFIXED(synq_parser_expand_and_feed_macro)
+#define synq_parser_expand_nodes SYNQ_PREFIXED(synq_parser_expand_nodes)
+#define synq_parser_record_comment SYNQ_PREFIXED(synq_parser_record_comment)
+#define synq_parser_scan_macro_args SYNQ_PREFIXED(synq_parser_scan_macro_args)
+#define synq_parser_set_result_status SYNQ_PREFIXED(synq_parser_set_result_status)
+#define synq_parser_shift_token SYNQ_PREFIXED(synq_parser_shift_token)
+#define synq_parser_try_macro_call SYNQ_PREFIXED(synq_parser_try_macro_call)
+#define synq_rewrite_results_free SYNQ_PREFIXED(synq_rewrite_results_free)
+#define synq_rewrite_state_free SYNQ_PREFIXED(synq_rewrite_state_free)
+#define synq_rewrite_state_init SYNQ_PREFIXED(synq_rewrite_state_init)
+#define synq_sqlite3_keywordCode SYNQ_PREFIXED(synq_sqlite3_keywordCode)
+#define synq_sqlite_aKWCode SYNQ_PREFIXED(synq_sqlite_aKWCode)
+#define synq_sqlite_aKWLen SYNQ_PREFIXED(synq_sqlite_aKWLen)
+#define synq_sqlite_aKWOffset SYNQ_PREFIXED(synq_sqlite_aKWOffset)
+#define synq_sqlite_nKeyword SYNQ_PREFIXED(synq_sqlite_nKeyword)
+#define synq_sqlite_zKWText SYNQ_PREFIXED(synq_sqlite_zKWText)
+#define SynqSqliteGetToken SYNQ_PREFIXED(SynqSqliteGetToken)
+#define SynqSqliteGetTokenVersionWrapped SYNQ_PREFIXED(SynqSqliteGetTokenVersionWrapped)
+#define SynqSqliteParse SYNQ_PREFIXED(SynqSqliteParse)
+#define SynqSqliteParseAlloc SYNQ_PREFIXED(SynqSqliteParseAlloc)
+#define SynqSqliteParseCompletionContext SYNQ_PREFIXED(SynqSqliteParseCompletionContext)
+#define SynqSqliteParseExpectedTokens SYNQ_PREFIXED(SynqSqliteParseExpectedTokens)
+#define SynqSqliteParseFallback SYNQ_PREFIXED(SynqSqliteParseFallback)
+#define SynqSqliteParseFinalize SYNQ_PREFIXED(SynqSqliteParseFinalize)
+#define SynqSqliteParseFree SYNQ_PREFIXED(SynqSqliteParseFree)
+#define SynqSqliteParseInit SYNQ_PREFIXED(SynqSqliteParseInit)
+#define SynqSqliteParseTrace SYNQ_PREFIXED(SynqSqliteParseTrace)
+#define syntaqlite_dialect_load SYNQ_PREFIXED(syntaqlite_dialect_load)
+#define syntaqlite_dump_node SYNQ_PREFIXED(syntaqlite_dump_node)
+#define syntaqlite_loaded_dialect_destroy SYNQ_PREFIXED(syntaqlite_loaded_dialect_destroy)
+#define syntaqlite_loaded_dialect_error SYNQ_PREFIXED(syntaqlite_loaded_dialect_error)
+#define syntaqlite_loaded_dialect_get SYNQ_PREFIXED(syntaqlite_loaded_dialect_get)
+#define syntaqlite_macro_expansion_expand_and_set_result SYNQ_PREFIXED(syntaqlite_macro_expansion_expand_and_set_result)
+#define syntaqlite_macro_expansion_set_result SYNQ_PREFIXED(syntaqlite_macro_expansion_set_result)
+#define syntaqlite_macro_expansion_set_result_with_arg_map SYNQ_PREFIXED(syntaqlite_macro_expansion_set_result_with_arg_map)
+#define syntaqlite_macro_rewrite_arg_at SYNQ_PREFIXED(syntaqlite_macro_rewrite_arg_at)
+#define syntaqlite_macro_rewrite_arg_count SYNQ_PREFIXED(syntaqlite_macro_rewrite_arg_count)
+#define syntaqlite_macro_rewrite_arg_segment_at SYNQ_PREFIXED(syntaqlite_macro_rewrite_arg_segment_at)
+#define syntaqlite_macro_rewrite_arg_segment_count SYNQ_PREFIXED(syntaqlite_macro_rewrite_arg_segment_count)
+#define syntaqlite_node_expansion_set_result SYNQ_PREFIXED(syntaqlite_node_expansion_set_result)
+#define syntaqlite_node_is_macro_free SYNQ_PREFIXED(syntaqlite_node_is_macro_free)
+#define syntaqlite_node_leading_comments SYNQ_PREFIXED(syntaqlite_node_leading_comments)
+#define syntaqlite_node_token_range SYNQ_PREFIXED(syntaqlite_node_token_range)
+#define syntaqlite_node_trailing_comments SYNQ_PREFIXED(syntaqlite_node_trailing_comments)
+#define syntaqlite_parser_completion_context SYNQ_PREFIXED(syntaqlite_parser_completion_context)
+#define syntaqlite_parser_create SYNQ_PREFIXED(syntaqlite_parser_create)
+#define syntaqlite_parser_create_sqlite SYNQ_PREFIXED(syntaqlite_parser_create_sqlite)
+#define syntaqlite_parser_create_with_dialect SYNQ_PREFIXED(syntaqlite_parser_create_with_dialect)
+#define syntaqlite_parser_destroy SYNQ_PREFIXED(syntaqlite_parser_destroy)
+#define syntaqlite_parser_expanded_text SYNQ_PREFIXED(syntaqlite_parser_expanded_text)
+#define syntaqlite_parser_expected_tokens SYNQ_PREFIXED(syntaqlite_parser_expected_tokens)
+#define syntaqlite_parser_feed_token SYNQ_PREFIXED(syntaqlite_parser_feed_token)
+#define syntaqlite_parser_finish SYNQ_PREFIXED(syntaqlite_parser_finish)
+#define syntaqlite_parser_full_text SYNQ_PREFIXED(syntaqlite_parser_full_text)
+#define syntaqlite_parser_layer_text SYNQ_PREFIXED(syntaqlite_parser_layer_text)
+#define syntaqlite_parser_next SYNQ_PREFIXED(syntaqlite_parser_next)
+#define syntaqlite_parser_node SYNQ_PREFIXED(syntaqlite_parser_node)
+#define syntaqlite_parser_node_count SYNQ_PREFIXED(syntaqlite_parser_node_count)
+#define syntaqlite_parser_node_expanded_text SYNQ_PREFIXED(syntaqlite_parser_node_expanded_text)
+#define syntaqlite_parser_node_site SYNQ_PREFIXED(syntaqlite_parser_node_site)
+#define syntaqlite_parser_node_text SYNQ_PREFIXED(syntaqlite_parser_node_text)
+#define syntaqlite_parser_reset SYNQ_PREFIXED(syntaqlite_parser_reset)
+#define syntaqlite_parser_set_collect_node_extents SYNQ_PREFIXED(syntaqlite_parser_set_collect_node_extents)
+#define syntaqlite_parser_set_collect_tokens SYNQ_PREFIXED(syntaqlite_parser_set_collect_tokens)
+#define syntaqlite_parser_set_macro_fallback SYNQ_PREFIXED(syntaqlite_parser_set_macro_fallback)
+#define syntaqlite_parser_set_macro_lookup SYNQ_PREFIXED(syntaqlite_parser_set_macro_lookup)
+#define syntaqlite_parser_set_node_expander SYNQ_PREFIXED(syntaqlite_parser_set_node_expander)
+#define syntaqlite_parser_set_trace SYNQ_PREFIXED(syntaqlite_parser_set_trace)
+#define syntaqlite_parser_span_expanded_text SYNQ_PREFIXED(syntaqlite_parser_span_expanded_text)
+#define syntaqlite_parser_span_text SYNQ_PREFIXED(syntaqlite_parser_span_text)
+#define syntaqlite_parser_text SYNQ_PREFIXED(syntaqlite_parser_text)
+#define syntaqlite_parser_traceback SYNQ_PREFIXED(syntaqlite_parser_traceback)
+#define syntaqlite_result_comments SYNQ_PREFIXED(syntaqlite_result_comments)
+#define syntaqlite_result_error_length SYNQ_PREFIXED(syntaqlite_result_error_length)
+#define syntaqlite_result_error_msg SYNQ_PREFIXED(syntaqlite_result_error_msg)
+#define syntaqlite_result_error_offset SYNQ_PREFIXED(syntaqlite_result_error_offset)
+#define syntaqlite_result_recovery_root SYNQ_PREFIXED(syntaqlite_result_recovery_root)
+#define syntaqlite_result_rewrite_at SYNQ_PREFIXED(syntaqlite_result_rewrite_at)
+#define syntaqlite_result_rewrite_count SYNQ_PREFIXED(syntaqlite_result_rewrite_count)
+#define syntaqlite_result_root SYNQ_PREFIXED(syntaqlite_result_root)
+#define syntaqlite_result_tokens SYNQ_PREFIXED(syntaqlite_result_tokens)
+#define syntaqlite_sqlite_dialect SYNQ_PREFIXED(syntaqlite_sqlite_dialect)
+#define syntaqlite_sqlite_dialect_template SYNQ_PREFIXED(syntaqlite_sqlite_dialect_template)
+#define syntaqlite_token_leading_comments SYNQ_PREFIXED(syntaqlite_token_leading_comments)
+#define syntaqlite_token_trailing_comments SYNQ_PREFIXED(syntaqlite_token_trailing_comments)
+#define syntaqlite_tokenizer_create SYNQ_PREFIXED(syntaqlite_tokenizer_create)
+#define syntaqlite_tokenizer_create_sqlite SYNQ_PREFIXED(syntaqlite_tokenizer_create_sqlite)
+#define syntaqlite_tokenizer_create_with_dialect SYNQ_PREFIXED(syntaqlite_tokenizer_create_with_dialect)
+#define syntaqlite_tokenizer_destroy SYNQ_PREFIXED(syntaqlite_tokenizer_destroy)
+#define syntaqlite_tokenizer_next SYNQ_PREFIXED(syntaqlite_tokenizer_next)
+#define syntaqlite_tokenizer_reset SYNQ_PREFIXED(syntaqlite_tokenizer_reset)
+// clang-format on
+
+#endif  // SYNTAQLITE_SYMBOL_PREFIX
+
+#endif  // SYNTAQLITE_SYMBOL_PREFIX_H

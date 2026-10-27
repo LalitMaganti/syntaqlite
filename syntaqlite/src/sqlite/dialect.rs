@@ -96,12 +96,8 @@ impl std::ops::Deref for Dialect {
     }
 }
 
-static DIALECT: LazyLock<AnyDialect> = LazyLock::new(|| {
-    // SAFETY: `syntaqlite_sqlite_dialect()` returns a `SyntaqliteDialect` value
-    // whose `tmpl` field points to a valid static `SyntaqliteDialectTemplate`.
-    // The data lives for the entire program lifetime — effectively `'static`.
-    unsafe { AnyDialect::from_c_dialect(ffi::syntaqlite_sqlite_dialect()) }
-});
+static DIALECT: LazyLock<AnyDialect> =
+    LazyLock::new(|| AnyDialect::from_syntax_dialect(syntaqlite_syntax::typed::dialect().into()));
 
 /// Returns the type-erased `SQLite` dialect handle (cached).
 pub(crate) fn any_dialect() -> AnyDialect {
@@ -111,14 +107,4 @@ pub(crate) fn any_dialect() -> AnyDialect {
 /// Returns the typed `SQLite` dialect handle.
 pub(crate) fn dialect() -> Dialect {
     Dialect { raw: any_dialect() }
-}
-
-// ── ffi ───────────────────────────────────────────────────────────────────────
-
-mod ffi {
-    use crate::dialect::ffi::CDialect;
-
-    unsafe extern "C" {
-        pub(super) fn syntaqlite_sqlite_dialect() -> CDialect;
-    }
 }

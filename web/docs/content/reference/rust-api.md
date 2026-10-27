@@ -21,6 +21,29 @@ SQL. Its Rust API is published as the `syntaqlite` crate.
 | `serde` | `serde::Serialize`/`Deserialize` for AST nodes and diagnostics |
 | `dynload` | Load custom dialects from shared libraries at runtime |
 
+## Linking two versions into one binary
+
+The parser and tokenizer are written in C, and their functions are global
+symbols, so two versions of syntaqlite in one binary clash at link time. Give
+one of them a symbol prefix to avoid this.
+
+With Cargo, set `SYNTAQLITE_SYMBOL_PREFIX` when building:
+
+```bash
+SYNTAQLITE_SYMBOL_PREFIX=syntaqlite_v13_ cargo build
+```
+
+In other build systems such as Bazel, apply the same prefix in two places:
+
+- Compile the C sources in `syntaqlite-syntax/csrc` with
+  `-DSYNTAQLITE_SYMBOL_PREFIX=syntaqlite_v13_`.
+- Build the `syntaqlite-syntax` crate with `--cfg syntaqlite_symbol_prefix`
+  and `SYNTAQLITE_SYMBOL_PREFIX=syntaqlite_v13_` in the rustc environment.
+
+A prefixed build cannot load dialect plugins compiled with
+`-DSYNTAQLITE_OMIT_RUNTIME`, because those plugins look up the runtime by its
+unprefixed names.
+
 ## Formatter
 
 | Type / Method | Description |
