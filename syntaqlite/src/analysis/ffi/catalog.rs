@@ -22,8 +22,7 @@ use crate::analysis::catalog::{Column, TableDef, ViewDef};
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn syntaqlite_analyzer_reset_catalog(v: *mut SyntaqliteAnalyzer) {
     // SAFETY: caller guarantees `v` is valid.
-    let v = unsafe { &mut *v };
-    let state = v.state_mut();
+    let state = unsafe { SyntaqliteAnalyzer::state_mut(v) };
     state.user_catalog = Catalog::new(state.dialect.clone());
     state.analysis_config = AnalysisConfig::default();
 }
@@ -46,8 +45,9 @@ pub unsafe extern "C" fn syntaqlite_analyzer_add_tables(
     count: u32,
 ) {
     // SAFETY: caller guarantees `v` is valid.
-    let v = unsafe { &mut *v };
-    let layer = v.state_mut().user_catalog.layer_mut(CatalogLayer::Database);
+    let layer = unsafe { SyntaqliteAnalyzer::state_mut(v) }
+        .user_catalog
+        .layer_mut(CatalogLayer::Database);
     for i in 0..count as usize {
         // SAFETY: caller guarantees `tables[i]` is valid.
         let def = unsafe { &*tables.add(i) };
@@ -79,8 +79,9 @@ pub unsafe extern "C" fn syntaqlite_analyzer_add_views(
     count: u32,
 ) {
     // SAFETY: caller guarantees `v` is valid.
-    let v = unsafe { &mut *v };
-    let layer = v.state_mut().user_catalog.layer_mut(CatalogLayer::Database);
+    let layer = unsafe { SyntaqliteAnalyzer::state_mut(v) }
+        .user_catalog
+        .layer_mut(CatalogLayer::Database);
     for i in 0..count as usize {
         // SAFETY: caller guarantees `views[i]` is valid.
         let def = unsafe { &*views.add(i) };
@@ -148,8 +149,7 @@ pub unsafe extern "C" fn syntaqlite_analyzer_load_schema_ddl(
     len: u32,
 ) -> u32 {
     // SAFETY: caller guarantees `v` is valid.
-    let v = unsafe { &mut *v };
-    let state = v.state_mut();
+    let state = unsafe { SyntaqliteAnalyzer::state_mut(v) };
 
     // SAFETY: caller guarantees `source` is NULL or points to `len` bytes of
     // valid UTF-8.
@@ -186,8 +186,7 @@ pub unsafe extern "C" fn syntaqlite_analyzer_add_function_overload(
     };
 
     // SAFETY: caller guarantees `v` is valid.
-    let v = unsafe { &mut *v };
-    let state = v.state_mut();
+    let state = unsafe { SyntaqliteAnalyzer::state_mut(v) };
 
     // SAFETY: caller guarantees `name` is a valid NUL-terminated C string.
     let name = unsafe { CStr::from_ptr(name) }
@@ -223,8 +222,7 @@ pub unsafe extern "C" fn syntaqlite_analyzer_add_table_function(
     };
 
     // SAFETY: caller guarantees `v` is valid.
-    let v = unsafe { &mut *v };
-    let state = v.state_mut();
+    let state = unsafe { SyntaqliteAnalyzer::state_mut(v) };
 
     // SAFETY: caller guarantees `name` is a valid NUL-terminated C string.
     let name = unsafe { CStr::from_ptr(name) }

@@ -70,20 +70,30 @@ pub(super) struct AnalyzerState {
 
 /// Opaque C handle — the pointer target of `SyntaqliteAnalyzer*`.
 ///
-/// This is a zero-variant enum so that Rust cannot construct it directly;
-/// all access goes through raw pointer casts to `AnalyzerState`.
-pub enum SyntaqliteAnalyzer {}
+/// Never constructed or referenced in Rust; handle pointers are cast
+/// directly to `AnalyzerState`.
+#[repr(C)]
+pub struct SyntaqliteAnalyzer {
+    _private: [u8; 0],
+}
 
 impl SyntaqliteAnalyzer {
-    pub(super) fn state(&self) -> &AnalyzerState {
-        // SAFETY: `self` was created from a `Box<AnalyzerState>` via
-        // `Box::into_raw` cast in `syntaqlite_analyzer_create_sqlite`.
-        unsafe { &*std::ptr::from_ref::<Self>(self).cast::<AnalyzerState>() }
+    /// # Safety
+    ///
+    /// `v` must be a live pointer from a `syntaqlite_analyzer_create_*`
+    /// function with no mutable borrow of its state alive for `'a`.
+    pub(super) unsafe fn state<'a>(v: *const Self) -> &'a AnalyzerState {
+        // SAFETY: `v` was created from a `Box<AnalyzerState>` via
+        // `Box::into_raw` cast in a `syntaqlite_analyzer_create_*` function.
+        unsafe { &*v.cast::<AnalyzerState>() }
     }
 
-    pub(super) fn state_mut(&mut self) -> &mut AnalyzerState {
-        // SAFETY: `self` was created from a `Box<AnalyzerState>` via
-        // `Box::into_raw` cast in `syntaqlite_analyzer_create_sqlite`.
-        unsafe { &mut *std::ptr::from_mut::<Self>(self).cast::<AnalyzerState>() }
+    /// # Safety
+    ///
+    /// `v` must be a live pointer from a `syntaqlite_analyzer_create_*`
+    /// function with no other borrow of its state alive for `'a`.
+    pub(super) unsafe fn state_mut<'a>(v: *mut Self) -> &'a mut AnalyzerState {
+        // SAFETY: same as above.
+        unsafe { &mut *v.cast::<AnalyzerState>() }
     }
 }

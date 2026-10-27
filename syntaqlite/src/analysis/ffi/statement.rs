@@ -192,7 +192,7 @@ unsafe fn stmt_cache<'a>(
     idx: u32,
 ) -> Option<(&'a StatementAnalysis, &'a mut PerStatementCache)> {
     // SAFETY: caller guarantees `v` is a valid pointer from `syntaqlite_analyzer_create_*`.
-    let state = unsafe { &mut *v }.state_mut();
+    let state = unsafe { SyntaqliteAnalyzer::state_mut(v) };
     let i = idx as usize;
     let model = state.last_model.as_ref()?;
     let stmt = model.statements().get(i)?;
@@ -232,7 +232,7 @@ pub unsafe extern "C" fn syntaqlite_analyzer_statement_source(
 #[expect(clippy::cast_possible_truncation)]
 pub unsafe extern "C" fn syntaqlite_analyzer_statement_count(v: *mut SyntaqliteAnalyzer) -> u32 {
     // SAFETY: caller guarantees `v` is a valid pointer from `syntaqlite_analyzer_create_*`.
-    let state = unsafe { &mut *v }.state_mut();
+    let state = unsafe { SyntaqliteAnalyzer::state_mut(v) };
     state
         .last_model
         .as_ref()

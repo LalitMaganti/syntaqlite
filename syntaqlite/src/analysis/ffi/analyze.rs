@@ -31,8 +31,7 @@ pub unsafe extern "C" fn syntaqlite_analyzer_analyze(
     len: u32,
 ) -> u32 {
     // SAFETY: caller guarantees `v` is valid.
-    let v = unsafe { &mut *v };
-    let state = v.state_mut();
+    let state = unsafe { SyntaqliteAnalyzer::state_mut(v) };
 
     // SAFETY: caller guarantees `source` is NULL or points to `len` bytes of
     // valid UTF-8.
