@@ -1,6 +1,6 @@
 [package]
 name = "syntaqlite-capi"
-version = "0.13.2"
+version = "0.13.3"
 edition = "2024"
 description = "C API for syntaqlite (libsyntaqlite)"
 license = "Apache-2.0"
