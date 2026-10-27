@@ -4,6 +4,7 @@ members = [
     "syntaqlite-common",
     "syntaqlite-syntax",
     "syntaqlite",
+    "syntaqlite-capi",
     "syntaqlite-buildtools",
     "syntaqlite-wasm",
     # temporarily excluded until semantic refactor is complete:

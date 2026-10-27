@@ -8,8 +8,8 @@
 
 use std::ffi::{CString, c_char};
 
-use super::formatter::Formatter;
-use super::{FormatConfig, KeywordCase};
+use syntaqlite::fmt::Formatter;
+use syntaqlite::fmt::{FormatConfig, KeywordCase};
 
 // ── C-compatible config struct ────────────────────────────────────────────
 
@@ -68,15 +68,14 @@ impl SyntaqliteFormatter {
 // ── Config conversion ─────────────────────────────────────────────────────
 
 fn config_from_c(c: &SyntaqliteFormatConfig) -> FormatConfig {
-    FormatConfig {
-        line_width: c.line_width as usize,
-        indent_width: c.indent_width as usize,
-        keyword_case: match c.keyword_case {
+    FormatConfig::default()
+        .with_line_width(c.line_width as usize)
+        .with_indent_width(c.indent_width as usize)
+        .with_keyword_case(match c.keyword_case {
             1 => KeywordCase::Lower,
             _ => KeywordCase::Upper,
-        },
-        semicolons: c.semicolons != 0,
-    }
+        })
+        .with_semicolons(c.semicolons != 0)
 }
 
 /// # Safety
@@ -144,7 +143,7 @@ pub unsafe extern "C" fn syntaqlite_formatter_format(
 
     // SAFETY: caller guarantees `source` is NULL or points to `len` bytes of
     // valid UTF-8.
-    let src = unsafe { crate::dialect::ffi::source_str(source, len) };
+    let src = unsafe { crate::source_str(source, len) };
 
     match state.formatter.format(src) {
         Ok(output) => {
@@ -154,7 +153,7 @@ pub unsafe extern "C" fn syntaqlite_formatter_format(
         }
         Err(e) => {
             state.last_output = None;
-            state.last_error = Some(CString::new(e.message).unwrap_or_default());
+            state.last_error = Some(CString::new(e.message()).unwrap_or_default());
             -1
         }
     }
@@ -229,11 +228,11 @@ pub unsafe extern "C" fn syntaqlite_formatter_error_msg(
 /// - `config` must be NULL or a valid pointer to a `SyntaqliteFormatConfig`.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn syntaqlite_formatter_create_with_dialect(
-    dialect: crate::dialect::ffi::CDialect,
+    dialect: syntaqlite::typed::CDialect,
     config: *const SyntaqliteFormatConfig,
 ) -> *mut SyntaqliteFormatter {
     // SAFETY: caller guarantees `dialect.tmpl` is valid.
-    let any = unsafe { crate::dialect::AnyDialect::from_c_dialect(dialect) };
+    let any = unsafe { syntaqlite::any::AnyDialect::from_c_dialect(dialect) };
     // SAFETY: caller guarantees `config` is NULL or valid.
     let cfg = unsafe { config_from_c_or_default(config) };
     new_state(Formatter::with_dialect_config(any, &cfg))

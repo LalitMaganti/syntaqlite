@@ -5,10 +5,8 @@
 
 use std::ffi::{CString, c_char};
 
-use crate::analysis::AnalysisConfig;
-use crate::analysis::catalog::Catalog;
-use crate::analysis::engine::Analyzer;
-use crate::dialect::AnyDialect;
+use syntaqlite::analysis::{AnalysisConfig, Analyzer, Catalog};
+use syntaqlite::any::AnyDialect;
 
 use super::{AnalyzerState, SyntaqliteAnalyzer};
 
@@ -46,7 +44,7 @@ pub(super) fn create_validator(dialect: AnyDialect) -> *mut SyntaqliteAnalyzer {
 /// `dialect.tmpl` must point to a valid `SyntaqliteDialectTemplate`.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn syntaqlite_analyzer_create_with_dialect(
-    dialect: crate::dialect::ffi::CDialect,
+    dialect: syntaqlite::typed::CDialect,
 ) -> *mut SyntaqliteAnalyzer {
     // SAFETY: caller guarantees `dialect.tmpl` is valid.
     let any = unsafe { AnyDialect::from_c_dialect(dialect) };
@@ -57,7 +55,7 @@ pub unsafe extern "C" fn syntaqlite_analyzer_create_with_dialect(
 #[cfg(feature = "sqlite")]
 #[unsafe(no_mangle)]
 pub extern "C" fn syntaqlite_analyzer_create_sqlite() -> *mut SyntaqliteAnalyzer {
-    let dialect: AnyDialect = crate::sqlite_dialect().into();
+    let dialect: AnyDialect = syntaqlite::sqlite_dialect().into();
     create_validator(dialect)
 }
 

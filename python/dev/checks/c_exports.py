@@ -26,7 +26,7 @@ ROOT = Path(__file__).parent.parent.parent.parent  # repo root
 MANIFEST = ROOT / "tests" / "c_api" / "api-manifest.json"
 PUBLIC_INCLUDE_DIRS = [
     ROOT / "syntaqlite-syntax" / "include",
-    ROOT / "syntaqlite" / "include",
+    ROOT / "syntaqlite-capi" / "include",
 ]
 
 _COMMENT = re.compile(r"//[^\n]*|/\*.*?\*/", re.S)

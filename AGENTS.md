@@ -73,6 +73,7 @@ Use `/cpfast` for the same without pre-push checks (CI will catch issues).
   - `src/sqlite/` - SQLite dialect (AST, tokens, wrappers), feature="sqlite"
   - `src/validation/` - Semantic validation (schema checks, fuzzy suggestions), feature="validation"
   - Features: `default=["sqlite","fmt","validation"]`, `lsp`, `validation`, `pin-version`, `pin-cflags`
+- `syntaqlite-capi/` - C API (`include/syntaqlite/{formatter,analysis,rpc}.h`), built as `libsyntaqlite`. Not published to crates.io.
 - `syntaqlite-buildtools/` - Bootstrap and codegen tool (library + binary):
   - `util/` - Shared utilities (parsers, C/Rust writers, case conversion, tool_run)
   - `dialect_codegen/` - `.synq` → C/Rust codegen (AST model, node/meta/dialect/fmt codegen)

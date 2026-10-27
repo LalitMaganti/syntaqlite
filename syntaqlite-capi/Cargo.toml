@@ -1,0 +1,28 @@
+[package]
+name = "syntaqlite-capi"
+version = "0.13.2"
+edition = "2024"
+description = "C API for syntaqlite (libsyntaqlite)"
+license = "Apache-2.0"
+repository.workspace = true
+homepage.workspace = true
+publish = false
+
+[package.metadata.dist]
+dist = false
+
+[lib]
+name = "syntaqlite"
+crate-type = ["staticlib", "cdylib"]
+doc = false
+
+[features]
+default = ["sqlite"]
+sqlite = ["syntaqlite/sqlite"]
+dynload = ["syntaqlite/dynload"]
+
+[lints]
+workspace = true
+
+[dependencies]
+syntaqlite = { path = "../syntaqlite", default-features = false, features = ["fmt", "analysis", "rpc"] }

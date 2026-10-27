@@ -7,8 +7,7 @@
 
 use std::ffi::{CString, c_char};
 
-use crate::analysis::lineage::RelationKind;
-use crate::analysis::model::StatementAnalysis;
+use syntaqlite::analysis::{RelationKind, StatementAnalysis};
 
 use super::codes::{diagnostic_code_to_c, severity_to_c};
 use super::{

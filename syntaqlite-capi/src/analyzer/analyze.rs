@@ -5,9 +5,7 @@
 
 use std::ffi::{CString, c_char};
 
-use crate::analysis::AnalysisContext;
-use crate::analysis::lineage::RelationKind;
-use crate::analysis::model::Analysis;
+use syntaqlite::analysis::{Analysis, AnalysisContext, RelationKind};
 
 use super::codes::{diagnostic_code_to_c, severity_to_c};
 use super::{
@@ -35,7 +33,7 @@ pub unsafe extern "C" fn syntaqlite_analyzer_analyze(
 
     // SAFETY: caller guarantees `source` is NULL or points to `len` bytes of
     // valid UTF-8.
-    let src = unsafe { crate::dialect::ffi::source_str(source, len) };
+    let src = unsafe { crate::source_str(source, len) };
 
     let mut ctx = AnalysisContext::new(&mut state.user_catalog).with_config(state.analysis_config);
     if let Some(r) = state.resolver.as_deref() {

@@ -1055,6 +1055,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "syntaqlite-capi"
+version = "0.13.2"
+dependencies = [
+ "syntaqlite",
+]
+
+[[package]]
 name = "syntaqlite-cli"
 version = "0.13.2"
 dependencies = [

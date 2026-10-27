@@ -113,8 +113,7 @@ def main() -> int:
     rc = subprocess.call(
         [
             sys.executable, cargo, "--no-sysroot", "--hermetic",
-            "rustc", "-p", "syntaqlite", "--release", "--target", TARGET,
-            "--no-default-features", "--features", "rpc,sqlite,fmt,analysis",
+            "rustc", "-p", "syntaqlite-capi", "--release", "--target", TARGET,
             "--crate-type", "cdylib",
         ],
         cwd=ROOT_DIR, env=env,

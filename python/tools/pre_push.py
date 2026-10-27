@@ -580,8 +580,8 @@ def _run(fix: bool, verbosity: int, run_all: bool, cargo: Callable[..., list[str
     # build so a stale target/release copy is never used.
     if flags["run_api"]:
         r = run_step(
-            "cargo build -p syntaqlite --features rpc,dynload",
-            cargo("build", "-p", "syntaqlite", "--features", "rpc,dynload"),
+            "cargo build -p syntaqlite-capi --features dynload",
+            cargo("build", "-p", "syntaqlite-capi", "--features", "dynload"),
             verbosity,
         )
         if not r.ok:
@@ -592,7 +592,7 @@ def _run(fix: bool, verbosity: int, run_all: bool, cargo: Callable[..., list[str
         os.environ.setdefault("SYNTAQLITE_FFI_LIB", os.path.join(debug_dir, lib_name))
         os.environ.setdefault("SYNTAQLITE_STATIC_LIB", os.path.join(debug_dir, "libsyntaqlite.a"))
     else:
-        _skip("cargo build -p syntaqlite --features rpc,dynload")
+        _skip("cargo build -p syntaqlite-capi --features dynload")
 
     if need_rust:
         r = run_step("tools/run-unit-tests", [_tool("run-unit-tests")], verbosity)

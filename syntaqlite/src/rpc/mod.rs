@@ -47,9 +47,6 @@ use crate::{
     AnalysisConfig, AnalysisContext, Analyzer, Catalog, Diagnostic, FormatConfig, Formatter,
 };
 
-/// JSON-RPC C API (`include/syntaqlite/rpc.h`).
-pub(crate) mod ffi;
-
 /// A long-lived RPC session bundling the workers reused across requests.
 ///
 /// Parser, tokenizer, and analyzer are stateless between requests; the
@@ -752,7 +749,7 @@ impl Serialize for UnexpandedViewsSeq<'_> {
     }
 }
 
-// Keep in sync with `syntaqlite/src/analysis/ffi/codes.rs` — Python maps
+// Keep in sync with `syntaqlite-capi/src/analyzer/codes.rs` — Python maps
 // these back via `DiagnosticCode(d["code"])`.
 const DIAG_CODE_PARSE_ERROR: u32 = 0;
 const DIAG_CODE_UNKNOWN_TABLE: u32 = 1;

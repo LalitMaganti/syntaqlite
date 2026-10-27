@@ -3,11 +3,11 @@
 
 //! C-ABI numeric codes for severity, diagnostic kind, check level,
 //! function category, and arity spec. Must match the definitions in
-//! `syntaqlite/include/syntaqlite/analysis.h`.
+//! `include/syntaqlite/analysis.h`.
 
-use crate::analysis::CheckLevel;
-use crate::analysis::catalog::{AritySpec, ColumnKind, FunctionCategory};
-use crate::analysis::diagnostics::{DiagnosticMessage, Severity};
+use syntaqlite::analysis::{
+    AritySpec, CheckLevel, ColumnKind, DiagnosticMessage, FunctionCategory, Severity,
+};
 
 pub(super) const SEVERITY_ERROR: u32 = 0;
 pub(super) const SEVERITY_WARNING: u32 = 1;

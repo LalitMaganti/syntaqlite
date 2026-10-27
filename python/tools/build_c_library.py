@@ -77,7 +77,7 @@ def _build_with_rustc_exports(
     system: str,
     verbose: bool,
 ) -> Path:
-    command = _cargo() + ["rustc", "-p", "syntaqlite", "--features", "rpc,dynload"]
+    command = _cargo() + ["rustc", "-p", "syntaqlite-capi", "--features", "dynload"]
     if release:
         command.append("--release")
     if target:
@@ -104,7 +104,7 @@ def _build_with_rustc_exports(
 def _build_linux(
     symbols: list[str], *, release: bool, target: str | None, verbose: bool
 ) -> Path:
-    command = _cargo() + ["build", "-p", "syntaqlite", "--features", "rpc,dynload"]
+    command = _cargo() + ["build", "-p", "syntaqlite-capi", "--features", "dynload"]
     if release:
         command.append("--release")
     if target:

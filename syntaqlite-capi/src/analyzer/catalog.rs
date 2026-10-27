@@ -6,13 +6,12 @@
 
 use std::ffi::{CStr, c_char};
 
-use crate::analysis::AnalysisConfig;
-use crate::analysis::catalog::{Catalog, CatalogLayer};
+use syntaqlite::analysis::{AnalysisConfig, Catalog, CatalogLayer};
 
 use super::SyntaqliteAnalyzer;
 use super::codes::{arity_spec_from_c, column_kind_from_c, function_category_from_c};
 use super::types::{SyntaqliteColumnDef, SyntaqliteTableDef, SyntaqliteViewDef};
-use crate::analysis::catalog::{Column, TableDef, ViewDef};
+use syntaqlite::analysis::{Column, TableDef, ViewDef};
 
 /// Clear accumulated DDL from the catalog.
 ///
@@ -153,7 +152,7 @@ pub unsafe extern "C" fn syntaqlite_analyzer_load_schema_ddl(
 
     // SAFETY: caller guarantees `source` is NULL or points to `len` bytes of
     // valid UTF-8.
-    let src = unsafe { crate::dialect::ffi::source_str(source, len) };
+    let src = unsafe { crate::source_str(source, len) };
 
     let (catalog, errors) = Catalog::from_ddl(state.dialect.clone(), &[src]);
     state

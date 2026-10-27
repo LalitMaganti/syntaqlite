@@ -3,7 +3,7 @@
 
 //! JSON-RPC C API (`include/syntaqlite/rpc.h`).
 //!
-//! Wires the parent [`crate::rpc`] dispatch onto a C boundary: one UTF-8 JSON
+//! Wires the parent [`syntaqlite::rpc`] dispatch onto a C boundary: one UTF-8 JSON
 //! request in, one UTF-8 JSON envelope out, plus an opaque session handle. The
 //! same protocol as the CLI's `serve json`, for in-process embedding (the
 //! Python bindings load the cdylib via ctypes; any C/C++ host works too).
@@ -16,7 +16,7 @@
 use std::os::raw::c_char;
 use std::panic::{self, AssertUnwindSafe};
 
-use crate::rpc::{self, RpcSession};
+use syntaqlite::rpc::{self, RpcSession};
 
 /// Opaque handle backing a `Box<RpcSession>`. Zero-variant so Rust can't
 /// construct it; accessed only via pointer casts, like `SyntaqliteAnalyzer`.
@@ -31,7 +31,7 @@ const PANIC_ENVELOPE: &[u8] = br#"{"ok":false,"error":"internal panic during rpc
 #[unsafe(no_mangle)]
 pub(crate) extern "C" fn syntaqlite_rpc_create_sqlite() -> *mut SyntaqliteRpc {
     panic::catch_unwind(|| {
-        let dialect = crate::sqlite_dialect().erase();
+        let dialect = syntaqlite::sqlite_dialect().erase();
         Box::into_raw(Box::new(RpcSession::new(&dialect))).cast::<SyntaqliteRpc>()
     })
     .unwrap_or(std::ptr::null_mut())
@@ -78,7 +78,7 @@ pub(crate) unsafe extern "C" fn syntaqlite_rpc_create_dialect(
                 Err(_) => return std::ptr::null_mut(),
             }
         };
-        match crate::any::AnyDialect::load(path_str, name_str) {
+        match syntaqlite::any::AnyDialect::load(path_str, name_str) {
             Ok(dialect) => {
                 Box::into_raw(Box::new(RpcSession::new(&dialect))).cast::<SyntaqliteRpc>()
             }

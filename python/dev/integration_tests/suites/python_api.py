@@ -866,7 +866,7 @@ def run(ctx: SuiteContext) -> int:
         if lib is None:
             print(
                 "Error: syntaqlite cdylib not found. Build it with:\n"
-                "  cargo build -p syntaqlite --release --features rpc,dynload",
+                "  cargo build -p syntaqlite-capi --release --features dynload",
                 file=sys.stderr,
             )
             return 1

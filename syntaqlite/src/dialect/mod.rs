@@ -214,7 +214,8 @@ impl AnyDialect {
     ///
     /// `dialect.template` must point to a valid [`ffi::CDialectTemplate`] that
     /// lives at least as long as this `AnyDialect` (and all its clones).
-    pub(crate) unsafe fn from_c_dialect(dialect: ffi::CDialect) -> Self {
+    #[doc(hidden)]
+    pub unsafe fn from_c_dialect(dialect: ffi::CDialect) -> Self {
         // SAFETY: caller guarantees dialect.template is valid.
         let mut inner = unsafe { (*dialect.template).syntax_dialect() };
         inner = inner
@@ -481,29 +482,9 @@ mod tests {
 
 // ── ffi ───────────────────────────────────────────────────────────────────────
 
-/// C-ABI types re-exported from `syntaqlite-syntax`, plus helpers shared by
-/// the formatter and analyzer C APIs.
+/// C-ABI types re-exported from `syntaqlite-syntax`.
 pub(crate) mod ffi {
-    use std::ffi::c_char;
-
     pub(crate) use syntaqlite_syntax::typed::{CDialect, CDialectTemplate};
-
-    /// Borrow a C `(source, len)` buffer as a `&str`, treating NULL as "".
-    ///
-    /// # Safety
-    ///
-    /// If `source` is non-NULL it must point to `len` bytes of valid UTF-8
-    /// that stay alive and unmodified for `'a`.
-    pub(crate) unsafe fn source_str<'a>(source: *const c_char, len: u32) -> &'a str {
-        if source.is_null() {
-            return "";
-        }
-        // SAFETY: caller guarantees non-NULL `source` points to `len` bytes
-        // of valid UTF-8 that live for `'a`.
-        unsafe {
-            std::str::from_utf8_unchecked(std::slice::from_raw_parts(source.cast(), len as usize))
-        }
-    }
 }
 
 /// Extension methods on [`ffi::CDialectTemplate`] for fmt/validation access.

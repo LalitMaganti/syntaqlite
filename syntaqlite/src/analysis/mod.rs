@@ -50,9 +50,6 @@ pub(crate) mod diagnostics;
 #[cfg(feature = "analysis")]
 pub(crate) mod engine;
 #[cfg(feature = "analysis")]
-#[expect(unreachable_pub)]
-pub(crate) mod ffi;
-#[cfg(feature = "analysis")]
 mod lineage;
 #[cfg(feature = "analysis")]
 pub(crate) mod model;
