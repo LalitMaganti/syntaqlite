@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.13.3
+
+**Rust API**
+- Fixed several ways safe code could read freed or out-of-bounds memory, such as holding expanded text or a traceback across another call, or using data from a loaded dialect after the dialect was dropped. `feed_token` now panics on a span that is out of range or splits a character.
+- As part of these fixes, a few rarely used signatures changed: dialect accessors like `node_name`, `field_meta` and `keywords` borrow from the dialect instead of returning `'static` data, parsed statements are no longer `Clone`, and `Dialect` no longer implements `DerefMut`.
+
+**Linking**
+- Two versions of syntaqlite can now be linked into one binary by building one of them with `SYNTAQLITE_SYMBOL_PREFIX`. This also works in build systems other than Cargo.
+
+**C library**
+- `syntaqlite_formatter_format`, `syntaqlite_analyzer_analyze` and `syntaqlite_analyzer_load_schema_ddl` treat a NULL source as empty input, and `syntaqlite_formatter_create_sqlite_with_config` accepts a NULL config.
+- The C library is now built from a separate `syntaqlite-capi` crate, so Rust programs that use `syntaqlite` no longer export its C symbols. The library's files and functions are unchanged.
+
 ## 0.13.2
 
 **Licensing**
