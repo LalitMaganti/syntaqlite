@@ -23,8 +23,7 @@ use super::{
 #[expect(clippy::cast_possible_truncation)]
 pub unsafe extern "C" fn syntaqlite_analyzer_diagnostic_count(v: *const SyntaqliteAnalyzer) -> u32 {
     // SAFETY: caller guarantees `v` is valid.
-    let v = unsafe { &*v };
-    v.state().c_diagnostics.len() as u32
+    unsafe { SyntaqliteAnalyzer::state(v) }.c_diagnostics.len() as u32
 }
 
 /// Pointer to the diagnostic array from the last `analyze()` call.
@@ -39,8 +38,7 @@ pub unsafe extern "C" fn syntaqlite_analyzer_diagnostics(
     v: *const SyntaqliteAnalyzer,
 ) -> *const SyntaqliteDiagnostic {
     // SAFETY: caller guarantees `v` is valid.
-    let v = unsafe { &*v };
-    let state = v.state();
+    let state = unsafe { SyntaqliteAnalyzer::state(v) };
     if state.c_diagnostics.is_empty() {
         std::ptr::null()
     } else {
@@ -68,8 +66,7 @@ pub unsafe extern "C" fn syntaqlite_analyzer_render_diagnostics(
     file: *const c_char,
 ) -> *const c_char {
     // SAFETY: caller guarantees `v` is valid.
-    let v = unsafe { &mut *v };
-    let state = v.state_mut();
+    let state = unsafe { SyntaqliteAnalyzer::state_mut(v) };
 
     if state.last_diagnostics.is_empty() {
         state.rendered_output = CString::default();
@@ -102,8 +99,7 @@ pub unsafe extern "C" fn syntaqlite_analyzer_render_diagnostics(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn syntaqlite_analyzer_lineage_complete(v: *const SyntaqliteAnalyzer) -> u32 {
     // SAFETY: caller guarantees `v` is valid.
-    let v = unsafe { &*v };
-    u32::from(v.state().lineage_complete)
+    u32::from(unsafe { SyntaqliteAnalyzer::state(v) }.lineage_complete)
 }
 
 /// Number of result columns with lineage information.
@@ -117,8 +113,9 @@ pub unsafe extern "C" fn syntaqlite_analyzer_column_lineage_count(
     v: *const SyntaqliteAnalyzer,
 ) -> u32 {
     // SAFETY: caller guarantees `v` is valid.
-    let v = unsafe { &*v };
-    v.state().c_column_lineage.len() as u32
+    unsafe { SyntaqliteAnalyzer::state(v) }
+        .c_column_lineage
+        .len() as u32
 }
 
 /// Pointer to the column lineage array. Returns NULL when count is 0.
@@ -132,8 +129,7 @@ pub unsafe extern "C" fn syntaqlite_analyzer_column_lineage(
     v: *const SyntaqliteAnalyzer,
 ) -> *const SyntaqliteColumnLineage {
     // SAFETY: caller guarantees `v` is valid.
-    let v = unsafe { &*v };
-    let state = v.state();
+    let state = unsafe { SyntaqliteAnalyzer::state(v) };
     if state.c_column_lineage.is_empty() {
         std::ptr::null()
     } else {
@@ -150,8 +146,7 @@ pub unsafe extern "C" fn syntaqlite_analyzer_column_lineage(
 #[expect(clippy::cast_possible_truncation)]
 pub unsafe extern "C" fn syntaqlite_analyzer_relation_count(v: *const SyntaqliteAnalyzer) -> u32 {
     // SAFETY: caller guarantees `v` is valid.
-    let v = unsafe { &*v };
-    v.state().c_relations.len() as u32
+    unsafe { SyntaqliteAnalyzer::state(v) }.c_relations.len() as u32
 }
 
 /// Pointer to the relation access array. Returns NULL when count is 0.
@@ -165,8 +160,7 @@ pub unsafe extern "C" fn syntaqlite_analyzer_relations(
     v: *const SyntaqliteAnalyzer,
 ) -> *const SyntaqliteRelationAccess {
     // SAFETY: caller guarantees `v` is valid.
-    let v = unsafe { &*v };
-    let state = v.state();
+    let state = unsafe { SyntaqliteAnalyzer::state(v) };
     if state.c_relations.is_empty() {
         std::ptr::null()
     } else {
@@ -185,8 +179,9 @@ pub unsafe extern "C" fn syntaqlite_analyzer_physical_table_count(
     v: *const SyntaqliteAnalyzer,
 ) -> u32 {
     // SAFETY: caller guarantees `v` is valid.
-    let v = unsafe { &*v };
-    v.state().c_physical_tables.len() as u32
+    unsafe { SyntaqliteAnalyzer::state(v) }
+        .c_physical_tables
+        .len() as u32
 }
 
 /// Pointer to the physical table array. Returns NULL when count is 0.
@@ -200,8 +195,7 @@ pub unsafe extern "C" fn syntaqlite_analyzer_physical_tables(
     v: *const SyntaqliteAnalyzer,
 ) -> *const SyntaqlitePhysicalTableAccess {
     // SAFETY: caller guarantees `v` is valid.
-    let v = unsafe { &*v };
-    let state = v.state();
+    let state = unsafe { SyntaqliteAnalyzer::state(v) };
     if state.c_physical_tables.is_empty() {
         std::ptr::null()
     } else {
@@ -221,8 +215,9 @@ pub unsafe extern "C" fn syntaqlite_analyzer_unexpanded_view_count(
     v: *const SyntaqliteAnalyzer,
 ) -> u32 {
     // SAFETY: caller guarantees `v` is valid.
-    let v = unsafe { &*v };
-    v.state().c_unexpanded_views.len() as u32
+    unsafe { SyntaqliteAnalyzer::state(v) }
+        .c_unexpanded_views
+        .len() as u32
 }
 
 /// Pointer to the unexpanded views array. Returns NULL when count is 0.
@@ -236,8 +231,7 @@ pub unsafe extern "C" fn syntaqlite_analyzer_unexpanded_views(
     v: *const SyntaqliteAnalyzer,
 ) -> *const SyntaqliteUnexpandedView {
     // SAFETY: caller guarantees `v` is valid.
-    let v = unsafe { &*v };
-    let state = v.state();
+    let state = unsafe { SyntaqliteAnalyzer::state(v) };
     if state.c_unexpanded_views.is_empty() {
         std::ptr::null()
     } else {

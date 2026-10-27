@@ -37,20 +37,31 @@ struct FormatterState {
 
 /// Opaque C handle — the pointer target of `SyntaqliteFormatter*`.
 ///
-/// Zero-variant enum so Rust cannot construct it directly; all access goes
-/// through raw pointer casts to `FormatterState`.
-pub enum SyntaqliteFormatter {}
+/// Never constructed or referenced in Rust; handle pointers are cast
+/// directly to `FormatterState`.
+#[repr(C)]
+pub struct SyntaqliteFormatter {
+    _private: [u8; 0],
+}
 
 impl SyntaqliteFormatter {
-    fn state(&self) -> &FormatterState {
-        // SAFETY: `self` was created from a `Box<FormatterState>` via
+    /// # Safety
+    ///
+    /// `f` must be a live pointer from a `syntaqlite_formatter_create_*`
+    /// function with no mutable borrow of its state alive for `'a`.
+    unsafe fn state<'a>(f: *const Self) -> &'a FormatterState {
+        // SAFETY: `f` was created from a `Box<FormatterState>` via
         // `Box::into_raw` cast in a `syntaqlite_formatter_create_*` function.
-        unsafe { &*std::ptr::from_ref::<Self>(self).cast::<FormatterState>() }
+        unsafe { &*f.cast::<FormatterState>() }
     }
 
-    fn state_mut(&mut self) -> &mut FormatterState {
+    /// # Safety
+    ///
+    /// `f` must be a live pointer from a `syntaqlite_formatter_create_*`
+    /// function with no other borrow of its state alive for `'a`.
+    unsafe fn state_mut<'a>(f: *mut Self) -> &'a mut FormatterState {
         // SAFETY: same as above.
-        unsafe { &mut *std::ptr::from_mut::<Self>(self).cast::<FormatterState>() }
+        unsafe { &mut *f.cast::<FormatterState>() }
     }
 }
 
@@ -129,8 +140,7 @@ pub unsafe extern "C" fn syntaqlite_formatter_format(
     len: u32,
 ) -> i32 {
     // SAFETY: caller guarantees `f` is valid.
-    let f = unsafe { &mut *f };
-    let state = f.state_mut();
+    let state = unsafe { SyntaqliteFormatter::state_mut(f) };
 
     // SAFETY: caller guarantees `source` is NULL or points to `len` bytes of
     // valid UTF-8.
@@ -164,8 +174,8 @@ pub unsafe extern "C" fn syntaqlite_formatter_output(
     f: *const SyntaqliteFormatter,
 ) -> *const c_char {
     // SAFETY: caller guarantees `f` is valid.
-    let f = unsafe { &*f };
-    match &f.state().last_output {
+    let state = unsafe { SyntaqliteFormatter::state(f) };
+    match &state.last_output {
         Some(s) => s.as_ptr(),
         None => std::ptr::null(),
     }
@@ -181,8 +191,8 @@ pub unsafe extern "C" fn syntaqlite_formatter_output(
 #[expect(clippy::cast_possible_truncation)]
 pub unsafe extern "C" fn syntaqlite_formatter_output_len(f: *const SyntaqliteFormatter) -> u32 {
     // SAFETY: caller guarantees `f` is valid.
-    let f = unsafe { &*f };
-    match &f.state().last_output {
+    let state = unsafe { SyntaqliteFormatter::state(f) };
+    match &state.last_output {
         Some(s) => s.as_bytes().len() as u32,
         None => 0,
     }
@@ -202,8 +212,8 @@ pub unsafe extern "C" fn syntaqlite_formatter_error_msg(
     f: *const SyntaqliteFormatter,
 ) -> *const c_char {
     // SAFETY: caller guarantees `f` is valid.
-    let f = unsafe { &*f };
-    match &f.state().last_error {
+    let state = unsafe { SyntaqliteFormatter::state(f) };
+    match &state.last_error {
         Some(s) => s.as_ptr(),
         None => std::ptr::null(),
     }

@@ -22,8 +22,7 @@ use super::codes::check_level_from_c;
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn syntaqlite_analyzer_set_mode(v: *mut SyntaqliteAnalyzer, mode: u32) {
     // SAFETY: caller guarantees `v` is a valid pointer from `syntaqlite_analyzer_create_sqlite`.
-    let v = unsafe { &mut *v };
-    let state = v.state_mut();
+    let state = unsafe { SyntaqliteAnalyzer::state_mut(v) };
     state.analyzer.set_mode(match mode {
         1 => AnalysisMode::Execute,
         _ => AnalysisMode::Document,
@@ -61,7 +60,7 @@ pub unsafe extern "C" fn syntaqlite_analyzer_set_check_level(
         return -1;
     };
     // SAFETY: caller guarantees `v` is a valid pointer.
-    let state = unsafe { &mut *v }.state_mut();
+    let state = unsafe { SyntaqliteAnalyzer::state_mut(v) };
     let checks = state.analysis_config.checks();
     match checks.set_by_name(name_str, cl) {
         Ok(new_checks) => {
@@ -88,7 +87,7 @@ pub unsafe extern "C" fn syntaqlite_analyzer_set_strict_schema(
         return;
     }
     // SAFETY: caller guarantees `v` is a valid pointer.
-    let state = unsafe { &mut *v }.state_mut();
+    let state = unsafe { SyntaqliteAnalyzer::state_mut(v) };
     if enabled != 0 {
         state.analysis_config = state.analysis_config.with_strict_schema();
     } else {
@@ -112,7 +111,7 @@ pub unsafe extern "C" fn syntaqlite_analyzer_set_suggestion_threshold(
         return;
     }
     // SAFETY: caller guarantees `v` is a valid pointer.
-    let state = unsafe { &mut *v }.state_mut();
+    let state = unsafe { SyntaqliteAnalyzer::state_mut(v) };
     state.analysis_config = state
         .analysis_config
         .with_suggestion_threshold(threshold as usize);
@@ -177,8 +176,7 @@ pub unsafe extern "C" fn syntaqlite_analyzer_set_module_resolver(
     user_data: *mut std::ffi::c_void,
 ) {
     // SAFETY: caller guarantees `v` is a valid pointer from `syntaqlite_analyzer_create_*`.
-    let v = unsafe { &mut *v };
-    let state = v.state_mut();
+    let state = unsafe { SyntaqliteAnalyzer::state_mut(v) };
     state.resolver = resolve_fn.map(|f| -> Box<dyn crate::analysis::ModuleResolver> {
         Box::new(CCallbackResolver {
             resolve_fn: f,
