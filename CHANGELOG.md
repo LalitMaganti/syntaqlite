@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.13.5
+
+**Rust API**
+- `AnyDialect::from_c_dialect_ptr` now takes a `&'static CDialectTemplate` reference instead of a raw pointer, and `AnyDialect::load` returns an error if the dialect symbol returns a null template pointer.
+
 ## 0.13.4
 
 **Rust API**
