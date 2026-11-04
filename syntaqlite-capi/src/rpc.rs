@@ -42,8 +42,11 @@ pub(crate) extern "C" fn syntaqlite_rpc_create_sqlite() -> *mut SyntaqliteRpc {
 ///
 /// # Safety
 ///
-/// `path` must be valid for `path_len` bytes; `name`, if non-null, for
-/// `name_len` bytes.
+/// - `path` must be valid for `path_len` bytes; `name`, if non-null, for
+///   `name_len` bytes.
+/// - The shared library at `path` must satisfy [`syntaqlite::any::AnyDialect::load`]'s
+///   safety requirements (benign library load/unload hooks and a valid dialect
+///   template symbol matching the `syntaqlite` C ABI).
 #[cfg(feature = "dynload")]
 #[unsafe(no_mangle)]
 pub(crate) unsafe extern "C" fn syntaqlite_rpc_create_dialect(
@@ -78,7 +81,8 @@ pub(crate) unsafe extern "C" fn syntaqlite_rpc_create_dialect(
                 Err(_) => return std::ptr::null_mut(),
             }
         };
-        match syntaqlite::any::AnyDialect::load(path_str, name_str) {
+        // SAFETY: caller upholds `AnyDialect::load`'s safety contract for `path`.
+        match unsafe { syntaqlite::any::AnyDialect::load(path_str, name_str) } {
             Ok(dialect) => {
                 Box::into_raw(Box::new(RpcSession::new(&dialect))).cast::<SyntaqliteRpc>()
             }
