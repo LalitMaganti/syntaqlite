@@ -175,7 +175,9 @@ fn dispatch(cli: Cli, default_dialect: Option<AnyDialect>) -> Result<(), String>
     #[cfg(feature = "dynload")]
     let base = match dialect_path {
         Some(path) => Some(
-            AnyDialect::load(&path, dialect_name.as_deref()).unwrap_or_else(|e| {
+            // SAFETY: `--dialect` is an explicit user-supplied shared library
+            // path expected to export a valid syntaqlite dialect template ABI.
+            unsafe { AnyDialect::load(&path, dialect_name.as_deref()) }.unwrap_or_else(|e| {
                 eprintln!("error: {e}");
                 std::process::exit(1);
             }),
