@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.13.4
+
+**Rust API**
+- `AnyDialect::load` is now `unsafe`, since loading a shared library runs its initialization code and assumes the dialect symbol matches the expected C ABI.
+- Dialect table accessors now check for null pointers and out-of-bounds indices when reading optional formatter and validation sections.
+
 ## 0.13.3
 
 **Rust API**
