@@ -171,17 +171,21 @@ pub struct AnyDialect {
     /// The syntax dialect, which also owns the `SyntaqliteDialectTemplate`
     /// this handle reads formatter/analysis tables from (and, for loaded
     /// dialects, keeps the library alive).
-    // Safety invariant: `inner.template_ptr()` points to a well-formed
-    // `CDialectTemplate` whose data tables remain valid and immutable for as
-    // long as `inner` is alive. Specifically, for every non-zero `*_count`
-    // field in the template:
+    // Safety invariant: `inner.template_ptr()` points to a valid, immutable,
+    // well-formed `CDialectTemplate` whose data tables remain valid and
+    // immutable for as long as `inner` is alive. Specifically, whenever a
+    // `*_count` field in the template is non-zero, its corresponding pointer is
+    // non-null, properly aligned, and valid for reads of that many elements
+    // (when `*_count == 0`, the pointer may be null):
     // - `roles_data` points to `roles_count` valid `SemanticRole` values.
     // - `macro_defs_data` points to `macro_defs_count` valid `MacroDef` values.
     // - `fmt_dispatch` points to `fmt_dispatch_count` `u32` entries.
     // - `fmt_ops` points to `fmt_ops_count` bytes.
     // - `fmt_str_offsets` points to `fmt_str_count + 1` monotonically
-    //   non-decreasing byte offsets into `fmt_str_data`, and `fmt_str_data`
-    //   points to valid UTF-8 bytes covering `0..fmt_str_offsets[fmt_str_count]`.
+    //   non-decreasing byte offsets into `fmt_str_data`, and (when the final
+    //   offset `fmt_str_offsets[fmt_str_count]` is non-zero) `fmt_str_data` is
+    //   non-null and points to valid UTF-8 bytes covering
+    //   `0..fmt_str_offsets[fmt_str_count]`.
     // - `fmt_enum_display` points to `fmt_enum_display_count` `u16` entries.
     // - `fmt_prec_table` points to `fmt_prec_table_count` bytes.
     // - `fmt_expr_meta` points to `fmt_expr_meta_count` `u32` entries.
@@ -200,20 +204,34 @@ const _: () = {
 };
 
 impl AnyDialect {
-    /// Construct from a pointer to the dialect's static template data.
+    /// Construct from a reference to the dialect's static template data.
     ///
     /// Derives the syntax dialect handle from the dialect template,
     /// using default version (latest) and empty cflags.
     ///
     /// # Safety
     ///
-    /// `data` must point to a valid, `'static`, well-formed
-    /// [`ffi::CDialectTemplate`] whose data tables remain valid and immutable
-    /// for the entire program lifetime.
-    pub(crate) unsafe fn from_data(data: *const ffi::CDialectTemplate) -> Self {
-        // SAFETY: The caller guarantees `data` points to a valid `'static`
-        // `CDialectTemplate`.
-        let inner = unsafe { SyntaxDialect::from_dialect_template(data) };
+    /// While the `&'static` reference guarantees the [`ffi::CDialectTemplate`]
+    /// struct itself is valid for the program lifetime, `CDialectTemplate` is a
+    /// `#[repr(C)]` FFI struct whose fields are raw pointers and counts. The
+    /// caller must ensure `data` is well-formed (as produced by
+    /// `syntaqlite-buildtools`) and that all of its data tables remain valid and
+    /// immutable for `'static`:
+    /// - For every non-zero `*_count` field (`roles_count`, `macro_defs_count`,
+    ///   `fmt_dispatch_count`, `fmt_ops_count`, `fmt_str_count`,
+    ///   `fmt_enum_display_count`, `fmt_prec_table_count`,
+    ///   `fmt_expr_meta_count`), the corresponding pointer is non-null,
+    ///   properly aligned, and valid for reads of that many elements (or
+    ///   `fmt_str_count + 1` offsets for `fmt_str_offsets` and
+    ///   `0..fmt_str_offsets[fmt_str_count]` valid UTF-8 bytes for
+    ///   `fmt_str_data`).
+    /// - All syntax-level tables and function pointers required by
+    ///   [`SyntaxDialect::from_dialect_template`] are valid.
+    pub(crate) unsafe fn from_data(data: &'static ffi::CDialectTemplate) -> Self {
+        // SAFETY: `data` is a `'static` reference, and the caller guarantees its
+        // internal raw table and function pointers satisfy `SyntaxDialect` and
+        // `AnyDialect`'s safety invariants for `'static`.
+        let inner = unsafe { SyntaxDialect::from_dialect_template(std::ptr::from_ref(data)) };
         AnyDialect {
             inner,
             ext_cflags: crate::util::SqliteFlags::default(),
@@ -228,12 +246,15 @@ impl AnyDialect {
     /// # Safety
     ///
     /// `dialect.template` must point to a valid, well-formed
-    /// [`ffi::CDialectTemplate`] whose data tables remain valid and immutable
-    /// for at least as long as this `AnyDialect` (and all its clones).
+    /// [`ffi::CDialectTemplate`] (satisfying the table pointer/count invariants
+    /// documented on [`Self::from_c_dialect_ptr`]) whose data tables remain
+    /// valid and immutable for at least as long as this `AnyDialect` (and all
+    /// its clones).
     #[doc(hidden)]
     pub unsafe fn from_c_dialect(dialect: ffi::CDialect) -> Self {
-        // SAFETY: The caller guarantees `dialect.template` points to a valid
-        // `CDialectTemplate` for the lifetime of the returned `AnyDialect`.
+        // SAFETY: The caller guarantees `dialect.template` points to a valid,
+        // well-formed `CDialectTemplate` for the lifetime of the returned
+        // `AnyDialect`.
         let mut inner = unsafe { SyntaxDialect::from_dialect_template(dialect.template) };
         inner = inner
             .with_version(SqliteVersion::from_int(dialect.sqlite_version))
@@ -272,12 +293,19 @@ impl AnyDialect {
     pub(crate) fn roles(&self) -> &[SemanticRole] {
         const { assert!(align_of::<SemanticRole>() == 1) };
         let raw = self.template();
-        if raw.roles_count == 0 || raw.roles_data.is_null() {
+        if raw.roles_count == 0 {
             return &[];
         }
-        // SAFETY: `raw.roles_data` is non-null, `SemanticRole` has alignment 1,
-        // and by `AnyDialect`'s safety invariant `roles_data` points to
-        // `roles_count` valid `SemanticRole` values that live as long as `self`.
+        assert!(
+            !raw.roles_data.is_null(),
+            "roles_data is null with non-zero roles_count ({})",
+            raw.roles_count,
+        );
+        // SAFETY: The early return above ensures `raw.roles_count > 0`, and the
+        // assert ensures `raw.roles_data` is non-null. Because `raw.roles_count`
+        // is non-zero, `AnyDialect`'s safety invariant guarantees that
+        // `raw.roles_data` points to `raw.roles_count` valid `SemanticRole`
+        // values (alignment 1) that live at least as long as `self`.
         unsafe {
             std::slice::from_raw_parts(
                 raw.roles_data.cast::<SemanticRole>(),
@@ -293,12 +321,20 @@ impl AnyDialect {
     pub(crate) fn macro_defs(&self) -> &[MacroDef] {
         const { assert!(align_of::<MacroDef>() == 1) };
         let raw = self.template();
-        if raw.macro_defs_count == 0 || raw.macro_defs_data.is_null() {
+        if raw.macro_defs_count == 0 {
             return &[];
         }
-        // SAFETY: `raw.macro_defs_data` is non-null, `MacroDef` has alignment 1,
-        // and by `AnyDialect`'s safety invariant `macro_defs_data` points to
-        // `macro_defs_count` valid `MacroDef` values that live as long as `self`.
+        assert!(
+            !raw.macro_defs_data.is_null(),
+            "macro_defs_data is null with non-zero macro_defs_count ({})",
+            raw.macro_defs_count,
+        );
+        // SAFETY: The early return above ensures `raw.macro_defs_count > 0`, and
+        // the assert ensures `raw.macro_defs_data` is non-null. Because
+        // `raw.macro_defs_count` is non-zero, `AnyDialect`'s safety invariant
+        // guarantees that `raw.macro_defs_data` points to
+        // `raw.macro_defs_count` valid `MacroDef` values (alignment 1) that live
+        // at least as long as `self`.
         unsafe {
             std::slice::from_raw_parts(
                 raw.macro_defs_data.cast::<MacroDef>(),
@@ -510,8 +546,9 @@ impl AnyDialect {
         self.inner.cflags()
     }
 
-    /// Construct an [`AnyDialect`] from a pointer returned by a dialect's
-    /// `syntaqlite_<name>_dialect()` extern "C" function.
+    /// Construct an [`AnyDialect`] from a reference to a `'static`
+    /// [`ffi::CDialectTemplate`] returned by a dialect's
+    /// `syntaqlite_<name>_dialect_template()` `extern "C"` function.
     ///
     /// **This is only intended for external dialect implementations and WASM side-module
     /// loaders.** Normal application code should use [`crate::sqlite_dialect()`] or the
@@ -519,11 +556,24 @@ impl AnyDialect {
     ///
     /// # Safety
     ///
-    /// `ptr` must point to a valid, `'static`, well-formed [`ffi::CDialectTemplate`]
-    /// whose data tables remain valid and immutable for the entire program lifetime.
-    pub unsafe fn from_c_dialect_ptr(ptr: *const ffi::CDialectTemplate) -> Self {
-        // SAFETY: caller guarantees ptr points to a valid `'static`
-        // `SyntaqliteDialectTemplate`.
+    /// While the `&'static` reference guarantees the [`ffi::CDialectTemplate`]
+    /// struct itself is valid for the program lifetime, `CDialectTemplate` is a
+    /// `#[repr(C)]` FFI struct whose fields are raw pointers and counts. The
+    /// caller must ensure `ptr` is well-formed (as produced by
+    /// `syntaqlite-buildtools`) and that all of its data tables remain valid and
+    /// immutable for `'static`:
+    /// - For every non-zero `*_count` field (`roles_count`, `macro_defs_count`,
+    ///   `fmt_dispatch_count`, `fmt_ops_count`, `fmt_str_count`,
+    ///   `fmt_enum_display_count`, `fmt_prec_table_count`,
+    ///   `fmt_expr_meta_count`), the corresponding pointer is non-null,
+    ///   properly aligned, and valid for reads of that many elements (or
+    ///   `fmt_str_count + 1` offsets for `fmt_str_offsets` and
+    ///   `0..fmt_str_offsets[fmt_str_count]` valid UTF-8 bytes for
+    ///   `fmt_str_data`).
+    /// - All syntax-level tables and function pointers required by
+    ///   [`SyntaxDialect::from_dialect_template`] are valid.
+    pub unsafe fn from_c_dialect_ptr(ptr: &'static ffi::CDialectTemplate) -> Self {
+        // SAFETY: Forwarded from caller; see `# Safety` above.
         unsafe { Self::from_data(ptr) }
     }
 
@@ -534,7 +584,8 @@ impl AnyDialect {
     /// a `SyntaqliteDialectTemplate` struct bundling dialect + all data arrays.
     ///
     /// # Errors
-    /// Returns `Err` if the library cannot be opened or the dialect symbol is absent.
+    /// Returns `Err` if the library cannot be opened, the dialect symbol is
+    /// absent, or the symbol returns a null template pointer.
     ///
     /// # Safety
     ///
@@ -545,9 +596,11 @@ impl AnyDialect {
     ///   `syntaqlite_dialect_template`) exists in the library, it is a function
     ///   with ABI `extern "C" fn() -> *const SyntaqliteDialectTemplate` that is
     ///   sound to call with no arguments.
-    /// - The pointer returned by that function points to a valid, well-formed
-    ///   `SyntaqliteDialectTemplate` whose data tables remain valid and immutable
-    ///   for as long as the library remains loaded.
+    /// - If the pointer returned by that function is non-null, it points to a
+    ///   valid, well-formed `SyntaqliteDialectTemplate` (satisfying the table
+    ///   pointer/count invariants documented on [`Self::from_c_dialect_ptr`])
+    ///   whose data tables remain valid and immutable for as long as the library
+    ///   remains loaded.
     ///
     /// The library stays loaded while any clone of the returned handle, or
     /// any parser/tokenizer/formatter built from one, is alive.
@@ -578,12 +631,16 @@ impl AnyDialect {
                 .map_err(|e| format!("symbol {sym:?} not found in {path:?}: {e}"))?;
             func()
         };
+        if data.is_null() {
+            return Err(format!("{sym:?} returned a null dialect template pointer"));
+        }
 
         let owner: std::sync::Arc<dyn Send + Sync> = std::sync::Arc::new(lib);
-        // SAFETY: The caller guarantees `data` points to a valid, well-formed
-        // `CDialectTemplate` in `lib` that stays valid while `lib` is loaded;
-        // `owner` keeps `lib` loaded for as long as the returned dialect (or any
-        // clone / parser / tokenizer built from it) is alive.
+        // SAFETY: `data` is non-null, and the caller guarantees it points to a
+        // valid, well-formed `CDialectTemplate` in `lib` that stays valid while
+        // `lib` is loaded; `owner` keeps `lib` loaded for as long as the
+        // returned dialect (or any clone / parser / tokenizer built from it) is
+        // alive.
         let inner = unsafe { SyntaxDialect::from_dialect_template_with_owner(data, owner) };
         Ok(AnyDialect {
             inner,
