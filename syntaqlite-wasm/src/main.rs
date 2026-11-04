@@ -75,10 +75,11 @@ impl Session {
             self.dialect = None;
             return;
         }
-        // SAFETY: the pointer was validated in run_set_dialect when stored.
+        // SAFETY: the pointer was validated in run_set_dialect when stored and
+        // points to a static dialect template in the loaded WASM side module.
         let dialect = unsafe {
             AnyDialect::from_c_dialect_ptr(
-                self.dialect_template as *const syntaqlite::any::ffi::CDialectTemplate,
+                &*(self.dialect_template as *const syntaqlite::any::ffi::CDialectTemplate),
             )
         }
         .with_version(self.version)

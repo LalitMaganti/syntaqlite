@@ -511,7 +511,7 @@ pub trait syntaqlite::typed::TypedDialect: core::convert::Into<syntaqlite::any::
 pub type syntaqlite::Dialect::Target = syntaqlite::any::AnyDialect
 pub type syntaqlite::any::AnyDialect::Target = syntaqlite_syntax::dialect::AnyDialect
 pub type syntaqlite::util::SourceContext<'a> = syntaqlite::util::DiagnosticRenderer<'a>
-pub unsafe fn syntaqlite::any::AnyDialect::from_c_dialect_ptr(*const syntaqlite_syntax::dialect::ffi::CDialectTemplate) -> Self
+pub unsafe fn syntaqlite::any::AnyDialect::from_c_dialect_ptr(&'static syntaqlite_syntax::dialect::ffi::CDialectTemplate) -> Self
 pub use syntaqlite::ParseOutcome
 pub use syntaqlite::any::<<syntaqlite_syntax::any::*>>
 pub use syntaqlite::nodes::<<syntaqlite_syntax::nodes::*>>
