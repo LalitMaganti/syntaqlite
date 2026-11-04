@@ -683,8 +683,8 @@ mod tests {
             ext_cflags: crate::util::SqliteFlags::default(),
         };
 
-        assert!(d.roles().is_empty());
-        assert!(d.macro_defs().is_empty());
+        assert_eq!(d.roles(), []);
+        assert_eq!(d.macro_defs(), []);
         assert!(!d.has_fmt_data());
         assert!(
             d.fmt_dispatch(syntaqlite_syntax::any::AnyNodeTag::from_raw(0))
