@@ -6,22 +6,20 @@ weight = 4
 
 # Using libsyntaqlite from Rust
 
-The `syntaqlite` crate provides Rust APIs for formatting and analyzing SQLite
-SQL. This tutorial adds it to a small project, formats a query, validates the
-query against a schema, and prints any diagnostics.
+The `syntaqlite` crate is libsyntaqlite's Rust API. In this tutorial you add it
+to a project, format a query, check the query against a schema, and print its
+syntax tree.
 
 ## 1. Create a project
 
 ```bash
 cargo new sql-check
 cd sql-check
+cargo add syntaqlite
 ```
 
-Add syntaqlite with the features you need:
-
-```bash
-cargo add syntaqlite --features fmt,analysis,sqlite
-```
+The default features include the parser, formatter, and analyzer. The parser
+is written in C, so building the crate needs a C compiler as well as Rust.
 
 ## 2. Format a query
 
@@ -49,46 +47,78 @@ cargo run
 SELECT id, name, email FROM users WHERE active = 1 ORDER BY name;
 ```
 
-The formatter handle is reusable; internal allocations are recycled across
-calls.
+You can keep one `Formatter` and call `format` for every query you need to
+format.
 
 ## 3. Validate against a schema
 
-To add schema validation, update `src/main.rs`:
+Replace `src/main.rs` with:
 
 ```rust
-use syntaqlite::{AnalysisContext, Catalog, Formatter, Analyzer, AnalysisConfig};
+use syntaqlite::util::DiagnosticRenderer;
+use syntaqlite::{AnalysisConfig, AnalysisContext, Analyzer, Catalog, sqlite_dialect};
 
 fn main() {
-    // Format
-    let mut fmt = Formatter::new();
-    let output = fmt
-        .format("select id,nme from users where active=1")
-        .expect("parse error");
-    println!("Formatted:\n{output}");
-
-    // Validate
-    let mut analyzer = Analyzer::new();
-
-    // Register schema from CREATE TABLE statements
+    // Register the schema from CREATE TABLE statements.
     let schema = "CREATE TABLE users (id INTEGER, name TEXT, email TEXT, active INTEGER);";
-    let (mut catalog, errors) = Catalog::from_ddl(
-        syntaqlite::sqlite_dialect(),
-        &[(schema, None)],
-    );
-    assert!(errors.is_empty(), "Schema errors: {errors:?}");
+    let (mut catalog, errors) = Catalog::from_ddl(sqlite_dialect(), &[schema]);
+    assert!(errors.is_empty(), "schema errors: {errors:?}");
 
-    // Validate a query against the schema
+    // Analyze a query against the schema.
     let config = AnalysisConfig::default().with_strict_schema();
     let mut ctx = AnalysisContext::new(&mut catalog).with_config(config);
-    let query = "SELECT id, nme FROM users WHERE active = 1";
-    let model = analyzer.analyze(query, &mut ctx);
+    let mut analyzer = Analyzer::new();
+    let sql = "SELECT id, nme FROM users WHERE active = 1";
+    let model = analyzer.analyze(sql, &mut ctx);
 
-    if model.diagnostics().is_empty() {
-        println!("No errors found.");
-    } else {
-        for d in model.diagnostics() {
-            println!("{:?}: {}", d.severity(), d.message());
+    let renderer = DiagnosticRenderer::new(sql, "query.sql");
+    let mut out = std::io::stdout();
+    for d in model.diagnostics() {
+        renderer.render_diagnostic(d, &mut out).unwrap();
+    }
+}
+```
+
+Run it:
+
+```bash
+cargo run
+```
+
+```text
+error: unknown column 'nme'
+ --> query.sql:1:12
+  |
+1 | SELECT id, nme FROM users WHERE active = 1
+  |            ^~~
+  = help: did you mean 'name'?
+```
+
+`with_strict_schema` makes unknown tables and columns errors. Without it, they
+are reported as warnings.
+
+## 4. Parse and inspect the AST
+
+Replace `src/main.rs` with:
+
+```rust
+use syntaqlite::{ParseOutcome, Parser};
+
+fn main() {
+    let parser = Parser::new();
+    let mut session = parser.parse("SELECT 1 + 2; SELECT 'hello';");
+
+    let mut i = 0;
+    loop {
+        match session.next() {
+            ParseOutcome::Ok(stmt) => {
+                i += 1;
+                let mut dump = String::new();
+                stmt.dump(&mut dump, 0);
+                println!("--- statement {i} ---\n{dump}");
+            }
+            ParseOutcome::Err(err) => eprintln!("error: {}", err.message()),
+            ParseOutcome::Done => break,
         }
     }
 }
@@ -101,50 +131,35 @@ cargo run
 ```
 
 ```text
-Formatted:
-SELECT id, nme FROM users WHERE active = 1;
-
-Error: unknown column 'nme'
+--- statement 1 ---
+SelectStmt
+  flags: (none)
+  columns:
+    ResultColumnList [1 items]
+      ResultColumn
+        flags: (none)
+        alias: (none)
+        alias_as: FALSE
+        expr:
+          BinaryExpr
+            op: PLUS
+            left:
+              Literal
+                literal_type: INTEGER
+                source: "1"
+            right:
+              Literal
+                literal_type: INTEGER
+                source: "2"
+  ...
 ```
 
-The diagnostic identifies `nme` as an unknown column in the supplied schema.
-
-## 4. Parse and inspect the AST
-
-To work with the syntax tree directly, use `syntaqlite-syntax`:
-
-```bash
-cargo add syntaqlite-syntax --features sqlite
-```
-
-```rust
-use syntaqlite_syntax::{Parser, ParseOutcome};
-
-fn main() {
-    let parser = Parser::new();
-    let mut session = parser.parse("SELECT 1 + 2; SELECT 'hello';");
-
-    let mut i = 0;
-    loop {
-        match session.next() {
-            ParseOutcome::Ok(stmt) => {
-                i += 1;
-                let dump = stmt.dump();
-                println!("--- statement {i} ---\n{dump}");
-            }
-            ParseOutcome::Err(err) => {
-                eprintln!("error: {}", err.message());
-                break;
-            }
-            ParseOutcome::Done => break,
-        }
-    }
-}
-```
+The parser hands back one statement at a time, so memory use depends on the
+largest statement rather than the whole input.
 
 ## Next steps
 
-- [Using libsyntaqlite from Rust](@/guides/rust-api.md): formatting, parsing,
-  analysis, and config options
-- [libsyntaqlite Rust API reference](@/reference/rust-api.md): all types and
-  methods
+- [Using libsyntaqlite from Rust](@/guides/rust-api.md): formatter options,
+  tokens, building a schema in code, and column lineage
+- [libsyntaqlite Rust API reference](@/reference/rust-api.md): feature flags and
+  every type

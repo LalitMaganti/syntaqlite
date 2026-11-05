@@ -121,11 +121,12 @@ layer.insert_function_overload("my_func", FunctionCategory::Scalar, AritySpec::E
 Use `DiagnosticRenderer` for rustc-style error output:
 
 ```rust
-use syntaqlite::DiagnosticRenderer;
+use syntaqlite::util::DiagnosticRenderer;
 
 let renderer = DiagnosticRenderer::new(source, "query.sql");
+let mut out = std::io::stdout();
 for diag in model.diagnostics() {
-    renderer.render_diagnostic(diag).unwrap();
+    renderer.render_diagnostic(diag, &mut out).unwrap();
 }
 ```
 
