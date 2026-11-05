@@ -54,9 +54,7 @@ export class LspSession {
   private ensureInitialized(): void {
     if (this.initialized) return;
     this.send({
-      jsonrpc: "2.0",
-      id: this.nextId++,
-      method: "initialize",
+      jsonrpc: "2.0", id: this.nextId++, method: "initialize",
       params: {capabilities: {}},
     });
     this.send({jsonrpc: "2.0", method: "initialized", params: {}});
@@ -71,13 +69,11 @@ export class LspSession {
     const out =
       synced === undefined
         ? this.send({
-            jsonrpc: "2.0",
-            method: "textDocument/didOpen",
+            jsonrpc: "2.0", method: "textDocument/didOpen",
             params: {textDocument: {uri, languageId: "sql", version, text}},
           })
         : this.send({
-            jsonrpc: "2.0",
-            method: "textDocument/didChange",
+            jsonrpc: "2.0", method: "textDocument/didChange",
             params: {textDocument: {uri, version}, contentChanges: [{text}]},
           });
     this.syncedVersions.set(uri, version);
@@ -156,9 +152,7 @@ export class LspSession {
       const result = this.request(
         "textDocument/completion",
         {textDocument: {uri}, position: {line, character}},
-        uri,
-        text,
-        version,
+        uri, text, version,
       );
       if (Array.isArray(result)) return result as LspCompletionItem[];
       const items = (result as {items?: unknown} | null | undefined)?.items;

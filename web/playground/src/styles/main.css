@@ -189,8 +189,7 @@ pre {
   }
 
   /* Ensure the body can scroll when content overflows vertically. */
-  html,
-  body {
+  html, body {
     overflow: auto;
     -webkit-overflow-scrolling: touch;
   }

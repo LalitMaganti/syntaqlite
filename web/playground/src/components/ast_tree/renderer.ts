@@ -327,4 +327,5 @@ export class AstCanvasRenderer {
     this.transform.zoom = newZoom;
     this.render();
   }
+
 }

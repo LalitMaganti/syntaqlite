@@ -45,7 +45,9 @@ export class DialectConfigManager {
   /** Return cflag entries whose minVersion <= the given version. */
   visibleCflagEntries(version: string): CflagEntry[] {
     const ver = versionToInt(version);
-    return this.availableCflags.filter((e) => e.minVersion === 0 || e.minVersion <= ver);
+    return this.availableCflags.filter(
+      (e) => e.minVersion === 0 || e.minVersion <= ver,
+    );
   }
 
   /** Return cflag names whose minVersion <= the given version. */

@@ -3,15 +3,15 @@
 
 import m from "mithril";
 import * as monaco from "monaco-editor";
-import type {Engine} from "syntaqlite";
 import type {App, Attrs} from "../app/app";
+import type {Engine} from "syntaqlite";
 import type {Dialect, LanguageMode} from "../app/url_state";
+import {getSqlPresetLibrary} from "./workspace/sql_presets";
 import {debounce} from "../base/debounce";
 import type {DiagnosticEntry} from "../types";
-import {ResizeHandle} from "../widgets/resize_handle";
-import {type LanguageMode as EditorLanguageMode, EditorPane} from "./editor_pane";
+import {EditorPane, type LanguageMode as EditorLanguageMode} from "./editor_pane";
 import {OutputPanel} from "./output_panel";
-import {getSqlPresetLibrary} from "./workspace/sql_presets";
+import {ResizeHandle} from "../widgets/resize_handle";
 import "./workspace.css";
 
 const SEVERITY_MAP: Record<DiagnosticEntry["severity"], monaco.MarkerSeverity> = {
@@ -92,10 +92,9 @@ export class Workspace implements m.ClassComponent<Attrs> {
       this.initFromUrlState(app);
     }
 
-    const presetKey =
-      app.languageMode === "sql"
-        ? app.dialect.activePresetId
-        : `${app.dialect.activePresetId}:${app.languageMode}`;
+    const presetKey = app.languageMode === "sql"
+      ? app.dialect.activePresetId
+      : `${app.dialect.activePresetId}:${app.languageMode}`;
     const presetLibrary = getSqlPresetLibrary(presetKey);
     const selectedPresetId = this.ensurePresetSelection(presetLibrary);
 
@@ -138,85 +137,80 @@ export class Workspace implements m.ClassComponent<Attrs> {
       splitStyle.gridTemplateColumns = `${pct}% 5px 1fr`;
     }
 
-    return m(
-      "section.sq-workspace",
-      {
-        style: splitStyle,
-        oncreate: (v: m.VnodeDOM) => {
-          this.workspaceEl = v.dom as HTMLElement;
+    return m("section.sq-workspace", {
+      style: splitStyle,
+      oncreate: (v: m.VnodeDOM) => { this.workspaceEl = v.dom as HTMLElement; },
+    }, [
+      m(EditorPane, {
+        theme: app.theme.current,
+        initialSql: this.sql,
+        presets: presetLibrary.presets,
+        selectedPresetId,
+        languageMode: app.languageMode as EditorLanguageMode,
+        onLanguageChange: (lang: EditorLanguageMode) => {
+          app.languageMode = lang;
+          app.embeddedFragments = [];
+          app.selectedFragmentIndex = -1;
+          app.diagnostics = [];
+          app.runtime.setLanguageMode(lang);
+          if (this.editor) {
+            const model = this.editor.getModel();
+            if (model) monaco.editor.setModelMarkers(model, "syntaqlite", []);
+          }
+          // Apply the first preset of the new language.
+          const newPresetKey = lang === "sql"
+            ? app.dialect.activePresetId
+            : `${app.dialect.activePresetId}:${lang}`;
+          const newLib = getSqlPresetLibrary(newPresetKey);
+          const sel = this.ensurePresetSelection(newLib);
+          this.applySelectionForDialect(app.runtime, newLib.dialectId, sel, true);
+          this.writePresetUrlState(app, newLib.dialectId, sel, {languageMode: lang});
+          m.redraw();
         },
-      },
-      [
-        m(EditorPane, {
-          theme: app.theme.current,
-          initialSql: this.sql,
-          presets: presetLibrary.presets,
-          selectedPresetId,
-          languageMode: app.languageMode as EditorLanguageMode,
-          onLanguageChange: (lang: EditorLanguageMode) => {
-            app.languageMode = lang;
-            app.embeddedFragments = [];
-            app.selectedFragmentIndex = -1;
-            app.diagnostics = [];
-            app.runtime.setLanguageMode(lang);
-            if (this.editor) {
-              const model = this.editor.getModel();
-              if (model) monaco.editor.setModelMarkers(model, "syntaqlite", []);
+        onPresetChange: (presetId: string) => {
+          this.presetSelectionByDialect.set(presetLibrary.dialectId, presetId);
+          this.applySelectionForDialect(app.runtime, presetLibrary.dialectId, presetId);
+          app.urlState.update({preset: presetId, sql: null});
+        },
+        onContentChange: (s: string) => {
+          if (!this.applyingPreset) {
+            const current = this.presetSelectionByDialect.get(presetLibrary.dialectId);
+            if (current !== CUSTOM_PRESET_ID) {
+              this.presetSelectionByDialect.set(presetLibrary.dialectId, CUSTOM_PRESET_ID);
+              m.redraw();
             }
-            // Apply the first preset of the new language.
-            const newPresetKey =
-              lang === "sql" ? app.dialect.activePresetId : `${app.dialect.activePresetId}:${lang}`;
-            const newLib = getSqlPresetLibrary(newPresetKey);
-            const sel = this.ensurePresetSelection(newLib);
-            this.applySelectionForDialect(app.runtime, newLib.dialectId, sel, true);
-            this.writePresetUrlState(app, newLib.dialectId, sel, {languageMode: lang});
-            m.redraw();
-          },
-          onPresetChange: (presetId: string) => {
-            this.presetSelectionByDialect.set(presetLibrary.dialectId, presetId);
-            this.applySelectionForDialect(app.runtime, presetLibrary.dialectId, presetId);
-            app.urlState.update({preset: presetId, sql: null});
-          },
-          onContentChange: (s: string) => {
-            if (!this.applyingPreset) {
-              const current = this.presetSelectionByDialect.get(presetLibrary.dialectId);
-              if (current !== CUSTOM_PRESET_ID) {
-                this.presetSelectionByDialect.set(presetLibrary.dialectId, CUSTOM_PRESET_ID);
-                m.redraw();
-              }
-              this.customSqlByDialect.set(presetLibrary.dialectId, s);
-              // Debounced — urlState handles the 800ms delay internally.
-              app.urlState.update({preset: null, sql: s});
-            }
-            this.debouncedUpdate(s);
-            this.debouncedDiagnostics(app.runtime, s);
-          },
-          onEditorCreated: (editor) => {
-            this.editor = editor;
-            app.revealDiagnostic = (d) => this.revealDiagnostic(d);
-          },
-        }),
-        m(ResizeHandle, {
-          axis: "vertical",
-          onResize: (delta: number) => {
-            const el = this.workspaceEl;
-            if (!el) return;
-            const totalWidth = el.getBoundingClientRect().width;
-            const handleWidth = 5;
-            const available = totalWidth - handleWidth;
-            const current = this.splitFraction ?? 0.5;
-            const currentPx = current * available;
-            const minPx = 100;
-            const newPx = Math.max(minPx, Math.min(available - minPx, currentPx + delta));
-            this.splitFraction = newPx / available;
-          },
-          onResizeEnd: () => {
-            if (this.editor) this.editor.layout();
-          },
-        }),
-        m(OutputPanel, {app, sql: this.sql}),
-      ],
-    );
+            this.customSqlByDialect.set(presetLibrary.dialectId, s);
+            // Debounced — urlState handles the 800ms delay internally.
+            app.urlState.update({preset: null, sql: s});
+          }
+          this.debouncedUpdate(s);
+          this.debouncedDiagnostics(app.runtime, s);
+        },
+        onEditorCreated: (editor) => {
+          this.editor = editor;
+          app.revealDiagnostic = (d) => this.revealDiagnostic(d);
+        },
+      }),
+      m(ResizeHandle, {
+        axis: "vertical",
+        onResize: (delta: number) => {
+          const el = this.workspaceEl;
+          if (!el) return;
+          const totalWidth = el.getBoundingClientRect().width;
+          const handleWidth = 5;
+          const available = totalWidth - handleWidth;
+          const current = this.splitFraction ?? 0.5;
+          const currentPx = current * available;
+          const minPx = 100;
+          const newPx = Math.max(minPx, Math.min(available - minPx, currentPx + delta));
+          this.splitFraction = newPx / available;
+        },
+        onResizeEnd: () => {
+          if (this.editor) this.editor.layout();
+        },
+      }),
+      m(OutputPanel, {app, sql: this.sql}),
+    ]);
   }
 
   /**

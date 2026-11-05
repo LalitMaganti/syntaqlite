@@ -2,8 +2,8 @@
 // Licensed under the Apache License, Version 2.0.
 
 import m from "mithril";
-import {VERSION_OPTIONS} from "syntaqlite";
 import type {Attrs} from "../app/app";
+import {VERSION_OPTIONS} from "syntaqlite";
 import {HelpTooltip} from "./help_tooltip";
 import {SegmentedSwitch} from "./switch";
 import "./header.css";
@@ -61,16 +61,12 @@ export class Header implements m.ClassComponent<Attrs> {
                         [
                           m("span", preset.label),
                           activeId === "sqlite"
-                            ? m(
-                                "span.sq-config-chevron",
-                                {
-                                  onclick: (e: Event) => {
-                                    e.stopPropagation();
-                                    this.configPopoverOpen = !this.configPopoverOpen;
-                                  },
+                            ? m("span.sq-config-chevron", {
+                                onclick: (e: Event) => {
+                                  e.stopPropagation();
+                                  this.configPopoverOpen = !this.configPopoverOpen;
                                 },
-                                "\u25BE",
-                              )
+                              }, "\u25BE")
                             : undefined,
                         ],
                       ),
@@ -79,104 +75,91 @@ export class Header implements m.ClassComponent<Attrs> {
                           this.configPopoverOpen = false;
                         },
                       }),
-                      m(
-                        "div.sq-config-popover__panel",
-                        {onclick: (e: Event) => e.stopPropagation()},
-                        [
-                          m("div.sq-config-popover__section", [
-                            m("span.sq-config-popover__label", "SQLite Version"),
-                            m(
-                              "select.sq-config-popover__select",
-                              {
-                                value: sqliteVersion,
-                                onchange: (e: Event) => {
-                                  const newVersion = (e.target as HTMLSelectElement).value;
-                                  // Drop any cflags no longer visible at the new version.
-                                  const visible = new Set(
-                                    app.dialectConfig.visibleCflags(newVersion),
-                                  );
-                                  const newCflags = cflags.filter((f) => visible.has(f));
-                                  app.urlState.update({
-                                    sqliteVersion: newVersion,
-                                    cflags: newCflags,
-                                  });
-                                  app.dialectConfig.apply(app.runtime, newVersion, newCflags);
-                                  m.redraw();
-                                },
-                              },
-                              VERSION_OPTIONS.map((v) => m("option", {value: v}, v)),
-                            ),
-                          ]),
-                          m("div.sq-config-popover__section", [
-                            m("span.sq-config-popover__label", "Compile Flags"),
-                            m(
-                              "div.sq-config-popover__cflag-list",
-                              (() => {
-                                const entries =
-                                  app.dialectConfig.visibleCflagEntries(sqliteVersion);
-                                const groups: Record<string, string[]> = {};
-                                for (const e of entries) {
-                                  (groups[e.category] ??= []).push(e.name);
-                                }
-                                const categoryOrder = [
-                                  "parser",
-                                  "functions",
-                                  "extensions",
-                                  "vtable",
-                                ];
-                                const categoryLabels: Record<string, string> = {
-                                  parser: "Parser",
-                                  functions: "Functions",
-                                  extensions: "Extensions",
-                                  vtable: "Virtual Tables",
-                                };
-                                const renderGroup = (label: string, items: string[]) =>
-                                  items.length === 0
-                                    ? undefined
-                                    : [
-                                        m("div.sq-config-popover__group-label", label),
-                                        ...items.map((suffix) =>
-                                          m("label.sq-config-popover__cflag-item", [
-                                            m("input[type=checkbox]", {
-                                              checked: cflags.includes(suffix),
-                                              onchange: () => {
-                                                const newCflags = cflags.includes(suffix)
-                                                  ? cflags.filter((f) => f !== suffix)
-                                                  : [...cflags, suffix].sort();
-                                                app.urlState.update({cflags: newCflags});
-                                                app.dialectConfig.apply(
-                                                  app.runtime,
-                                                  sqliteVersion,
-                                                  newCflags,
-                                                );
-                                                m.redraw();
-                                              },
-                                            }),
-                                            m("span", suffix),
-                                          ]),
-                                        ),
-                                      ];
-                                return categoryOrder.map((cat) =>
-                                  renderGroup(categoryLabels[cat] ?? cat, groups[cat] ?? []),
+                      m("div.sq-config-popover__panel", {onclick: (e: Event) => e.stopPropagation()}, [
+                        m("div.sq-config-popover__section", [
+                          m("span.sq-config-popover__label", "SQLite Version"),
+                          m(
+                            "select.sq-config-popover__select",
+                            {
+                              value: sqliteVersion,
+                              onchange: (e: Event) => {
+                                const newVersion = (e.target as HTMLSelectElement).value;
+                                // Drop any cflags no longer visible at the new version.
+                                const visible = new Set(
+                                  app.dialectConfig.visibleCflags(newVersion),
                                 );
-                              })(),
-                            ),
-                          ]),
-                          m("div.sq-config-popover__section", [
-                            m(
-                              "button.sq-config-popover__reset-btn",
-                              {
-                                onclick: () => {
-                                  app.urlState.update({sqliteVersion: "latest", cflags: []});
-                                  app.dialectConfig.apply(app.runtime, "latest", []);
-                                  m.redraw();
-                                },
+                                const newCflags = cflags.filter((f) => visible.has(f));
+                                app.urlState.update({sqliteVersion: newVersion, cflags: newCflags});
+                                app.dialectConfig.apply(app.runtime, newVersion, newCflags);
+                                m.redraw();
                               },
-                              "Reset to Defaults",
-                            ),
-                          ]),
-                        ],
-                      ),
+                            },
+                            VERSION_OPTIONS.map((v) => m("option", {value: v}, v)),
+                          ),
+                        ]),
+                        m("div.sq-config-popover__section", [
+                          m("span.sq-config-popover__label", "Compile Flags"),
+                          m(
+                            "div.sq-config-popover__cflag-list",
+                            (() => {
+                              const entries = app.dialectConfig.visibleCflagEntries(sqliteVersion);
+                              const groups: Record<string, string[]> = {};
+                              for (const e of entries) {
+                                (groups[e.category] ??= []).push(e.name);
+                              }
+                              const categoryOrder = ["parser", "functions", "extensions", "vtable"];
+                              const categoryLabels: Record<string, string> = {
+                                parser: "Parser",
+                                functions: "Functions",
+                                extensions: "Extensions",
+                                vtable: "Virtual Tables",
+                              };
+                              const renderGroup = (label: string, items: string[]) =>
+                                items.length === 0
+                                  ? undefined
+                                  : [
+                                      m("div.sq-config-popover__group-label", label),
+                                      ...items.map((suffix) =>
+                                        m("label.sq-config-popover__cflag-item", [
+                                          m("input[type=checkbox]", {
+                                            checked: cflags.includes(suffix),
+                                            onchange: () => {
+                                              const newCflags = cflags.includes(suffix)
+                                                ? cflags.filter((f) => f !== suffix)
+                                                : [...cflags, suffix].sort();
+                                              app.urlState.update({cflags: newCflags});
+                                              app.dialectConfig.apply(
+                                                app.runtime,
+                                                sqliteVersion,
+                                                newCflags,
+                                              );
+                                              m.redraw();
+                                            },
+                                          }),
+                                          m("span", suffix),
+                                        ]),
+                                      ),
+                                    ];
+                              return categoryOrder.map((cat) =>
+                                renderGroup(categoryLabels[cat] ?? cat, groups[cat] ?? []),
+                              );
+                            })(),
+                          ),
+                        ]),
+                        m("div.sq-config-popover__section", [
+                          m(
+                            "button.sq-config-popover__reset-btn",
+                            {
+                              onclick: () => {
+                                app.urlState.update({sqliteVersion: "latest", cflags: []});
+                                app.dialectConfig.apply(app.runtime, "latest", []);
+                                m.redraw();
+                              },
+                            },
+                            "Reset to Defaults",
+                          ),
+                        ]),
+                      ]),
                     ],
                   )
                 : m(
@@ -196,10 +179,9 @@ export class Header implements m.ClassComponent<Attrs> {
                   "button.sq-dialect-switcher__btn",
                   {
                     class: activeId === "custom" ? "sq-dialect-switcher__btn--active" : "",
-                    title:
-                      activeId === "custom"
-                        ? "Custom dialect active — not included in shared URLs"
-                        : undefined,
+                    title: activeId === "custom"
+                      ? "Custom dialect active — not included in shared URLs"
+                      : undefined,
                     onclick: (e: Event) => {
                       e.stopPropagation();
                       this.customPopoverOpen = !this.customPopoverOpen;
@@ -294,9 +276,7 @@ export class Header implements m.ClassComponent<Attrs> {
                 ],
               ),
               m("div.sq-dialect-mobile-trigger__backdrop", {
-                onclick: () => {
-                  this.dialectPopoverOpen = false;
-                },
+                onclick: () => { this.dialectPopoverOpen = false; },
               }),
               m("div.sq-dialect-mobile-trigger__sheet", [
                 m("div.sq-dialect-mobile-trigger__title", "Select Dialect"),
@@ -304,8 +284,7 @@ export class Header implements m.ClassComponent<Attrs> {
                   m(
                     "button.sq-dialect-mobile-trigger__option",
                     {
-                      class:
-                        activeId === preset.id ? "sq-dialect-mobile-trigger__option--active" : "",
+                      class: activeId === preset.id ? "sq-dialect-mobile-trigger__option--active" : "",
                       onclick: () => {
                         app.dialect.selectPreset(app.runtime, preset);
                         this.dialectPopoverOpen = false;

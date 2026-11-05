@@ -120,10 +120,14 @@ export class FormatTab implements m.ClassComponent<FormatTabAttrs> {
           {
             value: this.formatOptions.keywordCase,
             onchange: (e: Event) => {
-              this.formatOptions.keywordCase = (e.target as HTMLSelectElement).value as KeywordCase;
+              this.formatOptions.keywordCase = (e.target as HTMLSelectElement)
+                .value as KeywordCase;
             },
           },
-          [m("option", {value: "upper"}, "Upper"), m("option", {value: "lower"}, "Lower")],
+          [
+            m("option", {value: "upper"}, "Upper"),
+            m("option", {value: "lower"}, "Lower"),
+          ],
         ),
         m("input[type=checkbox]", {
           checked: this.formatOptions.semicolons,

@@ -2,12 +2,17 @@
 // Licensed under the Apache License, Version 2.0.
 
 import m from "mithril";
-import {DialectConfigManager, DialectManager, Engine, SchemaContextManager} from "syntaqlite";
+import {
+  Engine,
+  DialectManager,
+  DialectConfigManager,
+  SchemaContextManager,
+} from "syntaqlite";
 import type {DiagnosticEntry, EmbeddedFragment, EmbeddedLanguage} from "syntaqlite";
-import {LspSession} from "../lsp_session";
 import {ThemeManager} from "./theme_manager";
-import {UrlStateManager} from "./url_state";
 import {WindowManager} from "./window_manager";
+import {UrlStateManager} from "./url_state";
+import {LspSession} from "../lsp_session";
 
 export interface Attrs {
   app: App;

@@ -3,10 +3,10 @@
 
 import m from "mithril";
 import type {App} from "../app/app";
-import type {OutputTab} from "../app/url_state";
 import type {ActiveTab} from "../types";
+import type {OutputTab} from "../app/url_state";
+import {renderValidationBadge, renderValidationTab, renderSchemaTab} from "./details_shared";
 import {AstTab} from "./ast_tab";
-import {renderSchemaTab, renderValidationBadge, renderValidationTab} from "./details_shared";
 import {FormatTab} from "./format_tab";
 import "./output_panel.css";
 
@@ -71,7 +71,9 @@ export class OutputPanel implements m.ClassComponent<OutputPanelAttrs> {
                 }
               },
             },
-            t.key === "validation" ? [t.label, renderValidationBadge(app.diagnostics)] : t.label,
+            t.key === "validation"
+              ? [t.label, renderValidationBadge(app.diagnostics)]
+              : t.label,
           ),
         ),
         // Fragment selector inside the tab bar for embedded mode.
@@ -82,7 +84,9 @@ export class OutputPanel implements m.ClassComponent<OutputPanelAttrs> {
                 {
                   value: String(app.selectedFragmentIndex),
                   onchange: (e: Event) => {
-                    app.selectedFragmentIndex = Number((e.target as HTMLSelectElement).value);
+                    app.selectedFragmentIndex = Number(
+                      (e.target as HTMLSelectElement).value,
+                    );
                   },
                 },
                 [

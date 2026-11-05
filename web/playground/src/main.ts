@@ -2,13 +2,13 @@
 // Licensed under the Apache License, Version 2.0.
 
 import m from "mithril";
-import * as monaco from "monaco-editor";
 import {App} from "./app/app";
+import * as monaco from "monaco-editor";
 import "monaco-editor/esm/vs/basic-languages/sql/sql.contribution";
 import "monaco-editor/esm/vs/basic-languages/python/python.contribution";
 import "monaco-editor/esm/vs/basic-languages/typescript/typescript.contribution";
-import type {Engine} from "syntaqlite";
 import {FORMATTED_MODEL_URI, INPUT_MODEL_URI} from "./app/editor_models";
+import type {Engine} from "syntaqlite";
 import {AppComponent} from "./components/app";
 import "./styles/main.css";
 
@@ -142,7 +142,8 @@ function registerCompletionProvider(app: App, engine: Engine): void {
         insertText: item.label,
         sortText: item.sortText,
         detail: item.detail,
-        kind: LSP_COMPLETION_KINDS.get(item.kind ?? 0) ?? monaco.languages.CompletionItemKind.Text,
+        kind:
+          LSP_COMPLETION_KINDS.get(item.kind ?? 0) ?? monaco.languages.CompletionItemKind.Text,
         range,
       }));
 
@@ -178,13 +179,11 @@ function registerCodeActionProvider(app: App): void {
           kind: "quickfix",
           isPreferred: true,
           edit: {
-            edits: [
-              {
-                resource: model.uri,
-                textEdit: {range: dRange, text: suggestion},
-                versionId: model.getVersionId(),
-              },
-            ],
+            edits: [{
+              resource: model.uri,
+              textEdit: {range: dRange, text: suggestion},
+              versionId: model.getVersionId(),
+            }],
           },
         });
       }

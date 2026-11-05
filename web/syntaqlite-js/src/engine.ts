@@ -373,7 +373,10 @@ export class Engine {
 
   /** One-shot JSON-RPC op — the CLI `serve json` protocol. Returns the
    *  op's result value; throws on error. */
-  private rpc(request: object, reviver?: (key: string, value: unknown) => unknown): unknown {
+  private rpc(
+    request: object,
+    reviver?: (key: string, value: unknown) => unknown,
+  ): unknown {
     if (!this.rpcRaw) {
       throw new Error("RPC not supported by this runtime");
     }
@@ -543,13 +546,10 @@ function analyzeRequest(sql: string, opts: AnalyzeOptions): Record<string, unkno
 }
 
 async function loadRuntimeModule(config: EngineConfig): Promise<EmscriptenModule> {
-  const baseJs = config.wasmBaseUrl
-    ? new URL("syntaqlite-runtime.js", config.wasmBaseUrl).href
-    : undefined;
+  const baseJs = config.wasmBaseUrl ? new URL("syntaqlite-runtime.js", config.wasmBaseUrl).href : undefined;
   const jsPath = config.runtimeJsPath ?? baseJs ?? DEFAULT_RUNTIME_JS;
-  const wasmPath =
-    config.runtimeWasmPath ??
-    (jsPath === DEFAULT_RUNTIME_JS ? DEFAULT_RUNTIME_WASM : jsPath.replace(/\.js$/, ".wasm"));
+  const wasmPath = config.runtimeWasmPath
+    ?? (jsPath === DEFAULT_RUNTIME_JS ? DEFAULT_RUNTIME_WASM : jsPath.replace(/\.js$/, ".wasm"));
   const moduleConfig: EmscriptenModuleConfig = {
     noInitialRun: true,
     locateFile(path: string) {

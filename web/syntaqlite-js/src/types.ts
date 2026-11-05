@@ -197,7 +197,6 @@ export type EmbeddedLanguage = "python" | "typescript";
 
 /** @experimental */
 export interface EmbeddedHole {
-  /** Byte range of the interpolation in the host source, delimiters included. */
   start: number;
   end: number;
   /** Byte offset in the fragment's `sql` where the hole's placeholder sits. */

@@ -4,9 +4,9 @@
 import m from "mithril";
 import type {DiagnosticEntry} from "syntaqlite";
 import type {App} from "../app/app";
-import type {SchemaFormat} from "../app/url_state";
 import {Table} from "../widgets/table";
 import type {TableColumn} from "../widgets/table";
+import type {SchemaFormat} from "../app/url_state";
 
 export const SEVERITY_ICON: Record<DiagnosticEntry["severity"], string> = {
   error: "\u2715",
@@ -22,9 +22,7 @@ export const VALIDATION_COLUMNS: TableColumn<DiagnosticEntry>[] = [
     width: "36px",
     align: "center",
     render: (d) =>
-      m(
-        "span",
-        {class: `sq-validation-severity sq-validation-severity--${d.severity}`},
+      m("span", {class: `sq-validation-severity sq-validation-severity--${d.severity}`},
         SEVERITY_ICON[d.severity],
       ),
   },
@@ -32,14 +30,14 @@ export const VALIDATION_COLUMNS: TableColumn<DiagnosticEntry>[] = [
     key: "location",
     label: "Location",
     width: "80px",
-    render: (d) => (d.line != null && d.col != null ? `${d.line}:${d.col}` : ""),
+    render: (d) => d.line != null && d.col != null ? `${d.line}:${d.col}` : "",
   },
   {
     key: "stmt",
     label: "Stmt",
     width: "48px",
     align: "center",
-    render: (d) => (d.stmtIndex != null ? String(d.stmtIndex) : ""),
+    render: (d) => d.stmtIndex != null ? String(d.stmtIndex) : "",
   },
   {
     key: "message",
@@ -109,18 +107,16 @@ export function renderSchemaTab(app: App): m.Children {
   return m("div.sq-details-panel__body", [
     m("div.sq-details-panel__options", [
       m("label", "Format"),
-      m(
-        "select",
-        {
-          value: schemaFormat,
-          onchange: (e: Event) => {
-            const newFormat = (e.target as HTMLSelectElement).value as SchemaFormat;
-            app.schemaContext.apply(app.runtime, schema, newFormat);
-            app.urlState.update({schemaFormat: newFormat});
-          },
+      m("select", {
+        value: schemaFormat,
+        onchange: (e: Event) => {
+          const newFormat = (e.target as HTMLSelectElement).value as SchemaFormat;
+          app.schemaContext.apply(app.runtime, schema, newFormat);
+          app.urlState.update({schemaFormat: newFormat});
         },
-        FORMAT_OPTIONS.map((o) => m("option", {value: o.value}, o.label)),
-      ),
+      }, FORMAT_OPTIONS.map((o) =>
+        m("option", {value: o.value}, o.label),
+      )),
     ]),
     m("textarea.sq-details-panel__textarea", {
       placeholder: FORMAT_PLACEHOLDER[schemaFormat],
@@ -137,7 +133,8 @@ export function renderSchemaTab(app: App): m.Children {
     app.schemaContext.parseError
       ? m("span.sq-details-panel__error", app.schemaContext.parseError)
       : app.schemaContext.parsedTableCount !== undefined
-        ? m("span.sq-details-panel__help", `${app.schemaContext.parsedTableCount} table(s) loaded`)
+        ? m("span.sq-details-panel__help",
+            `${app.schemaContext.parsedTableCount} table(s) loaded`)
         : m("span.sq-details-panel__help", FORMAT_HELP[schemaFormat]),
   ]);
 }

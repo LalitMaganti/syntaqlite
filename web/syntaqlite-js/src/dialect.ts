@@ -1,8 +1,8 @@
 // Copyright 2025 The syntaqlite Authors. All rights reserved.
 // Licensed under the Apache License, Version 2.0.
 
-import type {Engine} from "./engine.js";
 import type {DialectBinding} from "./types.js";
+import type {Engine} from "./engine.js";
 
 export interface DialectPreset {
   id: string;
@@ -69,10 +69,9 @@ export class DialectManager {
       this.onDialectChanged?.();
       return false;
     }
-    const url =
-      engine.wasmBaseUrl && preset.wasmFile
-        ? new URL(preset.wasmFile, engine.wasmBaseUrl).href
-        : preset.wasmUrl;
+    const url = engine.wasmBaseUrl && preset.wasmFile
+      ? new URL(preset.wasmFile, engine.wasmBaseUrl).href
+      : preset.wasmUrl;
     try {
       const binding = await this.loadCached(engine, url, preset.symbol, preset.label);
       engine.setDialectPointer(binding.ptr);
