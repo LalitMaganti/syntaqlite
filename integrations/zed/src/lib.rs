@@ -3,12 +3,33 @@
 
 use std::fs;
 
-use zed_extension_api::{self as zed, settings::LspSettings, LanguageServerId, Result};
+use zed_extension_api::{
+    self as zed,
+    http_client::{HttpMethod, HttpRequest, RedirectPolicy},
+    serde_json,
+    settings::LspSettings,
+    LanguageServerId, Result,
+};
 
 const SERVER_NAME: &str = "syntaqlite-lsp";
 
-/// GitHub release asset names by platform.
-fn github_asset_name(platform: zed::Os, arch: zed::Architecture) -> Result<&'static str> {
+/// Release file listing every release file; see tools/write-release-manifest.
+const MANIFEST_NAME: &str = "syntaqlite-release.json";
+const MANIFEST_VERSION: u64 = 1;
+
+/// Rust target triple of the CLI build for each platform.
+fn target_triple(platform: zed::Os, arch: zed::Architecture) -> Result<&'static str> {
+    match (platform, arch) {
+        (zed::Os::Mac, zed::Architecture::Aarch64) => Ok("aarch64-apple-darwin"),
+        (zed::Os::Mac, zed::Architecture::X8664) => Ok("x86_64-apple-darwin"),
+        (zed::Os::Linux, zed::Architecture::Aarch64) => Ok("aarch64-unknown-linux-gnu"),
+        (zed::Os::Linux, zed::Architecture::X8664) => Ok("x86_64-unknown-linux-gnu"),
+        _ => Err(format!("unsupported platform: {platform:?} {arch:?}")),
+    }
+}
+
+/// CLI archive names used by releases that predate the release manifest.
+fn legacy_asset_name(platform: zed::Os, arch: zed::Architecture) -> Result<&'static str> {
     match (platform, arch) {
         (zed::Os::Mac, zed::Architecture::Aarch64) => Ok("syntaqlite-macos-arm64.tar.gz"),
         (zed::Os::Mac, zed::Architecture::X8664) => Ok("syntaqlite-macos-x64.tar.gz"),
@@ -21,6 +42,39 @@ fn github_asset_name(platform: zed::Os, arch: zed::Architecture) -> Result<&'sta
 /// Binary name inside the extracted archive.
 fn binary_name() -> &'static str {
     "syntaqlite"
+}
+
+/// Returns the name of this platform's CLI archive in `release` and of the
+/// binary inside it.
+fn cli_archive(release: &zed::GithubRelease) -> Result<(String, String)> {
+    let (platform, arch) = zed::current_platform();
+    let Some(manifest_asset) = release.assets.iter().find(|a| a.name == MANIFEST_NAME) else {
+        let name = legacy_asset_name(platform, arch)?;
+        return Ok((name.to_string(), binary_name().to_string()));
+    };
+
+    let response = HttpRequest::builder()
+        .method(HttpMethod::Get)
+        .url(&manifest_asset.download_url)
+        .redirect_policy(RedirectPolicy::FollowAll)
+        .build()?
+        .fetch()
+        .map_err(|e| format!("failed to fetch {MANIFEST_NAME}: {e}"))?;
+    let manifest: serde_json::Value = serde_json::from_slice(&response.body)
+        .map_err(|e| format!("invalid {MANIFEST_NAME}: {e}"))?;
+    if manifest["manifest_version"].as_u64() != Some(MANIFEST_VERSION) {
+        return Err(format!(
+            "release {} uses an unsupported {MANIFEST_NAME} version; update the syntaqlite extension",
+            release.version
+        ));
+    }
+
+    let triple = target_triple(platform, arch)?;
+    let entry = &manifest["cli"][triple];
+    match (entry["name"].as_str(), entry["binary"].as_str()) {
+        (Some(name), Some(binary)) => Ok((name.to_string(), binary.to_string())),
+        _ => Err(format!("release {} has no CLI build for {triple}", release.version)),
+    }
 }
 
 struct SyntaqliteExtension {
@@ -67,21 +121,19 @@ impl SyntaqliteExtension {
             },
         )?;
 
-        let (platform, arch) = zed::current_platform();
-        let asset_name = github_asset_name(platform, arch)?;
-
-        let asset = release
-            .assets
-            .iter()
-            .find(|a| a.name == asset_name)
-            .ok_or_else(|| {
-                format!("no release asset '{asset_name}' found in release {}", release.version)
-            })?;
-
         let version_dir = format!("syntaqlite-{}", release.version);
         let binary_path = format!("{version_dir}/{}", binary_name());
 
         if !fs::metadata(&binary_path).map_or(false, |m| m.is_file()) {
+            let (asset_name, archive_binary) = cli_archive(&release)?;
+            let asset = release
+                .assets
+                .iter()
+                .find(|a| a.name == asset_name)
+                .ok_or_else(|| {
+                    format!("no release asset '{asset_name}' found in release {}", release.version)
+                })?;
+
             zed::set_language_server_installation_status(
                 language_server_id,
                 &zed::LanguageServerInstallationStatus::Downloading,
@@ -94,19 +146,10 @@ impl SyntaqliteExtension {
             )
             .map_err(|e| format!("failed to download {asset_name}: {e}"))?;
 
-            // The archive extracts directly as the binary.
-            let entries =
-                fs::read_dir(&version_dir).map_err(|e| format!("read dir failed: {e}"))?;
-            for entry in entries.flatten() {
-                let name = entry.file_name();
-                if name.to_string_lossy().starts_with("syntaqlite") {
-                    let dest = format!("{version_dir}/{}", binary_name());
-                    if entry.path().to_string_lossy() != dest {
-                        fs::rename(entry.path(), &dest)
-                            .map_err(|e| format!("rename failed: {e}"))?;
-                    }
-                    break;
-                }
+            let extracted = format!("{version_dir}/{archive_binary}");
+            if extracted != binary_path {
+                fs::rename(&extracted, &binary_path)
+                    .map_err(|e| format!("rename failed: {e}"))?;
             }
 
             zed::make_file_executable(&binary_path)?;
