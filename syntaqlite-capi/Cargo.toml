@@ -1,6 +1,6 @@
 [package]
 name = "syntaqlite-capi"
-version = "0.13.5"
+version = "0.14.0"
 edition = "2024"
 description = "C API for syntaqlite (libsyntaqlite)"
 license = "Apache-2.0"
@@ -25,4 +25,4 @@ dynload = ["syntaqlite/dynload"]
 workspace = true
 
 [dependencies]
-syntaqlite = { version = "0.13.5", path = "../syntaqlite", default-features = false, features = ["fmt", "analysis", "rpc"] }
+syntaqlite = { version = "0.14.0", path = "../syntaqlite", default-features = false, features = ["fmt", "analysis", "rpc"] }

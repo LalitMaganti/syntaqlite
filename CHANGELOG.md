@@ -1,5 +1,68 @@
 # Changelog
 
+## 0.14.0
+
+0.14.0 makes the complete libsyntaqlite build with plain cargo, fixes the `syntaqlite.h` shipped with it, which had not compiled since at least 0.12.1, and releases the parser-only C library prebuilt as libsyntaqlite-parser. C users need to rename three analyzer types, and anyone downloading release files by name needs the new versioned names. Rust and Python users can upgrade without changes.
+
+### Highlights
+
+**libsyntaqlite builds with plain cargo.** Building `syntaqlite-capi` used to hide the parser and tokenizer functions, so the only complete library was the one in the release archive. `cargo build -p syntaqlite-capi` now produces that same library, and `syntaqlite-capi` is published to crates.io. Building from source uses separate headers behind an umbrella `syntaqlite.h`. ([#533](https://github.com/LalitMaganti/syntaqlite/pull/533), [#534](https://github.com/LalitMaganti/syntaqlite/pull/534), [#537](https://github.com/LalitMaganti/syntaqlite/pull/537))
+
+**Static libsyntaqlite and smaller shared libraries.** The libsyntaqlite archive includes a static library for every platform, so C programs can link it into a self-contained binary. Debug info is stripped on Linux and macOS, which brings the Linux shared library down from 7.9 MB to 2.3 MB. ([#523](https://github.com/LalitMaganti/syntaqlite/pull/523))
+
+**libsyntaqlite-parser.** The parser-only C library was released as source under the name "syntax amalgamation", and that source did not compile. It is now libsyntaqlite-parser, with a prebuilt static and shared library for each platform alongside a source archive that compiles. ([#518](https://github.com/LalitMaganti/syntaqlite/pull/518), [#522](https://github.com/LalitMaganti/syntaqlite/pull/522))
+
+**Install the CLI with cargo binstall.** `cargo binstall syntaqlite-cli` downloads the prebuilt binary instead of compiling it. ([#509](https://github.com/LalitMaganti/syntaqlite/pull/509))
+
+**Python, JavaScript and C docs.** Python has a tutorial and a guide, JavaScript has its own docs, and C has one starting page for choosing between libsyntaqlite and libsyntaqlite-parser. ([#527](https://github.com/LalitMaganti/syntaqlite/pull/527), [#530](https://github.com/LalitMaganti/syntaqlite/pull/530), [#526](https://github.com/LalitMaganti/syntaqlite/pull/526))
+
+### Breaking changes
+
+**Release file names include the version.** Scripts that download release files by name need the new names. The macOS and Linux CLI archives are also published under their old names for older versions of the Zed extension, until [#514](https://github.com/LalitMaganti/syntaqlite/issues/514). ([#515](https://github.com/LalitMaganti/syntaqlite/pull/515), [#518](https://github.com/LalitMaganti/syntaqlite/pull/518))
+
+| Before | After |
+|---|---|
+| `syntaqlite-linux-x64.tar.gz` | `syntaqlite-0.14.0-linux-x64.tar.gz` |
+| `libsyntaqlite.tar.gz` | `libsyntaqlite-0.14.0.tar.gz` |
+| `syntaqlite-syntax-amalgamation.tar.gz` | `libsyntaqlite-parser-0.14.0-src.tar.gz` |
+| `syntaqlite_syntax.h`, `syntaqlite_syntax.c` | `libsyntaqlite_parser.h`, `libsyntaqlite_parser.c` |
+
+**C analyzer schema types are renamed.** The analyzer's `SyntaqliteColumnDef` clashed with the parser's AST node of the same name, which is why the combined `syntaqlite.h` did not compile. C code using the analyzer's schema types needs the new names. The AST node keeps its name. ([#521](https://github.com/LalitMaganti/syntaqlite/pull/521))
+
+| Before | After |
+|---|---|
+| `SyntaqliteColumnDef` | `SyntaqliteSchemaColumn` |
+| `SyntaqliteTableDef` | `SyntaqliteSchemaTable` |
+| `SyntaqliteViewDef` | `SyntaqliteSchemaView` |
+
+**JavaScript `loadDefault` throws when the dialect fails to load.** It used to only set a status message, so a wrong path failed silently. Code that relied on it not throwing needs a `try`. `selectPreset` still reports through the status message and now returns whether it succeeded. ([#532](https://github.com/LalitMaganti/syntaqlite/pull/532))
+
+### Changes for packagers
+
+- Each release includes `syntaqlite-release.json`, which lists every release file with its SHA-256, and its notes have a Downloads table built from it. ([#511](https://github.com/LalitMaganti/syntaqlite/pull/511), [#516](https://github.com/LalitMaganti/syntaqlite/pull/516))
+- `libsyntaqlite-parser-<version>.tar.gz` has the header plus a static and a shared library per platform, laid out like the libsyntaqlite archive. On Linux its shared library links libdl. ([#522](https://github.com/LalitMaganti/syntaqlite/pull/522))
+- The libsyntaqlite archive ships the single amalgamated `syntaqlite.h`. Builds from source use the headers in `syntaqlite-capi/include` and the parser's include directory instead. ([#533](https://github.com/LalitMaganti/syntaqlite/pull/533))
+
+### Other changes
+
+**C library**
+- The `syntaqlite.h` shipped with libsyntaqlite compiles as C and C++. ([#521](https://github.com/LalitMaganti/syntaqlite/pull/521))
+
+**Python**
+- `analyze(strict_schema=True)` reports unknown tables and columns as errors. ([#531](https://github.com/LalitMaganti/syntaqlite/pull/531))
+- `parse` returns a `ParseResult`, whose `errors` holds the statements that failed to parse. Code that treats the result as a list keeps working. ([#531](https://github.com/LalitMaganti/syntaqlite/pull/531))
+- Rendered reports label the source `<input>` instead of leaving it blank. ([#531](https://github.com/LalitMaganti/syntaqlite/pull/531))
+
+**JavaScript**
+- `analyze` takes `strictSchema`, and `analyzeText` returns the rendered report. ([#532](https://github.com/LalitMaganti/syntaqlite/pull/532))
+- `new Engine({wasmBaseUrl})` loads the runtime and the SQLite dialect from one copied `wasm/` directory. ([#532](https://github.com/LalitMaganti/syntaqlite/pull/532))
+
+**CLI**
+- `syntaqlite serve json` accepts `strict_schema` in `analyze` requests. ([#531](https://github.com/LalitMaganti/syntaqlite/pull/531))
+
+**Rust API**
+- `syntaqlite` builds with any combination of its features. ([#538](https://github.com/LalitMaganti/syntaqlite/pull/538))
+
 ## 0.13.5
 
 **Rust API**
