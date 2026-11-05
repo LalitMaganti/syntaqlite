@@ -218,8 +218,11 @@ or build libsyntaqlite with `cargo build -p syntaqlite-capi`. The
 
 ## Project status
 
-syntaqlite is usable today but still 0.x: its APIs and command-line interface
-may change before 1.0.
+syntaqlite is ready to use today. It was built for [Perfetto](https://perfetto.dev),
+which uses it to parse PerfettoSQL in Trace Processor and to format Perfetto's
+SQL standard library.
+
+It is still 0.x, so its APIs and command-line interface may change before 1.0.
 
 ## Contributing
 
