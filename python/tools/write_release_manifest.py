@@ -55,6 +55,7 @@ PLATFORM_LABELS = {
 
 FILE_LABELS = {
     "libsyntaqlite": "C library, all platforms",
+    "libsyntaqlite-parser": "C parser library, all platforms",
     "libsyntaqlite-parser-src": "C parser source",
 }
 
