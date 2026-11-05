@@ -423,13 +423,106 @@ jobs:
         with:
           packages-dir: dist/
 
-  # Package libsyntaqlite + libsyntaqlite-parser source, then upload them to the GH
+  # Generate the libsyntaqlite-parser C source once, so the source archive and
+  # every prebuilt library come from the same files. Runs on pull requests too,
+  # so changes that break the prebuilt libraries fail before a release.
+  parser-source:
+    name: libsyntaqlite-parser source
+    runs-on: ubuntu-latest
+    env:
+      SYNTAQLITE_BUILDING: "1"
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Generate libsyntaqlite-parser source
+        run: |
+          cargo run --release -p syntaqlite-buildtools -- amalgamate-syntax \
+            --dialect sqlite \
+            --runtime-dir syntaqlite-syntax \
+            --dialect-dir syntaqlite-syntax \
+            --output-dir parser-out \
+            --output-name libsyntaqlite_parser
+
+      - name: Upload libsyntaqlite-parser source
+        uses: actions/upload-artifact@v6
+        with:
+          name: libsyntaqlite-parser-src
+          path: parser-out/
+
+  # Compile libsyntaqlite-parser into a static and shared library per platform,
+  # and check both link and run.
+  parser-libs:
+    name: libsyntaqlite-parser (${{ matrix.name }})
+    needs: parser-source
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {name: macos-arm64, runner: macos-latest, macos_deployment: "11.0"}
+          - {name: macos-x64, runner: macos-26-intel, macos_deployment: "10.12"}
+          - {name: linux-x64, runner: ubuntu-latest, container: "quay.io/pypa/manylinux_2_28_x86_64"}
+          - {name: linux-arm64, runner: ubuntu-24.04-arm, container: "quay.io/pypa/manylinux_2_28_aarch64"}
+          - {name: windows-x64, runner: windows-latest, msvc_arch: x64}
+          - {name: windows-arm64, runner: windows-latest, msvc_arch: amd64_arm64, clang_target: aarch64-pc-windows-msvc}
+    runs-on: ${{ matrix.runner }}
+    container: ${{ matrix.container }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Use manylinux Python (Linux container)
+        if: ${{ matrix.container }}
+        shell: bash
+        run: echo "/opt/python/cp312-cp312/bin" >> "$GITHUB_PATH"
+
+      - uses: actions/setup-python@v6
+        if: ${{ !matrix.container }}
+        with:
+          python-version: "3.12"
+
+      # Only GitHub-owned and verified actions are allowed here, so load the
+      # MSVC environment from vcvarsall directly.
+      - name: Set up MSVC
+        if: ${{ matrix.msvc_arch }}
+        shell: pwsh
+        run: |
+          $vs = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -products * -property installationPath
+          cmd /c "`"$vs\VC\Auxiliary\Build\vcvarsall.bat`" ${{ matrix.msvc_arch }} >nul && set" | ForEach-Object {
+            if ($_ -match '^([^=]+)=(.*)$') {
+              "$($matches[1])=$($matches[2])" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+            }
+          }
+
+      - name: Download libsyntaqlite-parser source
+        uses: actions/download-artifact@v7
+        with:
+          name: libsyntaqlite-parser-src
+          path: parser-src/
+
+      # The arm64 Windows build is cross-compiled, so its smoke test is only linked.
+      - name: Build libsyntaqlite-parser
+        shell: bash
+        env:
+          MACOSX_DEPLOYMENT_TARGET: ${{ matrix.macos_deployment }}
+        run: |
+          python tools/build-parser-library \
+            --source-dir parser-src \
+            --output-dir "parser-lib/${{ matrix.name }}" \
+            ${{ matrix.clang_target && format('--target {0} --no-run', matrix.clang_target) || '' }}
+
+      - name: Upload libsyntaqlite-parser libraries
+        uses: actions/upload-artifact@v6
+        with:
+          name: parser-lib-${{ matrix.name }}
+          path: parser-lib/
+
+  # Package libsyntaqlite and libsyntaqlite-parser, then upload them to the GH
   # Release with the manifest describing every release file.
   package-c-artifacts:
     name: Package C artifacts
     needs:
       - build
       - upload-release
+      - parser-libs
     if: ${{ !github.event.pull_request }}
     runs-on: ubuntu-latest
     env:
@@ -472,18 +565,26 @@ jobs:
           done
           tar -czf "libsyntaqlite-$VERSION.tar.gz" -C staging .
 
-      # -- libsyntaqlite-parser source --
-      - name: Generate libsyntaqlite-parser source
+      # -- libsyntaqlite-parser archives --
+      - name: Download libsyntaqlite-parser source
+        uses: actions/download-artifact@v7
+        with:
+          name: libsyntaqlite-parser-src
+          path: parser-src/
+
+      - name: Download libsyntaqlite-parser libraries
+        uses: actions/download-artifact@v7
+        with:
+          pattern: parser-lib-*
+          path: parser-lib/
+          merge-multiple: true
+
+      - name: Assemble libsyntaqlite-parser archives
         run: |
-          mkdir -p parser-out
-          bin/syntaqlite-buildtools amalgamate-syntax \
-            --dialect sqlite \
-            --runtime-dir syntaqlite-syntax \
-            --dialect-dir syntaqlite-syntax \
-            --output-dir parser-out \
-            --output-name libsyntaqlite_parser
           tar -czf "libsyntaqlite-parser-$VERSION-src.tar.gz" \
-            -C parser-out libsyntaqlite_parser.h libsyntaqlite_parser.c
+            -C parser-src libsyntaqlite_parser.h libsyntaqlite_parser.c
+          cp parser-src/libsyntaqlite_parser.h parser-lib/
+          tar -czf "libsyntaqlite-parser-$VERSION.tar.gz" -C parser-lib .
 
       # -- Release manifest --
       - name: Download all CLI archives
@@ -509,6 +610,7 @@ jobs:
             --parts manifest-parts \
             --cli-dir archives \
             --file libsyntaqlite="libsyntaqlite-$VERSION.tar.gz" \
+            --file libsyntaqlite-parser="libsyntaqlite-parser-$VERSION.tar.gz" \
             --file libsyntaqlite-parser-src="libsyntaqlite-parser-$VERSION-src.tar.gz" \
             --output syntaqlite-release.json \
             --release-notes release-notes.md \
@@ -523,6 +625,7 @@ jobs:
         run: |
           gh release upload "${{ github.ref_name }}" \
             "libsyntaqlite-$VERSION.tar.gz" \
+            "libsyntaqlite-parser-$VERSION.tar.gz" \
             "libsyntaqlite-parser-$VERSION-src.tar.gz" \
             --clobber
           gh release upload "${{ github.ref_name }}" syntaqlite-release.json --clobber
