@@ -25,9 +25,12 @@
 
 ## What is syntaqlite?
 
-syntaqlite reads SQL the way SQLite does. Its parser and tokenizer are
-generated from SQLite's own grammar and source, so it accepts and rejects the
-same statements as the SQLite version and compile-time flags you target.
+syntaqlite is a set of tools for working with SQLite SQL: a formatter, a
+static analyzer that checks queries against your schema, a language server for
+your editor, and the parser underneath them. Use it as the `syntaqlite`
+command-line tool, or embed it in your own code as a library. Its parser and
+tokenizer are generated from SQLite's own grammar and source, so it accepts and
+rejects the same statements as the SQLite version you target.
 
 - **Format SQL.** `syntaqlite fmt` formats files in place or checks them in
   CI, with configurable line width, indentation and keyword case.
