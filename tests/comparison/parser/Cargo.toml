@@ -2,7 +2,7 @@
 
 [package]
 name = "parser-bench"
-version = "0.13.5"
+version = "0.14.0"
 edition = "2021"
 
 [[bin]]

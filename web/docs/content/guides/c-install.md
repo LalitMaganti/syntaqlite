@@ -35,7 +35,7 @@ The release notes give the SHA-256 of every file.
 ## libsyntaqlite
 
 ```bash
-curl -L https://github.com/LalitMaganti/syntaqlite/releases/download/v0.13.5/libsyntaqlite-0.13.5.tar.gz | tar xz
+curl -L https://github.com/LalitMaganti/syntaqlite/releases/download/v0.14.0/libsyntaqlite-0.14.0.tar.gz | tar xz
 ```
 
 ```
@@ -125,7 +125,7 @@ must also tell the linker to export the functions listed in
 ### Prebuilt libraries
 
 ```bash
-curl -L https://github.com/LalitMaganti/syntaqlite/releases/download/v0.13.5/libsyntaqlite-parser-0.13.5.tar.gz | tar xz
+curl -L https://github.com/LalitMaganti/syntaqlite/releases/download/v0.14.0/libsyntaqlite-parser-0.14.0.tar.gz | tar xz
 ```
 
 ```
@@ -181,7 +181,7 @@ program with `/MD` too.
 ### C source
 
 ```bash
-curl -L https://github.com/LalitMaganti/syntaqlite/releases/download/v0.13.5/libsyntaqlite-parser-0.13.5-src.tar.gz | tar xz
+curl -L https://github.com/LalitMaganti/syntaqlite/releases/download/v0.14.0/libsyntaqlite-parser-0.14.0-src.tar.gz | tar xz
 ```
 
 The archive has `libsyntaqlite_parser.h` and `libsyntaqlite_parser.c`. Add the

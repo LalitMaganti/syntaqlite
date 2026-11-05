@@ -1,5 +1,63 @@
 # Changelog
 
+## 0.14.0
+
+0.14.0 makes the complete C library, libsyntaqlite, buildable from crates.io with cargo, fixes its shipped `syntaqlite.h`, which had not compiled since at least 0.12.1, and releases the parser-only C library prebuilt as libsyntaqlite-parser. C users need to rename three analyzer types, and anyone downloading release files by name needs the new versioned names. Rust and Python users can upgrade without changes.
+
+### Highlights
+
+**Build libsyntaqlite with cargo.** `syntaqlite-capi` is published to crates.io, and `cargo build -p syntaqlite-capi` produces the same library the release ships. Projects that build their dependencies from source no longer need the release archive. ([#533](https://github.com/LalitMaganti/syntaqlite/pull/533), [#534](https://github.com/LalitMaganti/syntaqlite/pull/534), [#537](https://github.com/LalitMaganti/syntaqlite/pull/537))
+
+**Static libsyntaqlite and a smaller shared library.** The libsyntaqlite archive includes a static library for every platform, so C programs can link syntaqlite into a self-contained binary. The Linux shared library is down from 7.9 MB to 2.3 MB. ([#523](https://github.com/LalitMaganti/syntaqlite/pull/523))
+
+**libsyntaqlite-parser.** The parser-only C library, previously released as source under the name "syntax amalgamation", is now libsyntaqlite-parser. It ships prebuilt static and shared libraries for each platform, and its source archive compiles again. ([#518](https://github.com/LalitMaganti/syntaqlite/pull/518), [#522](https://github.com/LalitMaganti/syntaqlite/pull/522))
+
+**Install the CLI with cargo binstall.** `cargo binstall syntaqlite-cli` downloads the prebuilt binary instead of compiling it. ([#509](https://github.com/LalitMaganti/syntaqlite/pull/509))
+
+**Python, JavaScript and C docs.** Python has a tutorial and a guide, JavaScript has its own docs, and C has one starting page for choosing between libsyntaqlite and libsyntaqlite-parser. ([#527](https://github.com/LalitMaganti/syntaqlite/pull/527), [#530](https://github.com/LalitMaganti/syntaqlite/pull/530), [#526](https://github.com/LalitMaganti/syntaqlite/pull/526))
+
+### Breaking changes
+
+**Release file names include the version.** Scripts that download release files by name need the new names. The macOS and Linux CLI archives are also published under their old names for older versions of the Zed extension, until [#514](https://github.com/LalitMaganti/syntaqlite/issues/514). ([#515](https://github.com/LalitMaganti/syntaqlite/pull/515), [#518](https://github.com/LalitMaganti/syntaqlite/pull/518))
+
+| Before | After |
+|---|---|
+| `syntaqlite-linux-x64.tar.gz` | `syntaqlite-0.14.0-linux-x64.tar.gz` |
+| `libsyntaqlite.tar.gz` | `libsyntaqlite-0.14.0.tar.gz` |
+| `syntaqlite-syntax-amalgamation.tar.gz` | `libsyntaqlite-parser-0.14.0-src.tar.gz` |
+| `syntaqlite_syntax.h`, `syntaqlite_syntax.c` | `libsyntaqlite_parser.h`, `libsyntaqlite_parser.c` |
+
+**C analyzer schema types are renamed.** C code that describes a schema to the analyzer needs the new names. ([#521](https://github.com/LalitMaganti/syntaqlite/pull/521))
+
+| Before | After |
+|---|---|
+| `SyntaqliteColumnDef` | `SyntaqliteSchemaColumn` |
+| `SyntaqliteTableDef` | `SyntaqliteSchemaTable` |
+| `SyntaqliteViewDef` | `SyntaqliteSchemaView` |
+
+**JavaScript `loadDefault` throws when the dialect fails to load.** It used to fail silently. Code that relied on it not throwing needs a `try`. ([#532](https://github.com/LalitMaganti/syntaqlite/pull/532))
+
+### Changes for packagers
+
+- Each release includes `syntaqlite-release.json`, which lists every release file with its SHA-256. ([#511](https://github.com/LalitMaganti/syntaqlite/pull/511))
+- On Linux, the libsyntaqlite-parser shared library links libdl. ([#522](https://github.com/LalitMaganti/syntaqlite/pull/522))
+
+### Other changes
+
+**Python**
+- `analyze(strict_schema=True)` reports unknown tables and columns as errors. ([#531](https://github.com/LalitMaganti/syntaqlite/pull/531))
+- `parse` returns a `ParseResult`, whose `errors` holds the statements that failed to parse. Code that treats the result as a list keeps working. ([#531](https://github.com/LalitMaganti/syntaqlite/pull/531))
+
+**JavaScript**
+- `analyze` takes `strictSchema`, and `analyzeText` returns the rendered report. ([#532](https://github.com/LalitMaganti/syntaqlite/pull/532))
+- `new Engine({wasmBaseUrl})` loads everything from one copied `wasm/` directory. ([#532](https://github.com/LalitMaganti/syntaqlite/pull/532))
+
+**CLI**
+- `syntaqlite serve json` accepts `strict_schema` in `analyze` requests. ([#531](https://github.com/LalitMaganti/syntaqlite/pull/531))
+
+**Rust API**
+- `syntaqlite` builds with default features turned off. ([#538](https://github.com/LalitMaganti/syntaqlite/pull/538))
+
 ## 0.13.5
 
 **Rust API**

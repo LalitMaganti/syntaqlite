@@ -27,12 +27,12 @@ The code in this tutorial is the same for both.
   </div>
   <div class="tab-panel active" data-tab="prebuilt">
     <pre><code class="language-bash">mkdir sql-parser &amp;&amp; cd sql-parser
-curl -L https://github.com/LalitMaganti/syntaqlite/releases/download/v0.13.5/libsyntaqlite-parser-0.13.5.tar.gz | tar xz</code></pre>
+curl -L https://github.com/LalitMaganti/syntaqlite/releases/download/v0.14.0/libsyntaqlite-parser-0.14.0.tar.gz | tar xz</code></pre>
     <p>The header, plus a static and a shared library for each platform.</p>
   </div>
   <div class="tab-panel" data-tab="source">
     <pre><code class="language-bash">mkdir sql-parser &amp;&amp; cd sql-parser
-curl -L https://github.com/LalitMaganti/syntaqlite/releases/download/v0.13.5/libsyntaqlite-parser-0.13.5-src.tar.gz | tar xz</code></pre>
+curl -L https://github.com/LalitMaganti/syntaqlite/releases/download/v0.14.0/libsyntaqlite-parser-0.14.0-src.tar.gz | tar xz</code></pre>
     <p>The header and <code>libsyntaqlite_parser.c</code>, which you compile with your program.</p>
   </div>
 </div>
