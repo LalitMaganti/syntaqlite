@@ -25,31 +25,27 @@
 
 ## What is syntaqlite?
 
-syntaqlite is a set of tools for working with SQLite SQL: a formatter, a
-static analyzer that checks queries against your schema, a language server for
-your editor, and the parser underneath them. Use it as the `syntaqlite`
-command-line tool, or embed it in your own code as a library. Its parser and
-tokenizer are generated from SQLite's own grammar and source, so it accepts and
-rejects the same statements as the SQLite version you target.
+syntaqlite is a set of tools for SQLite SQL. Use them through the `syntaqlite`
+command-line tool, in your editor, or as a library in your own code.
 
-- **Format SQL.** `syntaqlite fmt` formats files in place or checks them in
-  CI, with configurable line width, indentation and keyword case.
-- **Catch mistakes before you run them.** Give the analyzer your schema and it
-  reports unknown tables and columns, wrong column or value counts and other
-  errors SQLite would raise, without opening a database. It reports several
-  problems in one pass and suggests fixes.
-- **Match your SQLite.** Check SQL as SQLite 3.32 would, or against a build with
-  `SQLITE_ENABLE_MATH_FUNCTIONS`. The parser, formatter, analyzer and
-  language server all follow the same setting.
-- **Work in your editor.** The language server gives diagnostics, completion,
-  hover, formatting, go to definition, find references and rename in VS Code,
-  Zed, Claude Code and other editors.
-- **Build on it.** **libsyntaqlite** is the same parser, formatter and analyzer
-  as a library for Rust, Python, JavaScript and C. Its syntax tree keeps
-  comments and whitespace, for migration tools, code generators and other
-  source-to-source work. **libsyntaqlite-parser** is the parser alone, as a C
-  library. SQLite-based dialects can add their own grammar, functions and
-  formatting rules.
+- **Formatter.** `syntaqlite fmt` formats files in place or checks them in CI,
+  with configurable line width, indentation and keyword case.
+- **Static analyzer.** Checks queries against your schema without opening a
+  database. It reports unknown tables and columns, wrong column or value counts
+  and other errors SQLite would raise, several in one pass, and suggests fixes.
+- **Language server.** Diagnostics, completion, hover, formatting, go to
+  definition, find references and rename in VS Code, Zed, Claude Code and
+  other editors.
+- **Libraries.** **libsyntaqlite** is the parser, formatter and analyzer for
+  Rust, Python, JavaScript and C. Its syntax tree keeps comments and
+  whitespace, for migration tools, code generators and other source-to-source
+  work. **libsyntaqlite-parser** is the parser alone, as a C library.
+
+All of them use a parser and tokenizer generated from SQLite's own grammar and
+source, so they accept and reject the same statements as the SQLite version and
+compile-time flags you target, such as SQLite 3.32 or a build with
+`SQLITE_ENABLE_MATH_FUNCTIONS`. SQLite-based dialects can add their own
+grammar, functions and formatting rules.
 
 ## Try it in your browser
 
