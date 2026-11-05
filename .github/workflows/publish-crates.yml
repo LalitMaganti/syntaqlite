@@ -48,3 +48,4 @@ jobs:
           cargo publish -p syntaqlite --no-verify
           cargo publish -p syntaqlite-buildtools --no-verify
           cargo publish -p syntaqlite-cli --no-verify
+          cargo publish -p syntaqlite-capi --no-verify
