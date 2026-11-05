@@ -53,8 +53,9 @@ VERSION_REF_FILES = [
 
 # Docs with release download URLs (e.g. download/vX.Y.Z/libsyntaqlite-X.Y.Z.tar.gz).
 RELEASE_URL_FILES = [
-    "web/docs/content/guides/c-api.md",
+    "web/docs/content/getting-started/c.md",
     "web/docs/content/getting-started/c-parser.md",
+    "web/docs/content/guides/c-install.md",
 ]
 
 # Cargo.toml dependency version refs (e.g. version = "X.Y.Z", path = ...).
