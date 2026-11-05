@@ -1,6 +1,7 @@
 # Public C functions libsyntaqlite exports, one per line. build.rs passes
-# them to the linker. Generated from tests/c_api/api-manifest.json;
-# tools/check-c-exports checks the two match.
+# them to the linker. A second word names the cargo feature the function
+# needs. Generated from tests/c_api/api-manifest.json; tools/check-c-exports
+# checks the two match.
 syntaqlite_analyzer_add_function_overload
 syntaqlite_analyzer_add_table_function
 syntaqlite_analyzer_add_tables
@@ -104,7 +105,7 @@ syntaqlite_result_rewrite_count
 syntaqlite_result_root
 syntaqlite_result_tokens
 syntaqlite_rpc_call
-syntaqlite_rpc_create_dialect
+syntaqlite_rpc_create_dialect dynload
 syntaqlite_rpc_create_sqlite
 syntaqlite_rpc_destroy
 syntaqlite_rpc_free

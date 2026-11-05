@@ -22,6 +22,14 @@ fn main() {
         .lines()
         .map(str::trim)
         .filter(|l| !l.is_empty() && !l.starts_with('#'))
+        .filter_map(|l| {
+            let mut words = l.split_whitespace();
+            let name = words.next()?;
+            match words.next() {
+                Some(feature) => feature_enabled(feature).then_some(name),
+                None => Some(name),
+            }
+        })
         .collect();
 
     let os = env::var("CARGO_CFG_TARGET_OS").unwrap_or_default();
@@ -86,6 +94,11 @@ fn rust_lld_dir() -> Option<PathBuf> {
         .join(host)
         .join("bin/gcc-ld");
     dir.join("ld.lld").exists().then_some(dir)
+}
+
+fn feature_enabled(feature: &str) -> bool {
+    let var = format!("CARGO_FEATURE_{}", feature.to_uppercase().replace('-', "_"));
+    env::var_os(var).is_some()
 }
 
 fn link_arg(arg: &str) {
