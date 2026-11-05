@@ -6,111 +6,10 @@ weight = 2
 
 # Using libsyntaqlite from C
 
-libsyntaqlite is an embeddable parser, formatter, and static analyzer for SQLite
-SQL. C and C++ projects can use it, or libsyntaqlite-parser if they only need
-the parser and tokenizer:
-
-| | libsyntaqlite-parser | libsyntaqlite |
-|---|---|---|
-| **Package** | `libsyntaqlite-parser` (C source or prebuilt) | `libsyntaqlite` (prebuilt) |
-| **Contents** | Two C files, or static and shared libraries per platform | Shared library + header per platform |
-| **Parser & tokenizer** | Yes | Yes |
-| **Formatter** | No | Yes |
-| **Validator** | No | Yes |
-| **Dependencies** | None (just a C compiler) | Link against the shared library |
-
-libsyntaqlite-parser is released both as C source and as prebuilt libraries.
-
-## Option 1: libsyntaqlite-parser (parser and tokenizer only)
-
-libsyntaqlite-parser contains the **parser and tokenizer** as two compilable C
-files. It does **not** include the formatter or analyzer; those require the
-Rust runtime and are only available via the prebuilt shared library (option 2).
-
-Download from the
-[latest release](https://github.com/LalitMaganti/syntaqlite/releases):
-
-```bash
-curl -LO https://github.com/LalitMaganti/syntaqlite/releases/download/v0.13.5/libsyntaqlite-parser-0.13.5-src.tar.gz
-tar xf libsyntaqlite-parser-0.13.5-src.tar.gz
-```
-
-The archive contains `libsyntaqlite_parser.h` and `libsyntaqlite_parser.c`. Add
-both to your project and compile them:
-
-```bash
-cc -c -O2 libsyntaqlite_parser.c -o libsyntaqlite_parser.o
-cc -o my_program my_program.c libsyntaqlite_parser.o
-```
-
-To link a prebuilt library instead, download `libsyntaqlite-parser`. It contains
-the header and a static and shared library for each platform:
-
-```bash
-curl -LO https://github.com/LalitMaganti/syntaqlite/releases/download/v0.13.5/libsyntaqlite-parser-0.13.5.tar.gz
-tar xf libsyntaqlite-parser-0.13.5.tar.gz
-```
-
-```
-libsyntaqlite_parser.h
-linux-x64/libsyntaqlite_parser.a
-linux-x64/libsyntaqlite_parser.so
-macos-arm64/libsyntaqlite_parser.a
-macos-arm64/libsyntaqlite_parser.dylib
-windows-x64/syntaqlite_parser.lib
-windows-x64/syntaqlite_parser.dll
-windows-x64/syntaqlite_parser.dll.lib
-...
-```
-
-Link the static library, or the shared one. When linking the Windows DLL, define
-`SYNTAQLITE_SHARED` so the header imports its functions:
-
-```bash
-# Static, Linux x64
-cc -o my_program my_program.c -I. linux-x64/libsyntaqlite_parser.a
-
-# Shared, Linux x64
-cc -o my_program my_program.c -I. -Llinux-x64 -lsyntaqlite_parser -Wl,-rpath,'$ORIGIN/linux-x64'
-```
-
-See the [C parser tutorial](@/getting-started/c-parser.md) for a complete
-walkthrough.
-
-## Option 2: Prebuilt shared library (full API)
-
-The prebuilt shared library includes the **full API**: parser, tokenizer,
-formatter, and analyzer. Download `libsyntaqlite` from the
-[latest release](https://github.com/LalitMaganti/syntaqlite/releases). The
-archive contains a single `syntaqlite.h` header and shared libraries for each
-platform:
-
-```bash
-curl -LO https://github.com/LalitMaganti/syntaqlite/releases/download/v0.13.5/libsyntaqlite-0.13.5.tar.gz
-tar xf libsyntaqlite-0.13.5.tar.gz
-```
-
-```
-syntaqlite.h
-macos-arm64/libsyntaqlite.dylib
-macos-x64/libsyntaqlite.dylib
-linux-x64/libsyntaqlite.so
-linux-arm64/libsyntaqlite.so
-windows-x64/syntaqlite.dll
-windows-x64/syntaqlite.dll.lib
-windows-arm64/syntaqlite.dll
-windows-arm64/syntaqlite.dll.lib
-```
-
-Compile and link against the library for your platform:
-
-```bash
-# Linux x64
-cc -o my_program my_program.c -I. -Llinux-x64 -lsyntaqlite -Wl,-rpath,'$ORIGIN/linux-x64'
-
-# macOS arm64
-cc -o my_program my_program.c -I. -Lmacos-arm64 -lsyntaqlite -Wl,-rpath,@executable_path/macos-arm64
-```
+This guide covers libsyntaqlite's formatter and analyzer from C and C++. To
+get started, follow the [libsyntaqlite for C tutorial](@/getting-started/c.md).
+To download and link the library, see
+[Installing the C libraries](@/guides/c-install.md).
 
 ## Format a query
 
@@ -265,3 +164,4 @@ return NULL.
 
 - See the [libsyntaqlite C API reference](@/reference/c-api.md) for all functions, types,
   and the memory model
+- To only parse SQL, see [libsyntaqlite-parser for C](@/getting-started/c-parser.md)

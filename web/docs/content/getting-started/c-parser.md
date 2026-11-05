@@ -1,37 +1,40 @@
 +++
 title = "libsyntaqlite-parser for C"
-description = "Parse SQLite SQL from C with libsyntaqlite-parser, a dependency-free C source library."
-weight = 5
+description = "Parse SQLite SQL from C with libsyntaqlite-parser, the dependency-free parser library."
+weight = 6
 +++
 
-# Parsing SQLite SQL from C
+# Using libsyntaqlite-parser from C
 
-libsyntaqlite-parser lets you add SQLite parsing to a C program without any
-dependencies beyond a C compiler. The example below parses queries, prints their
+libsyntaqlite-parser is libsyntaqlite's parser and tokenizer on their own. It
+needs nothing beyond a C compiler. This tutorial parses queries, prints their
 AST, recovers from errors, and lists the tokens produced by the tokenizer.
 
-syntaqlite has two C libraries. This tutorial uses **libsyntaqlite-parser**,
-which provides the parser and tokenizer as two C files that you compile into
-your project. The prebuilt libsyntaqlite library also includes formatting and
-static analysis, as described in the
-[libsyntaqlite C guide](@/guides/c-api.md).
+To also format or analyze SQL, use
+[libsyntaqlite](@/getting-started/c.md) instead. It includes the same parser
+functions.
 
-## 1. Download libsyntaqlite-parser
+## 1. Get libsyntaqlite-parser
 
-libsyntaqlite-parser is two files: `libsyntaqlite_parser.h` (header) and
-`libsyntaqlite_parser.c` (implementation). Download them from the latest release:
+libsyntaqlite-parser is released as prebuilt libraries and as C source. Use
+whichever suits your build:
 
-```bash
-mkdir sql-parser && cd sql-parser
-curl -L https://github.com/LalitMaganti/syntaqlite/releases/download/v0.13.5/libsyntaqlite-parser-0.13.5-src.tar.gz | tar xz
-```
-
-You should have:
-
-```bash
-ls
-# libsyntaqlite_parser.c  libsyntaqlite_parser.h
-```
+<div class="tabs" data-tab-group="parser-get">
+  <div class="tab-buttons">
+    <button class="active" data-tab="prebuilt" onclick="switchTab('parser-get','prebuilt')">Prebuilt library</button>
+    <button data-tab="source" onclick="switchTab('parser-get','source')">C source</button>
+  </div>
+  <div class="tab-panel active" data-tab="prebuilt">
+    <pre><code class="language-bash">mkdir sql-parser &amp;&amp; cd sql-parser
+curl -L https://github.com/LalitMaganti/syntaqlite/releases/download/v0.13.5/libsyntaqlite-parser-0.13.5.tar.gz | tar xz</code></pre>
+    <p>Contains <code>libsyntaqlite_parser.h</code> and a static and shared library for each platform.</p>
+  </div>
+  <div class="tab-panel" data-tab="source">
+    <pre><code class="language-bash">mkdir sql-parser &amp;&amp; cd sql-parser
+curl -L https://github.com/LalitMaganti/syntaqlite/releases/download/v0.13.5/libsyntaqlite-parser-0.13.5-src.tar.gz | tar xz</code></pre>
+    <p>Contains <code>libsyntaqlite_parser.h</code> and <code>libsyntaqlite_parser.c</code>, to compile into your program.</p>
+  </div>
+</div>
 
 ## 2. Write the program
 
@@ -40,6 +43,7 @@ Create `parse.c`:
 ```c
 #include "libsyntaqlite_parser.h"
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 int main(int argc, char** argv) {
@@ -81,9 +85,20 @@ int main(int argc, char** argv) {
 
 ## 3. Compile and run
 
+With the prebuilt library, link the static library for your platform:
+
+```bash
+cc -o parse parse.c -I. linux-x64/libsyntaqlite_parser.a
+```
+
+With the C source, compile it alongside your program:
+
 ```bash
 cc -O2 -o parse parse.c libsyntaqlite_parser.c
 ```
+
+See [Installing the C libraries](@/guides/c-install.md) for macOS, Windows, and
+shared-library commands.
 
 Run it with the default query:
 
@@ -94,18 +109,23 @@ Run it with the default query:
 ```text
 --- statement 1 ---
 SelectStmt
+  flags: (none)
   columns:
-    ResultColumn
-      expr:
-        ColumnRef
-          column: "id"
-    ResultColumn
-      expr:
-        ColumnRef
-          column: "name"
+    ResultColumnList [2 items]
+      ResultColumn
+        flags: (none)
+        alias: (none)
+        alias_as: FALSE
+        expr:
+          ColumnRef
+            column: "id"
+            table: (none)
+            schema: (none)
+      ...
   from_clause:
     TableRef
       table_name: "users"
+      ...
   where_clause:
     BinaryExpr
       op: EQ
@@ -130,10 +150,18 @@ The parser recovers from errors and keeps going. Try invalid SQL:
 error in statement 1: syntax error near 'FROM'
 --- statement 2 ---
 SelectStmt
+  flags: (none)
   columns:
-    ResultColumn
-      expr:
-        Literal: 1
+    ResultColumnList [1 items]
+      ResultColumn
+        flags: (none)
+        alias: (none)
+        alias_as: FALSE
+        expr:
+          Literal
+            literal_type: INTEGER
+            source: "1"
+  ...
 ```
 
 Statement 1 failed but statement 2 still parsed successfully.
@@ -157,9 +185,20 @@ for (uint32_t i = 0; i < count; i++) {
 }
 ```
 
+For `SELECT id FROM users`, this prints:
+
+```text
+token 0: type=161 offset=0 len=6
+token 1: type=40 offset=7 len=2
+token 2: type=127 offset=10 len=4
+token 3: type=40 offset=15 len=5
+```
+
 ## Next steps
 
-- [Using libsyntaqlite from C](@/guides/c-api.md): switch to the prebuilt
-  library to format and statically analyze SQLite SQL from C
-- [libsyntaqlite C API](@/reference/c-api.md): all parser, tokenizer, formatter,
-  and analyzer functions
+- [libsyntaqlite for C](@/getting-started/c.md): format and analyze SQL as well
+  as parse it
+- [Installing the C libraries](@/guides/c-install.md): linking on every
+  platform
+- [libsyntaqlite C API reference](@/reference/c-api.md): all parser and
+  tokenizer functions

@@ -1,7 +1,7 @@
 +++
 title = "libsyntaqlite for Python"
 description = "Parse, format, and statically analyze SQLite SQL from Python."
-weight = 6
+weight = 7
 +++
 
 # Using libsyntaqlite from Python
