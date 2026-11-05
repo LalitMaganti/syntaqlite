@@ -24,8 +24,7 @@ env:
 jobs:
   # Single Rust build per platform. Produces:
   #   - CLI binary archive (tar.gz/zip)
-  #   - Static library (for C API tests)
-  #   - Shared libsyntaqlite library
+  #   - Static and shared libsyntaqlite libraries
   #   - buildtools binary (for amalgamation, linux-x64 only)
   build:
     name: build (${{ matrix.name }})
@@ -34,12 +33,12 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - {name: macos-arm64, runner: macos-latest, target: aarch64-apple-darwin, binary: syntaqlite, staticlib: libsyntaqlite.a, cdylib: libsyntaqlite.dylib, archive: tar.gz}
-          - {name: macos-x64, runner: macos-26-intel, target: x86_64-apple-darwin, binary: syntaqlite, staticlib: libsyntaqlite.a, cdylib: libsyntaqlite.dylib, archive: tar.gz}
-          - {name: linux-x64, runner: ubuntu-latest, container: "quay.io/pypa/manylinux_2_28_x86_64", target: x86_64-unknown-linux-gnu, binary: syntaqlite, staticlib: libsyntaqlite.a, cdylib: libsyntaqlite.so, archive: tar.gz}
-          - {name: linux-arm64, runner: ubuntu-24.04-arm, container: "quay.io/pypa/manylinux_2_28_aarch64", target: aarch64-unknown-linux-gnu, binary: syntaqlite, staticlib: libsyntaqlite.a, cdylib: libsyntaqlite.so, archive: tar.gz}
-          - {name: windows-x64, runner: windows-latest, target: x86_64-pc-windows-msvc, binary: syntaqlite.exe, staticlib: syntaqlite.lib, cdylib: syntaqlite.dll, importlib: syntaqlite.dll.lib, archive: zip}
-          - {name: windows-arm64, runner: windows-latest, target: aarch64-pc-windows-msvc, binary: syntaqlite.exe, cdylib: syntaqlite.dll, importlib: syntaqlite.dll.lib, archive: zip}
+          - {name: macos-arm64, runner: macos-latest, target: aarch64-apple-darwin, binary: syntaqlite, staticlib: libsyntaqlite.a, cdylib: libsyntaqlite.dylib, archive: tar.gz, out: target/release}
+          - {name: macos-x64, runner: macos-26-intel, target: x86_64-apple-darwin, binary: syntaqlite, staticlib: libsyntaqlite.a, cdylib: libsyntaqlite.dylib, archive: tar.gz, out: target/release}
+          - {name: linux-x64, runner: ubuntu-latest, container: "quay.io/pypa/manylinux_2_28_x86_64", target: x86_64-unknown-linux-gnu, binary: syntaqlite, staticlib: libsyntaqlite.a, cdylib: libsyntaqlite.so, archive: tar.gz, out: target/release}
+          - {name: linux-arm64, runner: ubuntu-24.04-arm, container: "quay.io/pypa/manylinux_2_28_aarch64", target: aarch64-unknown-linux-gnu, binary: syntaqlite, staticlib: libsyntaqlite.a, cdylib: libsyntaqlite.so, archive: tar.gz, out: target/release}
+          - {name: windows-x64, runner: windows-latest, target: x86_64-pc-windows-msvc, binary: syntaqlite.exe, staticlib: syntaqlite.lib, cdylib: syntaqlite.dll, importlib: syntaqlite.dll.lib, archive: zip, out: target/release}
+          - {name: windows-arm64, runner: windows-latest, target: aarch64-pc-windows-msvc, binary: syntaqlite.exe, staticlib: syntaqlite.lib, cdylib: syntaqlite.dll, importlib: syntaqlite.dll.lib, archive: zip, out: target/aarch64-pc-windows-msvc/release, cross: true}
     runs-on: ${{ matrix.runner }}
     container: ${{ matrix.container }}
     env:
@@ -61,13 +60,13 @@ jobs:
         run: rustup target add ${{ matrix.target }}
 
       # -- Build everything in one cargo invocation where possible --
-      - name: Build CLI + static library
-        if: matrix.staticlib
+      - name: Build CLI
+        if: ${{ !matrix.cross }}
         shell: bash
-        run: cargo build --release -p syntaqlite-cli -p syntaqlite-capi
+        run: cargo build --release -p syntaqlite-cli
 
       - name: Build CLI (cross-compiled)
-        if: ${{ !matrix.staticlib }}
+        if: ${{ matrix.cross }}
         shell: bash
         run: cargo build --release -p syntaqlite-cli --target ${{ matrix.target }}
 
@@ -76,15 +75,37 @@ jobs:
         shell: bash
         run: cargo build --release -p syntaqlite-buildtools
 
+      # Runs first so cargo cannot later replace the specially linked shared library.
+      - name: Build C static library
+        shell: bash
+        run: |
+          cargo build --release -p syntaqlite-capi --features dynload \
+            ${{ matrix.cross && format('--target {0}', matrix.target) || '' }}
+
       - name: Build full C shared library
         shell: bash
         run: |
           python3 tools/build-c-library --release \
-            ${{ !matrix.staticlib && format('--target {0}', matrix.target) || '' }}
+            ${{ matrix.cross && format('--target {0}', matrix.target) || '' }}
+
+      # Release builds keep the debug info of Rust's standard library. Windows
+      # keeps debug info in separate .pdb files, so its libraries need nothing.
+      - name: Strip debug info from the C libraries
+        if: runner.os != 'Windows'
+        shell: bash
+        working-directory: ${{ matrix.out }}
+        run: |
+          if [ "$RUNNER_OS" = macOS ]; then
+            strip -S ${{ matrix.staticlib }}
+            strip -x ${{ matrix.cdylib }}
+          else
+            strip --strip-debug ${{ matrix.staticlib }}
+            strip --strip-unneeded ${{ matrix.cdylib }}
+          fi
 
       # -- Smoke test CLI --
       - name: Smoke test CLI
-        if: matrix.staticlib
+        if: ${{ !matrix.cross }}
         shell: bash
         run: |
           target/release/${{ matrix.binary }} --version
@@ -109,8 +130,7 @@ jobs:
         shell: bash
         run: |
           mkdir -p staging/
-          BINARY_DIR=${{ !matrix.staticlib && format('target/{0}/release', matrix.target) || 'target/release' }}
-          cp "$BINARY_DIR/${{ matrix.binary }}" staging/
+          cp "${{ matrix.out }}/${{ matrix.binary }}" staging/
           cd staging && 7z a -tzip "../$CLI_ARCHIVE" "${{ matrix.binary }}"
 
       # -- Upload all artifacts --
@@ -151,20 +171,14 @@ jobs:
           name: manifest-part-${{ matrix.name }}
           path: manifest-part/${{ matrix.name }}.json
 
-      - name: Upload static library
-        if: matrix.staticlib
-        uses: actions/upload-artifact@v6
-        with:
-          name: staticlib-${{ matrix.name }}
-          path: target/release/${{ matrix.staticlib }}
-
       - name: Upload libsyntaqlite
         uses: actions/upload-artifact@v6
         with:
           name: libsyntaqlite-${{ matrix.name }}
           path: |
-            ${{ !matrix.staticlib && format('target/{0}/release', matrix.target) || 'target/release' }}/${{ matrix.cdylib }}
-            ${{ matrix.importlib && format('{0}/{1}', !matrix.staticlib && format('target/{0}/release', matrix.target) || 'target/release', matrix.importlib) || '' }}
+            ${{ matrix.out }}/${{ matrix.staticlib }}
+            ${{ matrix.out }}/${{ matrix.cdylib }}
+            ${{ matrix.importlib && format('{0}/{1}', matrix.out, matrix.importlib) || '' }}
 
       - name: Upload buildtools
         if: matrix.name == 'linux-x64'
@@ -311,6 +325,23 @@ jobs:
       - name: Build cdylib (in-process transport)
         shell: bash
         run: cargo build --release -p syntaqlite-capi --features dynload
+
+      # The release ships the static library built alongside this cdylib, and
+      # this job runs on pull requests, so check a C program links against it.
+      - name: Set up MSVC
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $vs = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -products * -property installationPath
+          cmd /c "`"$vs\VC\Auxiliary\Build\vcvarsall.bat`" x64 >nul && set" | ForEach-Object {
+            if ($_ -match '^([^=]+)=(.*)$') {
+              "$($matches[1])=$($matches[2])" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+            }
+          }
+
+      - name: Link a C program against the static library
+        shell: bash
+        run: python tools/check-static-library
 
       - name: Build wheel
         shell: bash
