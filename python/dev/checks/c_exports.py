@@ -62,7 +62,7 @@ def exported_functions() -> set[str]:
 
 def listed_exports() -> set[str]:
     lines = EXPORTS.read_text(encoding="utf-8").splitlines()
-    return {line.strip() for line in lines if line.strip() and not line.startswith("#")}
+    return {line.split()[0] for line in lines if line.strip() and not line.startswith("#")}
 
 
 def library_exports(library: Path) -> set[str]:
