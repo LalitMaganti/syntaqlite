@@ -10,7 +10,7 @@ use syntaqlite::analysis::{AnalysisConfig, Catalog, CatalogLayer};
 
 use super::SyntaqliteAnalyzer;
 use super::codes::{arity_spec_from_c, column_kind_from_c, function_category_from_c};
-use super::types::{SyntaqliteColumnDef, SyntaqliteTableDef, SyntaqliteViewDef};
+use super::types::{SyntaqliteSchemaColumn, SyntaqliteSchemaTable, SyntaqliteSchemaView};
 use syntaqlite::analysis::{Column, TableDef, ViewDef};
 
 /// Clear accumulated DDL from the catalog.
@@ -32,15 +32,15 @@ pub unsafe extern "C" fn syntaqlite_analyzer_reset_catalog(v: *mut SyntaqliteAna
 /// # Safety
 ///
 /// - `v` must be a valid pointer from `syntaqlite_analyzer_create_sqlite`.
-/// - `tables` must point to `count` valid `SyntaqliteTableDef` entries.
+/// - `tables` must point to `count` valid `SyntaqliteSchemaTable` entries.
 /// - Each `name` must be a valid NUL-terminated C string.
 /// - Each `columns` may be NULL. If non-NULL, must point to `column_count`
-///   valid `SyntaqliteColumnDef` entries whose names are valid NUL-terminated
+///   valid `SyntaqliteSchemaColumn` entries whose names are valid NUL-terminated
 ///   C strings.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn syntaqlite_analyzer_add_tables(
     v: *mut SyntaqliteAnalyzer,
-    tables: *const SyntaqliteTableDef,
+    tables: *const SyntaqliteSchemaTable,
     count: u32,
 ) {
     // SAFETY: caller guarantees `v` is valid.
@@ -70,11 +70,11 @@ pub unsafe extern "C" fn syntaqlite_analyzer_add_tables(
 /// # Safety
 ///
 /// Same requirements as `syntaqlite_analyzer_add_tables`, with `views`
-/// pointing to `count` valid `SyntaqliteViewDef` entries.
+/// pointing to `count` valid `SyntaqliteSchemaView` entries.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn syntaqlite_analyzer_add_views(
     v: *mut SyntaqliteAnalyzer,
-    views: *const SyntaqliteViewDef,
+    views: *const SyntaqliteSchemaView,
     count: u32,
 ) {
     // SAFETY: caller guarantees `v` is valid.
@@ -104,11 +104,11 @@ pub unsafe extern "C" fn syntaqlite_analyzer_add_views(
 /// # Safety
 ///
 /// `name` must be a valid NUL-terminated C string. `columns` may be NULL;
-/// if non-NULL it must point to `count` valid `SyntaqliteColumnDef` entries
+/// if non-NULL it must point to `count` valid `SyntaqliteSchemaColumn` entries
 /// whose names are valid NUL-terminated C strings.
 unsafe fn relation_from_c(
     name: *const c_char,
-    columns: *const SyntaqliteColumnDef,
+    columns: *const SyntaqliteSchemaColumn,
     count: u32,
 ) -> Option<(String, Option<Vec<Column>>)> {
     // SAFETY: caller guarantees `name` is a valid NUL-terminated C string.

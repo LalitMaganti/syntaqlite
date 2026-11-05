@@ -386,11 +386,11 @@
     },
     "syntaqlite_analyzer_add_tables": {
       "linkage": "external",
-      "type": "void (SyntaqliteAnalyzer *, const SyntaqliteTableDef *, uint32_t)"
+      "type": "void (SyntaqliteAnalyzer *, const SyntaqliteSchemaTable *, uint32_t)"
     },
     "syntaqlite_analyzer_add_views": {
       "linkage": "external",
-      "type": "void (SyntaqliteAnalyzer *, const SyntaqliteViewDef *, uint32_t)"
+      "type": "void (SyntaqliteAnalyzer *, const SyntaqliteSchemaView *, uint32_t)"
     },
     "syntaqlite_analyzer_analyze": {
       "linkage": "external",
@@ -1447,14 +1447,6 @@
         },
         "size": 8
       },
-      "SyntaqliteColumnDef": {
-        "align": 8,
-        "fields": {
-          "kind": 8,
-          "name": 0
-        },
-        "size": 16
-      },
       "SyntaqliteColumnDefList": {
         "align": 4,
         "fields": {
@@ -2270,6 +2262,32 @@
         },
         "size": 12
       },
+      "SyntaqliteSchemaColumn": {
+        "align": 8,
+        "fields": {
+          "kind": 8,
+          "name": 0
+        },
+        "size": 16
+      },
+      "SyntaqliteSchemaTable": {
+        "align": 8,
+        "fields": {
+          "column_count": 16,
+          "columns": 8,
+          "name": 0
+        },
+        "size": 24
+      },
+      "SyntaqliteSchemaView": {
+        "align": 8,
+        "fields": {
+          "column_count": 16,
+          "columns": 8,
+          "name": 0
+        },
+        "size": 24
+      },
       "SyntaqliteSelect": {
         "align": 4,
         "fields": {
@@ -2393,15 +2411,6 @@
           "tag": 0
         },
         "size": 8
-      },
-      "SyntaqliteTableDef": {
-        "align": 8,
-        "fields": {
-          "column_count": 16,
-          "columns": 8,
-          "name": 0
-        },
-        "size": 24
       },
       "SyntaqliteTableRef": {
         "align": 4,
@@ -2575,15 +2584,6 @@
           "tag": 0
         },
         "size": 20
-      },
-      "SyntaqliteViewDef": {
-        "align": 8,
-        "fields": {
-          "column_count": 16,
-          "columns": 8,
-          "name": 0
-        },
-        "size": 24
       },
       "SyntaqliteWindowDef": {
         "align": 4,
@@ -3368,19 +3368,6 @@
         {
           "name": "children",
           "type": "uint32_t[]"
-        }
-      ],
-      "kind": "struct"
-    },
-    "SyntaqliteColumnDef": {
-      "fields": [
-        {
-          "name": "name",
-          "type": "const char *"
-        },
-        {
-          "name": "kind",
-          "type": "SyntaqliteColumnKind"
         }
       ],
       "kind": "struct"
@@ -5391,6 +5378,53 @@
       ],
       "kind": "struct"
     },
+    "SyntaqliteSchemaColumn": {
+      "fields": [
+        {
+          "name": "name",
+          "type": "const char *"
+        },
+        {
+          "name": "kind",
+          "type": "SyntaqliteColumnKind"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqliteSchemaTable": {
+      "fields": [
+        {
+          "name": "name",
+          "type": "const char *"
+        },
+        {
+          "name": "columns",
+          "type": "const SyntaqliteSchemaColumn *"
+        },
+        {
+          "name": "column_count",
+          "type": "uint32_t"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqliteSchemaView": {
+      "fields": [
+        {
+          "name": "name",
+          "type": "const char *"
+        },
+        {
+          "name": "columns",
+          "type": "const SyntaqliteSchemaColumn *"
+        },
+        {
+          "name": "column_count",
+          "type": "uint32_t"
+        }
+      ],
+      "kind": "struct"
+    },
     "SyntaqliteSelect": {
       "fields": [
         {
@@ -5693,23 +5727,6 @@
         {
           "name": "children",
           "type": "uint32_t[]"
-        }
-      ],
-      "kind": "struct"
-    },
-    "SyntaqliteTableDef": {
-      "fields": [
-        {
-          "name": "name",
-          "type": "const char *"
-        },
-        {
-          "name": "columns",
-          "type": "const SyntaqliteColumnDef *"
-        },
-        {
-          "name": "column_count",
-          "type": "uint32_t"
         }
       ],
       "kind": "struct"
@@ -6083,23 +6100,6 @@
       ],
       "kind": "struct"
     },
-    "SyntaqliteViewDef": {
-      "fields": [
-        {
-          "name": "name",
-          "type": "const char *"
-        },
-        {
-          "name": "columns",
-          "type": "const SyntaqliteColumnDef *"
-        },
-        {
-          "name": "column_count",
-          "type": "uint32_t"
-        }
-      ],
-      "kind": "struct"
-    },
     "SyntaqliteWindowDef": {
       "fields": [
         {
@@ -6305,6 +6305,9 @@
     "SyntaqliteRpc": "struct SyntaqliteRpc",
     "SyntaqliteSavepointOp": "enum SyntaqliteSavepointOp",
     "SyntaqliteSavepointStmt": "struct SyntaqliteSavepointStmt",
+    "SyntaqliteSchemaColumn": "struct SyntaqliteSchemaColumn",
+    "SyntaqliteSchemaTable": "struct SyntaqliteSchemaTable",
+    "SyntaqliteSchemaView": "struct SyntaqliteSchemaView",
     "SyntaqliteSelect": "union SyntaqliteSelect",
     "SyntaqliteSelectStmt": "struct SyntaqliteSelectStmt",
     "SyntaqliteSelectStmtFlags": "union SyntaqliteSelectStmtFlags",
@@ -6319,7 +6322,6 @@
     "SyntaqliteTableConstraint": "struct SyntaqliteTableConstraint",
     "SyntaqliteTableConstraintList": "struct SyntaqliteTableConstraintList",
     "SyntaqliteTableConstraintType": "enum SyntaqliteTableConstraintType",
-    "SyntaqliteTableDef": "struct SyntaqliteTableDef",
     "SyntaqliteTableRef": "struct SyntaqliteTableRef",
     "SyntaqliteTableSource": "union SyntaqliteTableSource",
     "SyntaqliteTextSpan": "struct SyntaqliteTextSpan",
@@ -6345,7 +6347,6 @@
     "SyntaqliteValuesClause": "struct SyntaqliteValuesClause",
     "SyntaqliteValuesRowList": "struct SyntaqliteValuesRowList",
     "SyntaqliteVariable": "struct SyntaqliteVariable",
-    "SyntaqliteViewDef": "struct SyntaqliteViewDef",
     "SyntaqliteWindowDef": "struct SyntaqliteWindowDef",
     "SyntaqliteWindowDefList": "struct SyntaqliteWindowDefList",
     "SyntaqliteWithClause": "struct SyntaqliteWithClause"
