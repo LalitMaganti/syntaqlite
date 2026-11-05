@@ -121,6 +121,10 @@ else
   REDIRECT_TARGET="/main/"
 fi
 
+# Cloudflare Pages answers / with an HTTP redirect, so browsers go straight
+# there. The page below is only for previewing the output locally.
+echo "/ $REDIRECT_TARGET 302" > "$OUT_DIR/_redirects"
+
 cat > "$OUT_DIR/index.html" <<REDIRECT
 <!DOCTYPE html>
 <html>
