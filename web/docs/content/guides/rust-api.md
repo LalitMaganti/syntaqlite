@@ -1,232 +1,209 @@
 +++
 title = "Using libsyntaqlite from Rust"
-description = "Parse, format, and statically analyze SQLite SQL from Rust."
+description = "Formatter options, tokens, schemas built in code, and column lineage with the syntaqlite crate."
 weight = 1
 +++
 
 # Using libsyntaqlite from Rust
 
-libsyntaqlite is an embeddable parser, formatter, and static analyzer for SQLite
-SQL. Its Rust API is published as the `syntaqlite` crate.
-
-## Add the dependency
-
-```toml
-[dependencies]
-syntaqlite = { version = "0.13.5", features = ["fmt"] }
-```
-
-## Format a query
-
-```rust
-use syntaqlite::Formatter;
-
-let mut fmt = Formatter::new();
-let output = fmt.format("select a,b from t where x=1")?;
-println!("{output}");
-// SELECT a, b
-// FROM t
-// WHERE x = 1;
-```
-
-`Formatter::new()` uses 80-character lines, two-space indentation, and
-uppercase keywords by default. The formatter can be reused across calls, and
-it recycles its internal allocations.
+This guide picks up where the [libsyntaqlite for Rust tutorial](@/getting-started/rust.md)
+leaves off. It covers formatter options, reading tokens and comments,
+building a schema in code, and column lineage.
 
 ## Customize formatting
 
-```rust
-use syntaqlite::{Formatter, FormatConfig, KeywordCase};
-
-let config = FormatConfig::default()
-    .with_line_width(120)
-    .with_indent_width(4)
-    .with_keyword_case(KeywordCase::Lower);
-let mut fmt = Formatter::with_config(&config);
-let output = fmt.format("SELECT 1")?;
-```
-
-## Parse SQL
-
-The parser yields one statement at a time, so memory usage stays proportional
-to the largest single statement:
+Pass a `FormatConfig` to change the line width, indentation, keyword case, and
+trailing semicolons:
 
 ```rust
-use syntaqlite_syntax::{Parser, ParseOutcome};
+use syntaqlite::fmt::KeywordCase;
+use syntaqlite::{FormatConfig, Formatter};
 
-let parser = Parser::new();
-let mut session = parser.parse("SELECT 1; SELECT 2;");
+fn main() {
+    let config = FormatConfig::default()
+        .with_line_width(40)
+        .with_indent_width(4)
+        .with_keyword_case(KeywordCase::Lower);
+    let mut fmt = Formatter::with_config(&config);
 
-loop {
-    match session.next() {
-        ParseOutcome::Ok(stmt) => {
-            let mut buf = String::new();
-            stmt.dump(&mut buf, 0);
-            println!("{buf}");
+    for sql in [
+        "SELECT id, name, email FROM users WHERE active = 1 AND role = 'admin'",
+        "SELECT FROM users",
+    ] {
+        match fmt.format(sql) {
+            Ok(output) => print!("{output}"),
+            Err(err) => println!("error: {err}"),
         }
-        ParseOutcome::Err(err) => {
-            eprintln!("error: {}", err.message());
-        }
-        ParseOutcome::Done => break,
     }
 }
 ```
 
-### Accessing tokens
+```text
+select id, name, email
+from users
+where
+    active = 1
+    and role = 'admin';
+error: syntax error near 'FROM'
+```
 
-Enable token collection for token-level information:
+SQL that does not parse is not formatted; `format` returns the parse error. See
+[Formatting options](@/reference/formatting-options.md) for what each setting
+does.
+
+## Read tokens and comments
+
+Turn on token collection to see every token the parser read, its byte range,
+and how the parser used it. Comments are kept separately:
 
 ```rust
 use syntaqlite::parse::ParserConfig;
+use syntaqlite::{ParseOutcome, Parser};
 
-let config = ParserConfig::default().with_collect_tokens(true);
-let parser = Parser::with_config(&config);
-let mut session = parser.parse("SELECT max(x) FROM t");
+fn main() {
+    let config = ParserConfig::default().with_collect_tokens(true);
+    let parser = Parser::with_config(&config);
+    let mut session = parser.parse("SELECT max(x) FROM t -- largest x");
 
-if let ParseOutcome::Ok(stmt) = session.next() {
-    for token in stmt.tokens() {
-        println!(
-            "{:4}..{:4}  {:?}  {:?}",
-            token.offset(),
-            token.offset() + token.length(),
-            token.token_type(),
-            token.text(),
-        );
-    }
-    // Comments are separate from tokens:
-    for comment in stmt.comments() {
-        println!("comment at {}: {}", comment.offset(), comment.text());
-    }
-}
-```
-
-Token flags indicate how the parser used each token. For example,
-`token.flags().used_as_function()` is `true` for `max` in `max(x)`.
-
-### Generic traversal
-
-For grammar-agnostic tree walking (works with any dialect), use the type-erased
-API:
-
-```rust
-use syntaqlite::any::{AnyParsedStatement, FieldValue};
-
-fn walk(stmt: &AnyParsedStatement, node_id: u32, depth: usize) {
-    if let Some((tag, fields)) = stmt.extract_fields(node_id) {
-        for (i, field) in fields.iter().enumerate() {
-            match field {
-                FieldValue::NodeId(child) => walk(stmt, *child, depth + 1),
-                FieldValue::Span(text) => println!("{:indent$}{text}", "", indent = depth * 2),
-                _ => {}
-            }
+    if let ParseOutcome::Ok(stmt) = session.next() {
+        for token in stmt.tokens() {
+            println!(
+                "{:>2}..{:<2} {:<12} {:?}{}",
+                token.offset(),
+                token.offset() + token.length(),
+                format!("{:?}", token.token_type()),
+                token.text(),
+                if token.flags().used_as_function() { "  (function)" } else { "" },
+            );
+        }
+        for comment in stmt.comments() {
+            println!("comment at {}: {}", comment.offset(), comment.text());
         }
     }
 }
 ```
 
-## Validate SQL
-
-Add the `analysis` and `sqlite` features:
-
-```toml
-[dependencies]
-syntaqlite = { version = "0.13.5", features = ["analysis", "sqlite"] }
+```text
+ 0..6  Select       "SELECT"
+ 7..10 Id           "max"  (function)
+10..11 Lp           "("
+11..12 Id           "x"
+12..13 Rp           ")"
+14..18 From         "FROM"
+19..20 Id           "t"
+comment at 21: -- largest x
 ```
 
+`max` is an identifier token that the parser used as a function name, which
+`token.flags()` records.
+
+## Build a schema in code
+
+The tutorial loads the schema from `CREATE TABLE` statements. If your program
+already knows its tables, for example from a database's catalog, add them to
+the catalog directly. Mark generated columns with `Column::generated` and
+hidden virtual-table columns with `Column::hidden`. A table registered without
+columns accepts any column name:
+
 ```rust
-use syntaqlite::analysis::{
-    AnalysisContext, Analyzer, Catalog, CatalogLayer, TableDef,
-};
-use syntaqlite::sqlite_dialect;
+use syntaqlite::analysis::{CatalogLayer, Column, TableDef};
+use syntaqlite::{AnalysisConfig, AnalysisContext, Analyzer, Catalog, sqlite_dialect};
 
-let mut analyzer = Analyzer::new();
+fn main() {
+    let mut catalog = Catalog::new(sqlite_dialect());
+    let db = catalog.layer_mut(CatalogLayer::Database);
+    db.insert_table(TableDef::new("users").columns([
+        Column::from("id"),
+        Column::from("name"),
+        Column::generated("name_lower"),
+    ]));
+    // A table whose columns aren't known: any column of it is accepted.
+    db.insert_table(TableDef::new("events"));
 
-let mut catalog = Catalog::new(sqlite_dialect());
-catalog.layer_mut(CatalogLayer::Database)
-    .insert_table(TableDef::new("users").columns(["id", "name", "email"]));
-catalog.layer_mut(CatalogLayer::Database)
-    .insert_table(TableDef::new("posts").columns(["id", "user_id", "title"]));
+    let config = AnalysisConfig::default().with_strict_schema();
+    let mut ctx = AnalysisContext::new(&mut catalog).with_config(config);
+    let mut analyzer = Analyzer::new();
+    let model = analyzer.analyze(
+        "SELECT name_lower FROM users; SELECT anything FROM events; SELECT nmae FROM users",
+        &mut ctx,
+    );
 
-let mut ctx = AnalysisContext::new(&mut catalog);
-let model = analyzer.analyze("SELECT nme FROM users", &mut ctx);
-
-for diag in model.diagnostics() {
-    println!("[{}] {}", diag.severity(), diag.message());
-    if let Some(help) = diag.help() {
-        println!("  help: {help}");
+    for d in model.diagnostics() {
+        println!("{:?}: {}", d.severity(), d.message());
+        if let Some(help) = d.help() {
+            println!("  help: {help}");
+        }
     }
 }
 ```
 
-The catalog uses a layered resolution order; see
-[validation concepts](@/concepts/validation.md) for details. For most use cases,
-populate the `Database` layer with your schema and let the analyzer handle the
-rest.
+```text
+Error: unknown column 'nmae'
+  help: did you mean 'name'?
+```
 
-If you know a table exists but don't know its columns, register
-`TableDef::new(name)` without calling `columns`; this suppresses
-unknown-column warnings for that table. Mark generated columns with
-`Column::generated(name)` and hidden virtual-table columns with
-`Column::hidden(name)`.
-
-The CLI and LSP enable strict mode when a schema is provided through `--schema`
-or `syntaqlite.toml`. Rust API callers must enable it explicitly with
-`AnalysisContext::new(&mut catalog).with_config(AnalysisConfig::default().with_strict_schema())`.
+The catalog has several layers, which the analyzer searches in order. For most
+programs, put the schema in the `Database` layer. See
+[validation concepts](@/concepts/validation.md) for how the layers interact.
 
 ## Column lineage
 
-After validation, the `Analysis` also provides column-level lineage for
-SELECT statements, tracing each result column back to its source table and
-column:
+After `analyze`, each statement reports which table and column every result
+column comes from, and which tables it reads:
 
 ```rust
-use syntaqlite::analysis::{
-    AnalysisContext, Analyzer, Catalog, CatalogLayer, TableDef,
-};
-use syntaqlite::sqlite_dialect;
+use syntaqlite::analysis::{CatalogLayer, TableDef};
+use syntaqlite::{AnalysisContext, Analyzer, Catalog, sqlite_dialect};
 
-let mut analyzer = Analyzer::new();
+fn main() {
+    let mut catalog = Catalog::new(sqlite_dialect());
+    let db = catalog.layer_mut(CatalogLayer::Database);
+    db.insert_table(TableDef::new("users").columns(["id", "name"]));
+    db.insert_table(TableDef::new("posts").columns(["id", "user_id", "body"]));
 
-let mut catalog = Catalog::new(sqlite_dialect());
-catalog.layer_mut(CatalogLayer::Database)
-    .insert_table(TableDef::new("users").columns(["id", "name"]));
-catalog.layer_mut(CatalogLayer::Database)
-    .insert_table(TableDef::new("posts").columns(["id", "user_id", "body"]));
+    let mut ctx = AnalysisContext::new(&mut catalog);
+    let mut analyzer = Analyzer::new();
+    let model = analyzer.analyze(
+        "SELECT u.name, p.body FROM users u JOIN posts p ON u.id = p.user_id",
+        &mut ctx,
+    );
 
-let mut ctx = AnalysisContext::new(&mut catalog);
-let model = analyzer.analyze(
-    "SELECT u.name, p.body FROM users u JOIN posts p ON u.id = p.user_id",
-    &mut ctx,
-);
-
-for stmt in model.statements() {
-    if let Some(lineage) = stmt.lineage() {
-        println!("Complete: {}", lineage.is_complete());
-        for col in lineage.into_inner() {
-            print!("  column {}: {}", col.index, col.name);
-            if let Some(ref origin) = col.origin {
-                print!(" <- {}.{}", origin.table, origin.column);
+    for stmt in model.statements() {
+        if let Some(lineage) = stmt.lineage() {
+            println!("complete: {}", lineage.is_complete());
+            for col in lineage.into_inner() {
+                print!("  column {}: {}", col.index, col.name);
+                if let Some(origin) = &col.origin {
+                    print!(" <- {}.{}", origin.table, origin.column);
+                }
+                println!();
             }
-            println!();
         }
-    }
-    if let Some(physical_tables) = stmt.physical_tables_accessed() {
-        for t in physical_tables.into_inner() {
-            println!("  physical table: {}", t.name);
+        if let Some(tables) = stmt.physical_tables_accessed() {
+            for t in tables.into_inner() {
+                println!("  table: {}", t.name);
+            }
         }
-    }
-    for view in stmt.unexpanded_views() {
-        println!("  view body not available: {view}");
     }
 }
 ```
 
-`lineage()` returns `None` for non-query statements. It returns
-`LineageResult::Partial` when a view is referenced but its body is unavailable
-for resolution; `unexpanded_views()` surfaces which view names caused the
-partial result.
+```text
+complete: true
+  column 0: name <- users.name
+  column 1: body <- posts.body
+  table: posts
+  table: users
+```
+
+Lineage is complete when every source resolves to a table. It is partial when
+the query reads a view whose definition the analyzer doesn't have;
+`stmt.unexpanded_views()` lists those views. `lineage()` returns `None` for
+statements other than queries.
 
 ## Next steps
 
-- See the [libsyntaqlite Rust API reference](@/reference/rust-api.md) for all types and
-  methods
+- [libsyntaqlite Rust API reference](@/reference/rust-api.md): feature flags and
+  every type
+- [Validation concepts](@/concepts/validation.md): how the analyzer resolves
+  names

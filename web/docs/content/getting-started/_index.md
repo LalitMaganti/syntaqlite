@@ -86,7 +86,7 @@ syntaqlite parse -e "SELECT 1 + 2"
 ```
 
 The AST can be used for code generation, migration tooling, and static
-analysis. The [libsyntaqlite Rust guide](@/guides/rust-api.md#parse-sql) and
-[libsyntaqlite Python tutorial](@/getting-started/python.md) show how to work
-with it programmatically.
+analysis. The [Rust](@/getting-started/rust.md#4-parse-and-inspect-the-ast),
+[Python](@/getting-started/python.md), and [C](@/getting-started/c.md#4-parse-and-inspect-the-ast)
+tutorials show how to work with it programmatically.
 
