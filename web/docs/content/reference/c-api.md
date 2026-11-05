@@ -14,7 +14,7 @@ and tokenizer:
 
 | Package | Contents | Header |
 |---------|----------|--------|
-| `libsyntaqlite-parser` | Parser and tokenizer as compilable C source (`.c` + `.h`) | `libsyntaqlite_parser.h` |
+| `libsyntaqlite-parser` | Parser and tokenizer as compilable C source (`.c` + `.h`), or as prebuilt static and shared libraries for all platforms | `libsyntaqlite_parser.h` |
 | `libsyntaqlite` | Prebuilt shared library (parser + formatter + analyzer) for all platforms | `syntaqlite.h` |
 
 Both are attached to each

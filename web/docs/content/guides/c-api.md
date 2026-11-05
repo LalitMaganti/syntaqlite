@@ -12,12 +12,14 @@ the parser and tokenizer:
 
 | | libsyntaqlite-parser | libsyntaqlite |
 |---|---|---|
-| **Package** | `libsyntaqlite-parser` (C source) | `libsyntaqlite` (prebuilt) |
-| **Contents** | Two C files to compile yourself | Shared library + header per platform |
+| **Package** | `libsyntaqlite-parser` (C source or prebuilt) | `libsyntaqlite` (prebuilt) |
+| **Contents** | Two C files, or static and shared libraries per platform | Shared library + header per platform |
 | **Parser & tokenizer** | Yes | Yes |
 | **Formatter** | No | Yes |
 | **Validator** | No | Yes |
 | **Dependencies** | None (just a C compiler) | Link against the shared library |
+
+libsyntaqlite-parser is released both as C source and as prebuilt libraries.
 
 ## Option 1: libsyntaqlite-parser (parser and tokenizer only)
 
@@ -39,6 +41,37 @@ both to your project and compile them:
 ```bash
 cc -c -O2 libsyntaqlite_parser.c -o libsyntaqlite_parser.o
 cc -o my_program my_program.c libsyntaqlite_parser.o
+```
+
+To link a prebuilt library instead, download `libsyntaqlite-parser`. It contains
+the header and a static and shared library for each platform:
+
+```bash
+curl -LO https://github.com/LalitMaganti/syntaqlite/releases/download/v0.13.5/libsyntaqlite-parser-0.13.5.tar.gz
+tar xf libsyntaqlite-parser-0.13.5.tar.gz
+```
+
+```
+libsyntaqlite_parser.h
+linux-x64/libsyntaqlite_parser.a
+linux-x64/libsyntaqlite_parser.so
+macos-arm64/libsyntaqlite_parser.a
+macos-arm64/libsyntaqlite_parser.dylib
+windows-x64/syntaqlite_parser.lib
+windows-x64/syntaqlite_parser.dll
+windows-x64/syntaqlite_parser.dll.lib
+...
+```
+
+Link the static library, or the shared one. When linking the Windows DLL, define
+`SYNTAQLITE_SHARED` so the header imports its functions:
+
+```bash
+# Static, Linux x64
+cc -o my_program my_program.c -I. linux-x64/libsyntaqlite_parser.a
+
+# Shared, Linux x64
+cc -o my_program my_program.c -I. -Llinux-x64 -lsyntaqlite_parser -Wl,-rpath,'$ORIGIN/linux-x64'
 ```
 
 See the [C parser tutorial](@/getting-started/c-parser.md) for a complete
