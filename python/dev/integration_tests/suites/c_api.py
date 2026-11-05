@@ -11,9 +11,10 @@ Scenarios are defined in Python under `tests/c_api_tests/<area>.py` as
 classes deriving from `CApiTestSuite`; the module filename selects the
 driver area (e.g. `formatter.py` → `formatter_driver.c`).
 
-The suite also builds the single `syntaqlite.h` shipped in the
-libsyntaqlite release and compiles it as C and C++, since the drivers
-use the per-module headers and would not notice clashes between them.
+The suite also compiles `syntaqlite.h` as C and C++ in both its forms: the
+umbrella header used when building from source, and the single generated
+header shipped in release archives. The drivers use the per-module headers
+and would not notice clashes between them.
 
 Sanitizer mode: when `SYNTAQLITE_CAPI_SANITIZE=1`, drivers compile and
 link with `-fsanitize=address,undefined`. Point at a sanitizer-built
@@ -179,25 +180,31 @@ def _compile_driver(
 
 
 def _check_combined_header(root_dir: Path, out_dir: Path) -> list[tuple[str, str | None]]:
-    """Builds the release `syntaqlite.h` and compiles it as C and C++.
+    """Compiles `syntaqlite.h` as C and C++: the umbrella header from source,
+    and the single header the release generates.
 
     Returns (name, error output or None) per check.
     """
-    header = out_dir / "syntaqlite.h"
     subprocess.check_call(
         ["cargo", "run", "-q", "-p", "syntaqlite-buildtools", "--", "amalgamate",
          "--syntax-dir", str(root_dir / "syntaqlite-syntax"),
          "--lib-dir", str(root_dir / "syntaqlite-capi"),
-         "--output", str(header)],
+         "--output", str(out_dir / "syntaqlite.h")],
         cwd=root_dir,
     )
     source = out_dir / "combined_header.c"
     source.write_text('#include "syntaqlite.h"\nint main(void) { return 0; }\n')
-    flags = ["-Wall", "-Wextra", "-Werror", "-fsyntax-only", "-I", str(out_dir)]
-    checks = [
-        ("header.combined_c", ["cc", "-std=c11", *flags, str(source)]),
-        ("header.combined_cxx", ["c++", "-std=c++17", *flags, "-x", "c++", str(source)]),
+    source_includes = [
+        "-I", str(root_dir / "syntaqlite-capi" / "include"),
+        "-I", str(root_dir / "syntaqlite-syntax" / "include"),
     ]
+    release_includes = ["-I", str(out_dir)]
+    flags = ["-Wall", "-Wextra", "-Werror", "-fsyntax-only"]
+    checks = []
+    for form, includes in (("source", source_includes), ("release", release_includes)):
+        checks.append((f"header.{form}_c", ["cc", "-std=c11", *flags, *includes, str(source)]))
+        checks.append((f"header.{form}_cxx",
+                       ["c++", "-std=c++17", *flags, *includes, "-x", "c++", str(source)]))
     results = []
     for name, cmd in checks:
         proc = subprocess.run(cmd, capture_output=True, text=True)
