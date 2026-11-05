@@ -30,8 +30,8 @@ print(sq.format_sql(sql))
 ```
 ```
 SELECT u.id, u.name, p.title
-FROM users AS u
-JOIN posts AS p ON u.id = p.user_id
+FROM users u
+JOIN posts p ON u.id = p.user_id
 WHERE
   u.active = 1
   AND p.published = true
@@ -72,7 +72,7 @@ Enum and flag fields are `IntEnum`/`IntFlag` from `syntaqlite.enums`:
 from syntaqlite.enums import BinaryOp
 
 expr = stmt.columns[0].expr
-print(expr.op)  # BinaryOp.PLUS
+print(expr.op.name)  # PLUS
 ```
 
 For performance-sensitive code, use `sq.parse_raw()` to get plain dicts
@@ -109,7 +109,7 @@ for d in result.diagnostics:
     print(f"{d.severity}: {d.message}")
 ```
 ```
-error: unknown column 'nme'
+warning: unknown column 'nme'
 ```
 
 Switch `output` to get formatted diagnostics with source locations and suggestions:
@@ -118,11 +118,12 @@ Switch `output` to get formatted diagnostics with source locations and suggestio
 print(sq.analyze(
     "SELECT nme FROM users", schema,
     output=syntaqlite.AnalysisOutput.TEXT,
+    render_options=syntaqlite.RenderOptions(source_name="query.sql"),
 ))
 ```
 ```
-error: unknown column 'nme'
- --> <input>:1:8
+warning: unknown column 'nme'
+ --> query.sql:1:8
   |
 1 | SELECT nme FROM users
   |        ^~~
