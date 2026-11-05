@@ -12,6 +12,7 @@ weight = 2
   <div class="tab-buttons">
     <button class="active" data-tab="binary" onclick="switchTab('cli-install','binary')">Download script</button>
     <button data-tab="mise" onclick="switchTab('cli-install','mise')">mise</button>
+    <button data-tab="binstall" onclick="switchTab('cli-install','binstall')">cargo-binstall</button>
     <button data-tab="pip" onclick="switchTab('cli-install','pip')">pip</button>
     <button data-tab="brew" onclick="switchTab('cli-install','brew')">Homebrew</button>
     <button data-tab="cargo" onclick="switchTab('cli-install','cargo')">Cargo</button>
@@ -23,6 +24,10 @@ weight = 2
   <div class="tab-panel" data-tab="mise">
     <pre><code class="language-bash">mise use github:LalitMaganti/syntaqlite</code></pre>
   </div>
+  <div class="tab-panel" data-tab="binstall">
+    <pre><code class="language-bash">cargo binstall syntaqlite-cli</code></pre>
+    <p>Downloads the prebuilt release binary. Requires <a href="https://github.com/cargo-bins/cargo-binstall">cargo-binstall</a>.</p>
+  </div>
   <div class="tab-panel" data-tab="pip">
     <pre><code class="language-bash">pip install syntaqlite</code></pre>
     <p>Installs the CLI binary and the <a href="@/getting-started/python.md">libsyntaqlite Python API</a>. No Rust toolchain needed.</p>
@@ -31,8 +36,7 @@ weight = 2
     <pre><code class="language-bash">brew install LalitMaganti/tap/syntaqlite</code></pre>
   </div>
   <div class="tab-panel" data-tab="cargo">
-    <pre><code class="language-bash">cargo binstall syntaqlite-cli</code></pre>
-    <p>Downloads the prebuilt release binary with <a href="https://github.com/cargo-bins/cargo-binstall">cargo-binstall</a>. To build from source instead, run <code>cargo install syntaqlite-cli</code>.</p>
+    <pre><code class="language-bash">cargo install syntaqlite-cli</code></pre>
   </div>
 </div>
 
