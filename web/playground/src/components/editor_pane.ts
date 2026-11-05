@@ -3,10 +3,10 @@
 
 import m from "mithril";
 import type * as monaco from "monaco-editor";
-import type {SqlPreset} from "./workspace/sql_presets";
-import type {Theme} from "../types";
 import {INPUT_MODEL_URI} from "../app/editor_models";
+import type {Theme} from "../types";
 import {MonacoEditor} from "../widgets/monaco_editor";
+import type {SqlPreset} from "./workspace/sql_presets";
 import "./editor_pane.css";
 
 export type LanguageMode = "sql" | "python" | "typescript";
@@ -63,8 +63,7 @@ export class EditorPane implements m.ClassComponent<EditorPaneAttrs> {
           "select#sq-editor-preset.sq-editor-pane__select.sq-editor-pane__select--preset",
           {
             value: selectedPresetId,
-            onchange: (e: Event) =>
-              onPresetChange((e.target as HTMLSelectElement).value),
+            onchange: (e: Event) => onPresetChange((e.target as HTMLSelectElement).value),
           },
           [
             ...presets.map((preset) => m("option", {value: preset.id}, preset.label)),

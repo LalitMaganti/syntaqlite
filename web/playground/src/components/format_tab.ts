@@ -2,6 +2,7 @@
 // Licensed under the Apache License, Version 2.0.
 
 import m from "mithril";
+import {type EmbeddedFragment, plainFragmentSql} from "syntaqlite";
 import type {App} from "../app/app";
 import type {FormatOptions, FormatResult, KeywordCase} from "../types";
 import {FormatOutput} from "./format_output";
@@ -28,6 +29,11 @@ export class FormatTab implements m.ClassComponent<FormatTabAttrs> {
     } catch (e) {
       return {ok: false, text: (e as Error).message};
     }
+  }
+  private formatFragment(app: App, fragment: EmbeddedFragment, source: string): FormatResult {
+    const plain = plainFragmentSql(fragment, source);
+    const r = this.format(app, plain.sql);
+    return r.ok ? {ok: true, text: plain.restore(r.text)} : r;
   }
   private lastSql: string | undefined = undefined;
   private lastOptionsKey: string | undefined = undefined;
@@ -57,13 +63,13 @@ export class FormatTab implements m.ClassComponent<FormatTabAttrs> {
 
         if (isEmbedded && app.embeddedFragments.length > 0) {
           if (fragIdx >= 0 && fragIdx < app.embeddedFragments.length) {
-            this.formatResult = this.format(app, app.embeddedFragments[fragIdx].sql);
+            this.formatResult = this.formatFragment(app, app.embeddedFragments[fragIdx], sql);
           } else {
             // Format all fragments with separators.
             const parts: string[] = [];
             let allOk = true;
             for (let i = 0; i < app.embeddedFragments.length; i++) {
-              const r = this.format(app, app.embeddedFragments[i].sql);
+              const r = this.formatFragment(app, app.embeddedFragments[i], sql);
               if (!r.ok) {
                 allOk = false;
                 parts.push(`-- Fragment ${i + 1} (error)\n${r.text}`);
@@ -114,14 +120,10 @@ export class FormatTab implements m.ClassComponent<FormatTabAttrs> {
           {
             value: this.formatOptions.keywordCase,
             onchange: (e: Event) => {
-              this.formatOptions.keywordCase = (e.target as HTMLSelectElement)
-                .value as KeywordCase;
+              this.formatOptions.keywordCase = (e.target as HTMLSelectElement).value as KeywordCase;
             },
           },
-          [
-            m("option", {value: "upper"}, "Upper"),
-            m("option", {value: "lower"}, "Lower"),
-          ],
+          [m("option", {value: "upper"}, "Upper"), m("option", {value: "lower"}, "Lower")],
         ),
         m("input[type=checkbox]", {
           checked: this.formatOptions.semicolons,

@@ -522,6 +522,8 @@ fn embedded_fragments(lang: u32, source: &str) -> Result<Vec<EmbeddedFragment>, 
 struct WasmHole {
     start: usize,
     end: usize,
+    #[serde(rename = "sqlOffset")]
+    sql_offset: usize,
 }
 
 #[derive(Serialize)]
@@ -548,6 +550,7 @@ fn run_embedded_extract(lang: u32, ptr: u32, len: u32) -> i32 {
                 .map(|h| WasmHole {
                     start: h.host_range().start.as_usize(),
                     end: h.host_range().end.as_usize(),
+                    sql_offset: h.sql_offset().as_usize(),
                 })
                 .collect(),
         })

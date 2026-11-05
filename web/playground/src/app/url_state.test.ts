@@ -1,5 +1,5 @@
 import {describe, expect, it} from "vitest";
-import {parseHash, serializeHash, DEFAULT_STATE} from "./url_state";
+import {DEFAULT_STATE, parseHash, serializeHash} from "./url_state";
 import type {PlaygroundState} from "./url_state";
 
 // ---------------------------------------------------------------------------

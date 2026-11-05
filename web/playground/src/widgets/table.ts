@@ -62,14 +62,7 @@ export class Table implements m.ClassComponent<TableAttrs<any>> {
       rows.length === 0
         ? m(
             "tbody",
-            m(
-              "tr",
-              m(
-                "td.sq-table__empty",
-                {colspan: columns.length},
-                emptyContent ?? "No data",
-              ),
-            ),
+            m("tr", m("td.sq-table__empty", {colspan: columns.length}, emptyContent ?? "No data")),
           )
         : m(
             "tbody",

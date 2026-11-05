@@ -4,7 +4,7 @@
 import m from "mithril";
 import type {Attrs} from "../app/app";
 import {ResizeHandle} from "../widgets/resize_handle";
-import {renderValidationBadge, renderValidationTab, renderSchemaTab} from "./details_shared";
+import {renderSchemaTab, renderValidationBadge, renderValidationTab} from "./details_shared";
 import "./details_panel.css";
 
 type DetailsTab = "validation" | "schema";
@@ -32,50 +32,63 @@ export class DetailsPanel implements m.ClassComponent<Attrs> {
       const defaultH = app.window.isMobile ? MOBILE_DEFAULT_HEIGHT : DEFAULT_HEIGHT;
       style.height = `${this.panelHeight ?? defaultH}px`;
     }
-    return m("div.sq-details-panel", {
-      class: this.collapsed ? "sq-details-panel--collapsed" : "",
-      style,
-      oncreate: (v: m.VnodeDOM) => { this.panelEl = v.dom as HTMLElement; },
-    }, [
-      this.collapsed
-        ? undefined
-        : m(ResizeHandle, {
-            axis: "horizontal",
-            onResize: (delta: number) => {
-              const current = this.panelHeight ?? this.panelEl?.getBoundingClientRect().height ?? 120;
-              const maxHeight = window.innerHeight * MAX_HEIGHT_RATIO;
-              this.panelHeight = Math.max(MIN_HEIGHT, Math.min(maxHeight, current - delta));
-            },
-          }),
-      m("div.sq-details-panel__header", [
-        m(
-          "nav.sq-tab-bar",
-          TABS.map((t) =>
-            m(
-              "button.sq-tab-bar__tab",
-              {
-                class: this.activeTab === t.key ? "sq-tab-bar__tab--active" : "",
-                onclick: () => { this.activeTab = t.key; },
+    return m(
+      "div.sq-details-panel",
+      {
+        class: this.collapsed ? "sq-details-panel--collapsed" : "",
+        style,
+        oncreate: (v: m.VnodeDOM) => {
+          this.panelEl = v.dom as HTMLElement;
+        },
+      },
+      [
+        this.collapsed
+          ? undefined
+          : m(ResizeHandle, {
+              axis: "horizontal",
+              onResize: (delta: number) => {
+                const current =
+                  this.panelHeight ?? this.panelEl?.getBoundingClientRect().height ?? 120;
+                const maxHeight = window.innerHeight * MAX_HEIGHT_RATIO;
+                this.panelHeight = Math.max(MIN_HEIGHT, Math.min(maxHeight, current - delta));
               },
-              t.key === "validation"
-                ? [t.label, renderValidationBadge(app.diagnostics)]
-                : t.label,
+            }),
+        m("div.sq-details-panel__header", [
+          m(
+            "nav.sq-tab-bar",
+            TABS.map((t) =>
+              m(
+                "button.sq-tab-bar__tab",
+                {
+                  class: this.activeTab === t.key ? "sq-tab-bar__tab--active" : "",
+                  onclick: () => {
+                    this.activeTab = t.key;
+                  },
+                },
+                t.key === "validation"
+                  ? [t.label, renderValidationBadge(app.diagnostics)]
+                  : t.label,
+              ),
             ),
           ),
-        ),
-        m(
-          "button.sq-details-panel__toggle",
-          {onclick: () => { this.collapsed = !this.collapsed; }},
-          this.collapsed ? "\u25B4 Show" : "\u25BE Hide",
-        ),
-      ]),
-      this.collapsed
-        ? undefined
-        : this.activeTab === "validation"
-          ? renderValidationTab(app.diagnostics, app.revealDiagnostic)
-          : this.activeTab === "schema"
-            ? renderSchemaTab(app)
-            : undefined,
-    ]);
+          m(
+            "button.sq-details-panel__toggle",
+            {
+              onclick: () => {
+                this.collapsed = !this.collapsed;
+              },
+            },
+            this.collapsed ? "\u25B4 Show" : "\u25BE Hide",
+          ),
+        ]),
+        this.collapsed
+          ? undefined
+          : this.activeTab === "validation"
+            ? renderValidationTab(app.diagnostics, app.revealDiagnostic)
+            : this.activeTab === "schema"
+              ? renderSchemaTab(app)
+              : undefined,
+      ],
+    );
   }
 }

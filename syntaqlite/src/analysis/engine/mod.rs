@@ -222,6 +222,13 @@ impl Analyzer {
         // calls fall through to TK_ID without hitting the lookup path.
         // When a lookup IS installed, unresolved names are hard parse errors.
         let registry: Rc<RefCell<MacroRegistry>> = Rc::new(RefCell::new(HashMap::new()));
+        if self.macro_fallback {
+            // Embedded SQL holes are `__h__!()` calls; expand them to the
+            // all-underscore name the analyzer resolves unconditionally.
+            registry
+                .borrow_mut()
+                .insert("__h__".to_owned(), (Vec::new(), "_____".to_owned()));
+        }
         if self.dialect.has_macro_style() {
             let registry_for_cb = Rc::clone(&registry);
             parser.set_macro_lookup(Some(Box::new(SharedRegistryLookup(registry_for_cb))));

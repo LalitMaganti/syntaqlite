@@ -2,8 +2,8 @@
 // Licensed under the Apache License, Version 2.0.
 
 import m from "mithril";
-import type {Theme} from "../types";
 import {FORMATTED_MODEL_URI} from "../app/editor_models";
+import type {Theme} from "../types";
 import {MonacoEditor} from "../widgets/monaco_editor";
 import "./format_output.css";
 

@@ -32,7 +32,10 @@ export function parseSimple(rawText: string): SessionContextPayload {
     } else {
       const name = line.slice(0, colonIdx).trim();
       const colsPart = line.slice(colonIdx + 1).trim();
-      const columns = colsPart.split(",").map((c) => c.trim()).filter(Boolean);
+      const columns = colsPart
+        .split(",")
+        .map((c) => c.trim())
+        .filter(Boolean);
       if (name) tables.push(columns.length ? {name, columns} : {name});
     }
   }

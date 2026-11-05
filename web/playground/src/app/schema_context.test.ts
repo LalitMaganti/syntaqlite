@@ -1,5 +1,5 @@
-import {describe, expect, it} from "vitest";
 import {parseSimple} from "syntaqlite";
+import {describe, expect, it} from "vitest";
 
 describe("parseSimple", () => {
   it("returns empty tables for empty input", () => {

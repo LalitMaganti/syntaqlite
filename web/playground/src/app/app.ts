@@ -2,17 +2,12 @@
 // Licensed under the Apache License, Version 2.0.
 
 import m from "mithril";
-import {
-  Engine,
-  DialectManager,
-  DialectConfigManager,
-  SchemaContextManager,
-} from "syntaqlite";
+import {DialectConfigManager, DialectManager, Engine, SchemaContextManager} from "syntaqlite";
 import type {DiagnosticEntry, EmbeddedFragment, EmbeddedLanguage} from "syntaqlite";
-import {ThemeManager} from "./theme_manager";
-import {WindowManager} from "./window_manager";
-import {UrlStateManager} from "./url_state";
 import {LspSession} from "../lsp_session";
+import {ThemeManager} from "./theme_manager";
+import {UrlStateManager} from "./url_state";
+import {WindowManager} from "./window_manager";
 
 export interface Attrs {
   app: App;
@@ -72,6 +67,7 @@ export class App {
     this.schemaContext = new SchemaContextManager();
 
     this.languageMode = this.urlState.current.languageMode;
+    this.runtime.setLanguageMode(this.languageMode);
 
     this.window = new WindowManager();
   }

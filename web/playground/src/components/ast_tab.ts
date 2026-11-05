@@ -2,9 +2,10 @@
 // Licensed under the Apache License, Version 2.0.
 
 import m from "mithril";
+import {plainFragmentSql} from "syntaqlite";
 import type {App} from "../app/app";
-import type {AstResult} from "../types";
 import type {AstViewMode} from "../app/url_state";
+import type {AstResult} from "../types";
 import {AstOutline} from "./ast_outline";
 import {AstGraph} from "./ast_tree/ast_tree";
 
@@ -48,19 +49,26 @@ export class AstTab implements m.ClassComponent<AstTabAttrs> {
       const dPtr = app.dialect.active.ptr;
       const {sqliteVersion, cflags} = app.urlState.current;
       const cfgKey = `${sqliteVersion}|${cflags.join(",")}`;
-      if (cacheKey !== this.lastSql || dPtr !== this.lastDialectPtr || cfgKey !== this.lastConfigKey) {
+      if (
+        cacheKey !== this.lastSql ||
+        dPtr !== this.lastDialectPtr ||
+        cfgKey !== this.lastConfigKey
+      ) {
         this.lastSql = cacheKey;
         this.lastDialectPtr = dPtr;
         this.lastConfigKey = cfgKey;
 
         if (isEmbedded && app.embeddedFragments.length > 0) {
           if (fragIdx >= 0 && fragIdx < app.embeddedFragments.length) {
-            this.astResult = this.parse(app, app.embeddedFragments[fragIdx].sql);
+            this.astResult = this.parse(
+              app,
+              plainFragmentSql(app.embeddedFragments[fragIdx], sql).sql,
+            );
           } else {
             // Merge all fragments' ASTs.
             const allStatements: import("../types").AstJsonNode[] = [];
             for (const f of app.embeddedFragments) {
-              const r = this.parse(app, f.sql);
+              const r = this.parse(app, plainFragmentSql(f, sql).sql);
               if (r.ok) {
                 allStatements.push(...r.statements);
               }
