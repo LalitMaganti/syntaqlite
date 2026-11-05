@@ -11,9 +11,10 @@ Scenarios are defined in Python under `tests/c_api_tests/<area>.py` as
 classes deriving from `CApiTestSuite`; the module filename selects the
 driver area (e.g. `formatter.py` → `formatter_driver.c`).
 
-The suite also builds the single `syntaqlite.h` shipped in the
-libsyntaqlite release and compiles it as C and C++, since the drivers
-use the per-module headers and would not notice clashes between them.
+The suite also checks the single `syntaqlite-capi/include/syntaqlite.h`,
+which ships with the crate and the release, is up to date, and compiles it
+as C and C++, since the drivers use the per-module headers and would not
+notice clashes between them.
 
 Sanitizer mode: when `SYNTAQLITE_CAPI_SANITIZE=1`, drivers compile and
 link with `-fsanitize=address,undefined`. Point at a sanitizer-built
@@ -179,26 +180,32 @@ def _compile_driver(
 
 
 def _check_combined_header(root_dir: Path, out_dir: Path) -> list[tuple[str, str | None]]:
-    """Builds the release `syntaqlite.h` and compiles it as C and C++.
+    """Checks the committed `syntaqlite.h` is current, then compiles it as C
+    and C++.
 
     Returns (name, error output or None) per check.
     """
-    header = out_dir / "syntaqlite.h"
+    committed = root_dir / "syntaqlite-capi" / "include" / "syntaqlite.h"
+    generated = out_dir / "syntaqlite.h"
     subprocess.check_call(
         ["cargo", "run", "-q", "-p", "syntaqlite-buildtools", "--", "amalgamate",
          "--syntax-dir", str(root_dir / "syntaqlite-syntax"),
          "--lib-dir", str(root_dir / "syntaqlite-capi"),
-         "--output", str(header)],
+         "--output", str(generated)],
         cwd=root_dir,
     )
+    results = []
+    if committed.read_bytes() != generated.read_bytes():
+        results.append(("header.up_to_date", f"{committed} is out of date; run tools/gen-c-header"))
+    else:
+        results.append(("header.up_to_date", None))
     source = out_dir / "combined_header.c"
     source.write_text('#include "syntaqlite.h"\nint main(void) { return 0; }\n')
-    flags = ["-Wall", "-Wextra", "-Werror", "-fsyntax-only", "-I", str(out_dir)]
+    flags = ["-Wall", "-Wextra", "-Werror", "-fsyntax-only", "-I", str(committed.parent)]
     checks = [
         ("header.combined_c", ["cc", "-std=c11", *flags, str(source)]),
         ("header.combined_cxx", ["c++", "-std=c++17", *flags, "-x", "c++", str(source)]),
     ]
-    results = []
     for name, cmd in checks:
         proc = subprocess.run(cmd, capture_output=True, text=True)
         results.append((name, None if proc.returncode == 0 else proc.stderr))

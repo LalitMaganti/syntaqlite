@@ -25,7 +25,6 @@ jobs:
   # Single Rust build per platform. Produces:
   #   - CLI binary archive (tar.gz/zip)
   #   - Static and shared libsyntaqlite libraries
-  #   - buildtools binary (for amalgamation, linux-x64 only)
   build:
     name: build (${{ matrix.name }})
     if: ${{ !github.event.pull_request }}
@@ -70,22 +69,11 @@ jobs:
         shell: bash
         run: cargo build --release -p syntaqlite-cli --target ${{ matrix.target }}
 
-      - name: Build buildtools
-        if: matrix.name == 'linux-x64'
-        shell: bash
-        run: cargo build --release -p syntaqlite-buildtools
 
-      # Runs first so cargo cannot later replace the specially linked shared library.
-      - name: Build C static library
+      - name: Build C libraries
         shell: bash
         run: |
           cargo build --release -p syntaqlite-capi --features dynload \
-            ${{ matrix.cross && format('--target {0}', matrix.target) || '' }}
-
-      - name: Build full C shared library
-        shell: bash
-        run: |
-          python3 tools/build-c-library --release \
             ${{ matrix.cross && format('--target {0}', matrix.target) || '' }}
 
       # Release builds keep the debug info of Rust's standard library. Windows
@@ -180,12 +168,6 @@ jobs:
             ${{ matrix.out }}/${{ matrix.cdylib }}
             ${{ matrix.importlib && format('{0}/{1}', matrix.out, matrix.importlib) || '' }}
 
-      - name: Upload buildtools
-        if: matrix.name == 'linux-x64'
-        uses: actions/upload-artifact@v6
-        with:
-          name: buildtools
-          path: target/release/syntaqlite-buildtools
 
   # Upload CLI archives to GitHub Release.
   upload-release:
@@ -342,6 +324,16 @@ jobs:
       - name: Link a C program against the static library
         shell: bash
         run: python tools/check-static-library
+
+      - name: Check the shared library exports the whole C API
+        shell: bash
+        run: |
+          case "$RUNNER_OS" in
+            Linux) lib=libsyntaqlite.so ;;
+            macOS) lib=libsyntaqlite.dylib ;;
+            Windows) lib=syntaqlite.dll ;;
+          esac
+          python tools/check-c-exports --library "target/release/$lib"
 
       - name: Build wheel
         shell: bash
@@ -561,25 +553,14 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - name: Download buildtools
-        uses: actions/download-artifact@v7
-        with:
-          name: buildtools
-          path: bin/
-
-      - name: Make buildtools executable
-        run: chmod +x bin/syntaqlite-buildtools
-
       - name: Set version
         run: echo "VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
 
       # -- libsyntaqlite archive --
-      - name: Generate amalgamated header
+      - name: Copy the C header
         run: |
-          bin/syntaqlite-buildtools amalgamate \
-            --syntax-dir syntaqlite-syntax \
-            --lib-dir syntaqlite-capi \
-            --output staging/syntaqlite.h
+          mkdir -p staging
+          cp syntaqlite-capi/include/syntaqlite.h staging/
 
       - name: Download all platform libraries
         uses: actions/download-artifact@v7
