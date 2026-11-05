@@ -203,15 +203,24 @@ impl<'a, V: SemanticVisitor> StatementVisitor<'a, V> {
         let Some(severity) = self.config.checks().level_for(&message).to_severity() else {
             return;
         };
-        let frames = stmt
-            .traceback(node_id, field_idx)
-            .map(|f| crate::analysis::diagnostics::DiagnosticFrame {
-                buffer: f.snippet.as_str().to_string(),
-                range: LayerRange::from_offset_len(f.offset_in_snippet, f.length_in_snippet),
-            })
-            .collect::<Vec<_>>();
-        // Only attach if there's actual expansion (more than 1 frame).
-        let expansion_frames = if frames.len() > 1 { frames } else { Vec::new() };
+        // A traceback without macros is just the whole source, so skip it and
+        // only copy frame snippets when there is an expansion to show.
+        let mut expansion_frames = Vec::new();
+        if !stmt.is_macro_free() {
+            let frames: Vec<_> = stmt.traceback(node_id, field_idx).collect();
+            if frames.len() > 1 {
+                expansion_frames = frames
+                    .into_iter()
+                    .map(|f| crate::analysis::diagnostics::DiagnosticFrame {
+                        buffer: f.snippet.as_str().to_string(),
+                        range: LayerRange::from_offset_len(
+                            f.offset_in_snippet,
+                            f.length_in_snippet,
+                        ),
+                    })
+                    .collect();
+            }
+        }
         self.diagnostics.push(Diagnostic {
             range,
             message,
