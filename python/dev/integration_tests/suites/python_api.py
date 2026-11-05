@@ -468,6 +468,41 @@ def _test_validate_lineage_basic(stq) -> bool:
     return True
 
 
+def _test_validate_strict_schema_reports_errors(stq) -> bool:
+    with stq.Syntaqlite() as sq:
+        schema = stq.Schema(tables=[stq.Table("users", ["id", "name"])])
+        default = sq.analyze("SELECT nme FROM users", schema).diagnostics
+        strict = sq.analyze("SELECT nme FROM users", schema, strict_schema=True).diagnostics
+    if [d.severity for d in default] != ["warning"] or [d.severity for d in strict] != ["error"]:
+        _fail("validate_strict_schema_reports_errors", f"default={default!r} strict={strict!r}")
+        return False
+    _pass("validate_strict_schema_reports_errors")
+    return True
+
+
+def _test_validate_text_output_default_source_name(stq) -> bool:
+    with stq.Syntaqlite() as sq:
+        schema = stq.Schema(tables=[stq.Table("users", ["id", "name"])])
+        rendered = sq.analyze("SELECT nme FROM users", schema, output=stq.AnalysisOutput.TEXT)
+    if " --> <input>:1:8" not in rendered:
+        _fail("validate_text_output_default_source_name", f"no <input> label in {rendered!r}")
+        return False
+    _pass("validate_text_output_default_source_name")
+    return True
+
+
+def _test_parse_reports_errors(stq) -> bool:
+    with stq.Syntaqlite() as sq:
+        result = sq.parse("SELECT FROM; SELECT 1")
+    names = [type(s).__name__ for s in result]
+    errors = [(e.severity, e.message) for e in result.errors]
+    if names != ["SelectStmt"] or errors != [("error", "syntax error near 'FROM'")]:
+        _fail("parse_reports_errors", f"statements={names} errors={errors}")
+        return False
+    _pass("parse_reports_errors")
+    return True
+
+
 def _test_validate_relations(stq) -> bool:
     with stq.Syntaqlite() as sq:
         schema = stq.Schema(tables=[stq.Table("users", ["id"])])
@@ -810,6 +845,8 @@ _TESTS = [
     _test_validate_lineage_aggregate_drops_origin,
     _test_validate_relations,
     _test_validate_text_output_with_source_name,
+    _test_validate_text_output_default_source_name,
+    _test_validate_strict_schema_reports_errors,
     _test_validate_schema_modules_passthrough,
     # validate — per-statement
     _test_validate_statements_breakdown,
@@ -821,6 +858,7 @@ _TESTS = [
     _test_context_manager_raises_after_close,
     _test_explicit_close_is_idempotent,
     _test_parse_returns_wrapped_node_type,
+    _test_parse_reports_errors,
     _test_diagnostic_code_enum_members,
     _test_validate_output_enum_values,
     _test_analyze_accepts_string_output,

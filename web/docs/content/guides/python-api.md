@@ -74,7 +74,8 @@ with syntaqlite.Syntaqlite() as sq:
 warning at bytes 66-70: unknown column 'nmae' (UNKNOWN_COLUMN)
 ```
 
-Unknown tables and columns are reported as warnings.
+Unknown tables and columns are reported as warnings unless you pass
+`strict_schema=True`.
 
 ## Read diagnostics
 
@@ -158,18 +159,17 @@ them all.
 
 ## Parse errors
 
-`parse` returns the statements that parsed and leaves out any that didn't. To
-find out what went wrong, run the same SQL through `analyze`, which reports
-syntax errors as diagnostics:
+`parse` returns the statements that parsed, as a list, and leaves out any that
+didn't. The list's `errors` holds a diagnostic for each one it left out:
 
 ```python
 import syntaqlite
 
-sql = "SELECT FROM; SELECT 1"
 with syntaqlite.Syntaqlite() as sq:
-    print([type(s).__name__ for s in sq.parse(sql)])
-    for d in sq.analyze(sql).diagnostics:
-        print(f"{d.severity} at bytes {d.start_offset}-{d.end_offset}: {d.message}")
+    result = sq.parse("SELECT FROM; SELECT 1")
+    print([type(s).__name__ for s in result])
+    for e in result.errors:
+        print(f"{e.severity} at bytes {e.start_offset}-{e.end_offset}: {e.message}")
 ```
 
 ```text
