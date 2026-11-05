@@ -333,7 +333,7 @@ jobs:
             macOS) lib=libsyntaqlite.dylib ;;
             Windows) lib=syntaqlite.dll ;;
           esac
-          python tools/check-c-exports --library "target/release/$lib"
+          python python/dev/checks/c_exports.py --library "target/release/$lib"
 
       - name: Build wheel
         shell: bash
