@@ -29,6 +29,7 @@ use super::stmt_reader::StmtReader;
 mod helpers;
 mod query_scope;
 mod statement_visitor;
+#[cfg(feature = "lsp")]
 pub(crate) mod tokens;
 pub(crate) mod walker;
 
@@ -114,12 +115,14 @@ impl Analyzer {
     /// Enable macro fallback: unregistered `name!(args)` calls parse as
     /// identifiers and record [`Rewrite`]s on the resulting model.
     #[must_use]
+    #[cfg(any(feature = "lsp", feature = "experimental-embedded"))]
     pub(crate) fn with_macro_fallback(mut self, enabled: bool) -> Self {
         self.macro_fallback = enabled;
         self
     }
 
     /// Return the dialect this analyzer was constructed for.
+    #[cfg(any(feature = "lsp", feature = "experimental-embedded"))]
     pub(crate) fn dialect(&self) -> AnyDialect {
         self.dialect.clone()
     }

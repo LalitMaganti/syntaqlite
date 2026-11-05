@@ -41,6 +41,7 @@
 #[cfg(feature = "analysis")]
 pub(crate) mod catalog;
 #[cfg(feature = "analysis")]
+#[cfg(feature = "lsp")]
 pub(crate) mod completion;
 #[cfg(feature = "analysis")]
 pub(crate) mod config;

@@ -268,6 +268,7 @@ impl QueryScope {
     }
 
     /// Whether any source in scope has an unknown column list.
+    #[cfg(feature = "lsp")]
     pub(crate) fn has_unknown_columns(&self) -> bool {
         self.frames.iter().any(|f| {
             f.named.values().any(|t| t.columns.is_none())

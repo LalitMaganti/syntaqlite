@@ -850,7 +850,7 @@ impl Catalog {
     ///   "functions": [{ "name": "my_func",      "args": 2 }]
     /// }
     /// ```
-    #[cfg(feature = "serde-json")]
+    #[cfg(all(feature = "serde-json", any(feature = "lsp", test)))]
     pub(crate) fn from_json(dialect: impl Into<AnyDialect>, s: &str) -> Result<Self, String> {
         #[derive(serde::Deserialize)]
         struct Root {
@@ -1310,6 +1310,7 @@ impl Catalog {
     /// Enumerate column names across all layers, optionally filtered to a
     /// single relation. Unfiltered, dialect builtins such as `sqlite_schema`
     /// are skipped so their columns don't crowd out the user's.
+    #[cfg(feature = "lsp")]
     pub(crate) fn all_column_names(&self, table: Option<&str>) -> Vec<String> {
         let mut names = Vec::new();
         for (index, layer) in self.layers.iter().enumerate() {
@@ -1330,6 +1331,7 @@ impl Catalog {
     }
 
     /// Look up function metadata by name: returns (category, arities) if found.
+    #[cfg(feature = "lsp")]
     pub(crate) fn function_signature(
         &self,
         key: &NameKey,
@@ -1638,6 +1640,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "serde-json")]
     fn json_columns_carry_kinds() {
         let dialect = crate::sqlite::dialect::dialect();
         let cat = Catalog::from_json(
@@ -1662,6 +1665,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "serde-json")]
     fn json_rejects_malformed_columns() {
         let dialect = crate::sqlite::dialect::dialect();
         for column in [
@@ -1677,6 +1681,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "serde-json")]
     fn json_omitted_columns_are_unknown_and_empty_ones_known() {
         let dialect = crate::sqlite::dialect::dialect();
         let cat = Catalog::from_json(
