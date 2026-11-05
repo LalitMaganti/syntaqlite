@@ -85,7 +85,7 @@ directories. Link the static library to build it into your program:
 
 ```bash
 # Linux
-cc -o my_program my_program.c -I. linux-x64/libsyntaqlite_parser.a
+cc -o my_program my_program.c -I. linux-x64/libsyntaqlite_parser.a -ldl
 
 # macOS
 cc -o my_program my_program.c -I. macos-arm64/libsyntaqlite_parser.a
@@ -95,6 +95,9 @@ cc -o my_program my_program.c -I. macos-arm64/libsyntaqlite_parser.a
 :: Windows
 cl /MD /std:c11 /I. my_program.c windows-x64\syntaqlite_parser.lib
 ```
+
+On Linux, `-ldl` is needed with glibc older than 2.34, where `dlopen` is not
+part of libc. libsyntaqlite-parser uses it to load custom dialects.
 
 Or link the shared library:
 
@@ -126,8 +129,9 @@ Compile the `.c` file with the rest of your program. It needs a C11 compiler
 and nothing else:
 
 ```bash
-cc -O2 -o my_program my_program.c libsyntaqlite_parser.c
+cc -O2 -o my_program my_program.c libsyntaqlite_parser.c -ldl
 ```
 
-On Windows, compile it with clang-cl, since MSVC's C compiler does not support
-all the C11 features it uses.
+As with the static library, `-ldl` is needed on Linux with glibc older than
+2.34. On Windows, compile it with clang-cl, since MSVC's C compiler does not
+support all the C11 features it uses.

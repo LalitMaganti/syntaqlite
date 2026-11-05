@@ -49,6 +49,8 @@ def _build_unix(src: Path, out: Path, work: Path, run: bool) -> None:
     _run(cc + ["-O2", "-fPIC", "-c", str(source), "-o", str(obj)])
     _run(["ar", "rcs", str(out / "libsyntaqlite_parser.a"), str(obj)])
 
+    # Dialect loading uses dlopen, which glibc before 2.34 keeps in libdl.
+    libdl = [] if is_mac else ["-ldl"]
     if is_mac:
         shared = out / "libsyntaqlite_parser.dylib"
         soname = ["-Wl,-install_name,@rpath/libsyntaqlite_parser.dylib"]
@@ -56,11 +58,11 @@ def _build_unix(src: Path, out: Path, work: Path, run: bool) -> None:
         shared = out / "libsyntaqlite_parser.so"
         soname = ["-Wl,-soname,libsyntaqlite_parser.so"]
     _run(cc + ["-O2", "-fPIC", "-fvisibility=hidden", "-shared", *EXPORT_DEFINES,
-               str(source), "-o", str(shared), *soname])
+               str(source), "-o", str(shared), *soname, *libdl])
 
     static_exe = work / "smoke_static"
     _run(cc + ["-I", str(src), str(SMOKE_TEST), str(out / "libsyntaqlite_parser.a"),
-               "-o", str(static_exe)])
+               *libdl, "-o", str(static_exe)])
     shared_exe = work / "smoke_shared"
     _run(cc + ["-I", str(src), str(SMOKE_TEST),
                "-L", str(out), "-lsyntaqlite_parser", f"-Wl,-rpath,{out}",

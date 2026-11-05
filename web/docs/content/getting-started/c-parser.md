@@ -88,14 +88,16 @@ int main(int argc, char** argv) {
 With the prebuilt library, link the static library for your platform:
 
 ```bash
-cc -o parse parse.c -I. linux-x64/libsyntaqlite_parser.a
+cc -o parse parse.c -I. linux-x64/libsyntaqlite_parser.a -ldl
 ```
 
 With the C source, compile it alongside your program:
 
 ```bash
-cc -O2 -o parse parse.c libsyntaqlite_parser.c
+cc -O2 -o parse parse.c libsyntaqlite_parser.c -ldl
 ```
+
+On Linux, `-ldl` is needed with glibc older than 2.34.
 
 See [Installing the C libraries](@/guides/c-install.md) for macOS, Windows, and
 shared-library commands.
