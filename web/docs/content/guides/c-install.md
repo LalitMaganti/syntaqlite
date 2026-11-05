@@ -90,6 +90,36 @@ A program can only contain one static Rust library, because each brings its
 own copy of Rust's standard library. If yours already links another one, use
 the shared libsyntaqlite.
 
+### Build from source
+
+libsyntaqlite is built from the `syntaqlite-capi` crate, so you need Rust and a
+C compiler:
+
+```bash
+git clone https://github.com/LalitMaganti/syntaqlite
+cd syntaqlite
+cargo build --release -p syntaqlite-capi --features dynload
+```
+
+This builds the static and shared libraries in `target/release`. The `dynload`
+feature lets the library load custom dialects; leave it out if you don't need
+them. On Linux the shared library is linked with lld, which ships with Rust.
+
+Unlike the release archive's single `syntaqlite.h`, the source tree's header
+includes the per-module headers from two directories, so put both on the
+include path:
+
+```bash
+cc -o my_program my_program.c \
+  -Isyntaqlite-capi/include -Isyntaqlite-syntax/include \
+  -Ltarget/release -lsyntaqlite
+```
+
+If your build system compiles the crates itself rather than running Cargo, it
+must also tell the linker to export the functions listed in
+`syntaqlite-capi/exports.txt` from the shared library. `syntaqlite-capi`'s
+`build.rs` shows the linker flags for each platform.
+
 ## libsyntaqlite-parser
 
 ### Prebuilt libraries
