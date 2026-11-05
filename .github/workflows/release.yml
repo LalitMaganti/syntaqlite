@@ -471,24 +471,20 @@ jobs:
           path: manifest-parts/
           merge-multiple: true
 
-      - name: Write release manifest and Downloads table
+      - name: Write release manifest
         run: |
           TAG="${{ github.ref_name }}"
-          gh release view "$TAG" --json body --jq .body > release-notes.md
           tools/write-release-manifest \
             --version "${TAG#v}" \
             --parts manifest-parts \
             --cli-dir archives \
             --file libsyntaqlite=libsyntaqlite.tar.gz \
             --file amalgamation=syntaqlite-syntax-amalgamation.tar.gz \
-            --output syntaqlite-release.json \
-            --release-notes release-notes.md \
-            --repo "${{ github.repository }}"
+            --output syntaqlite-release.json
           cat syntaqlite-release.json
 
       # -- Upload to GH Release --
-      # The manifest and Downloads table go last so they only appear once
-      # the files they list exist.
+      # The manifest goes last so clients only see it once its files exist.
       - name: Upload to GitHub Release
         run: |
           gh release upload "${{ github.ref_name }}" \
@@ -496,4 +492,3 @@ jobs:
             "syntaqlite-syntax-amalgamation.tar.gz" \
             --clobber
           gh release upload "${{ github.ref_name }}" syntaqlite-release.json --clobber
-          gh release edit "${{ github.ref_name }}" --notes-file release-notes.md

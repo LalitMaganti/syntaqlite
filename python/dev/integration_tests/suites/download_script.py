@@ -15,12 +15,7 @@ from pathlib import Path
 from types import ModuleType
 
 from python.dev.integration_tests.suite import SuiteContext
-from python.tools.write_release_manifest import (
-    ManifestError,
-    build_manifest,
-    downloads_table,
-    with_downloads_table,
-)
+from python.tools.write_release_manifest import ManifestError, build_manifest
 
 NAME = "download-script"
 DESCRIPTION = "tools/syntaqlite download script and release manifest (offline)"
@@ -131,43 +126,12 @@ def _test_manifest_rejects_archive_without_part(script: ModuleType, tmp: Path) -
         raise AssertionError("archive without a part file was accepted")
 
 
-def _test_downloads_table_lists_every_file(script: ModuleType, tmp: Path) -> None:
-    lib = tmp / "libsyntaqlite.tar.gz"
-    lib.write_bytes(b"lib")
-    cli_dir = tmp / "archives"
-    cli_dir.mkdir()
-    _write_archive(cli_dir / "syntaqlite-linux-x64.tar.gz", _BINARY)
-    _write_part(tmp / "parts", "linux-x64", _TARGET[0], "syntaqlite-linux-x64.tar.gz")
-    manifest = build_manifest("9.9.9", tmp / "parts", cli_dir, {"libsyntaqlite": lib})
-    table = downloads_table(manifest, "OWNER/REPO")
-    base = "https://github.com/OWNER/REPO/releases/download/v9.9.9"
-    cli = manifest["cli"][_TARGET[0]]
-    lib_entry = manifest["files"]["libsyntaqlite"]
-    assert (
-        f"| [syntaqlite-linux-x64.tar.gz]({base}/syntaqlite-linux-x64.tar.gz) "
-        f"| x64 Linux | `{cli['sha256']}` |"
-    ) in table, table
-    assert (
-        f"| [libsyntaqlite.tar.gz]({base}/libsyntaqlite.tar.gz) "
-        f"| C library, all platforms | `{lib_entry['sha256']}` |"
-    ) in table, table
-
-
-def _test_downloads_table_replaces_previous_table(script: ModuleType, tmp: Path) -> None:
-    old_table = "<!-- downloads -->\n### Downloads\nold\n<!-- /downloads -->"
-    notes = with_downloads_table(f"**Formatter**\n- Fixed a bug.\n\n{old_table}\n", "NEW")
-    assert notes == "**Formatter**\n- Fixed a bug.\n\nNEW\n", repr(notes)
-    assert with_downloads_table("", "NEW") == "NEW\n"
-
-
 _TESTS = [
     _test_manifest_picks_renamed_archive,
     _test_checksum_mismatch_fails,
     _test_unsupported_manifest_version_fails,
     _test_release_without_manifest_uses_legacy_name,
     _test_manifest_rejects_archive_without_part,
-    _test_downloads_table_lists_every_file,
-    _test_downloads_table_replaces_previous_table,
 ]
 
 
