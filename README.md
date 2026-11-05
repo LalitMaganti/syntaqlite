@@ -45,7 +45,8 @@ same statements as the SQLite version and compile-time flags you target.
   as a library for Rust, Python, JavaScript and C. Its syntax tree keeps
   comments and whitespace, for migration tools, code generators and other
   source-to-source work. **libsyntaqlite-parser** is the parser alone, as a C
-  library.
+  library. SQLite-based dialects can add their own grammar, functions and
+  formatting rules.
 
 ## Try it in your browser
 
@@ -133,22 +134,21 @@ with `--sqlite-cflag SQLITE_ENABLE_MATH_FUNCTIONS`.
 ## Why syntaqlite?
 
 Most SQL tools treat SQLite as a dialect of generic SQL. That works for common
-queries, but not for syntax only SQLite has, such as `UPSERT`, `RETURNING`,
+queries, but can miss syntax only SQLite has, such as `UPSERT`, `RETURNING`,
 `STRICT` tables and window frames with `EXCLUDE`.
 
-- **It parses what SQLite parses.** On 40 SQLite-specific statements checked
-  against `sqlite3`, syntaqlite parses all 40 correctly, sqlfluff 29 and
-  sqlparser-rs 26. Across about 396,000 statements from
+- **It parses what SQLite parses.** Across about 396,000 statements from
   [SQLite's test suite](https://sqlite.org/testing.html), it agrees with SQLite
-  on 99.7%.
-- **Formatting is safe.** All 40 statements format to SQL that SQLite compiles
-  to the same bytecode as the original.
+  on 99.7%, and it parses all 40 statements of a corpus of SQLite-specific
+  syntax the same way `sqlite3` does.
+- **Formatting is safe.** Each of those 40 statements formats to SQL that
+  SQLite compiles to the same bytecode as the original.
 - **It's fast enough for every keystroke.** The parser and tokenizer are C, and
-  parsing is incremental. In the same benchmarks, syntaqlite had the lowest
-  total run time of the parsers and formatters tested.
+  parsing is incremental.
 
-The [comparison](https://docs.syntaqlite.com/latest/reference/comparison/) has the full results, the tools'
-versions and how to reproduce them.
+The [comparison](https://docs.syntaqlite.com/latest/reference/comparison/)
+runs the same tests on other SQL tools, with their versions and how to
+reproduce the results.
 
 ## Install
 
@@ -223,19 +223,6 @@ or build libsyntaqlite with `cargo build -p syntaqlite-capi`. The
   [configuration file](https://docs.syntaqlite.com/latest/reference/config-file/),
   [formatting options](https://docs.syntaqlite.com/latest/reference/formatting-options/) and
   [language server features](https://docs.syntaqlite.com/latest/reference/lsp-features/).
-
-## How it works
-
-The parser generator reads SQLite's `parse.y` grammar and pairs the generated
-parser with SQLite's tokenizer. A small, hand-maintained layer folds the
-concrete syntax tree into the AST, which keeps SQLite version updates
-mechanical. The parser and tokenizer are C, so they run wherever SQLite does.
-The formatter, analyzer and language server are Rust.
-
-SQLite-based dialects can add grammar, AST nodes, functions and formatting
-rules on the same runtime. See the
-[architecture guide](https://docs.syntaqlite.com/latest/contributing/architecture/) and
-[custom dialects](https://docs.syntaqlite.com/latest/guides/custom-dialects/).
 
 ## Project status
 
