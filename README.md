@@ -14,11 +14,11 @@
 </p>
 
 <p>
-  <a href="https://playground.syntaqlite.com">Try the playground</a> ·
   <a href="#quick-start">Quick start</a> ·
   <a href="#why-syntaqlite">Why syntaqlite?</a> ·
   <a href="#install">Install</a> ·
-  <a href="https://docs.syntaqlite.com/latest/">Documentation</a>
+  <a href="https://docs.syntaqlite.com/latest/">Documentation</a> ·
+  <a href="https://playground.syntaqlite.com">Playground</a>
 </p>
 
 </div>
@@ -39,14 +39,6 @@ line, in your editor, or as a library.
 - **Build your own tools.** libsyntaqlite brings the parser, formatter and
   analyzer to Rust, Python, JavaScript and C. libsyntaqlite-parser is the
   parser alone, as a C library.
-
-## Try it in your browser
-
-The [playground](https://playground.syntaqlite.com) runs syntaqlite in your
-browser: paste SQL and a schema to see it formatted, analyzed and parsed.
-Click the screenshot to open this example.
-
-[![The syntaqlite playground: a query with a typo in a column name, its formatted output, and the error "unknown column 'nme'" with the suggestion "did you mean 'name'?"](docs/images/readme-playground.png)](https://playground.syntaqlite.com/#sf=ddl&sc=MIJQogggKmAEUQEIBk4FcDOBTATh2AFAJYAmsAkgHIwDiYIsACiOQLIQgCasA0mJwBpYAOwCGAWyzwwADShCs40UQA20uUNEBjAC5EAblKq16ASgDcAKFCQY8JKlgB7HCVz5iZY2DoNmbDm4%2BQVhMXAB9UgpqH3pYcAAxejBKYDAAZVDsPE9TIR0nHVE1cAhkIS0cLFEdLBJwmvUoCyA&s=M4UwNiDGAuAECuA6AdgWxAGlseqAUA9otAdAIZgCUsZw2ADiMtAFABmATgagqB3fFgArAgEtksAhwAmIfpMkSi8PgH1R02AF4EiDSwDuACzkhdZGKIBuZnQEZYAcy7x6sAEYBPXfqmyOHt7AjMywssCQsGCiqKJwdgAMANxAA)
 
 ## Quick start
 
@@ -122,6 +114,14 @@ error: syntax error near 'RETURNING'
 
 `RETURNING` arrived in SQLite 3.35.0. Optional features work the same way,
 with `--sqlite-cflag SQLITE_ENABLE_MATH_FUNCTIONS`.
+
+### Try it in your browser
+
+The [playground](https://playground.syntaqlite.com) runs syntaqlite in your
+browser: paste SQL and a schema to see it formatted, analyzed and parsed.
+Click the screenshot to open this example.
+
+[![The syntaqlite playground: a query with a typo in a column name, its formatted output, and the error "unknown column 'nme'" with the suggestion "did you mean 'name'?"](docs/images/readme-playground.png)](https://playground.syntaqlite.com/#sf=ddl&sc=MIJQogggKmAEUQEIBk4FcDOBTATh2AFAJYAmsAkgHIwDiYIsACiOQLIQgCasA0mJwBpYAOwCGAWyzwwADShCs40UQA20uUNEBjAC5EAblKq16ASgDcAKFCQY8JKlgB7HCVz5iZY2DoNmbDm4%2BQVhMXAB9UgpqH3pYcAAxejBKYDAAZVDsPE9TIR0nHVE1cAhkIS0cLFEdLBJwmvUoCyA&s=M4UwNiDGAuAECuA6AdgWxAGlseqAUA9otAdAIZgCUsZw2ADiMtAFABmATgagqB3fFgArAgEtksAhwAmIfpMkSi8PgH1R02AF4EiDSwDuACzkhdZGKIBuZnQEZYAcy7x6sAEYBPXfqmyOHt7AjMywssCQsGCiqKJwdgAMANxAA)
 
 ## Why syntaqlite?
 
