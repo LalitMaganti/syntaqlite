@@ -119,4 +119,39 @@ if (isolated.some((d) => d.data?.detail?.kind === "unknown_column")) {
 }
 other.dispose();
 
+// Strict schema mode turns unknown columns into errors.
+const strictSchema = {schemaDdl: "CREATE TABLE users(id INTEGER);"};
+const loose = engine.analyze("SELECT c FROM users", strictSchema).diagnostics;
+const strict = engine.analyze("SELECT c FROM users", {...strictSchema, strictSchema: true}).diagnostics;
+if (loose[0]?.severity !== "warning" || strict[0]?.severity !== "error") {
+  throw new Error(`strictSchema ignored: ${JSON.stringify({loose, strict})}`);
+}
+
+// analyzeText renders the report, labelled <input> unless named.
+const report = engine.analyzeText("SELECT c FROM users", strictSchema);
+if (!report.includes("--> <input>:1:8")) throw new Error(`unexpected report: ${report}`);
+if (!engine.analyzeText("SELECT c FROM users", {...strictSchema, sourceName: "q.sql"}).includes("--> q.sql:1:8")) {
+  throw new Error("sourceName ignored");
+}
+
+// wasmBaseUrl loads the runtime and the built-in dialect from one place.
+const wasmBaseUrl = new URL("../wasm/", import.meta.url).href;
+const relocated = new Engine({wasmBaseUrl});
+await relocated.load();
+await new DialectManager().loadDefault(relocated);
+if (relocated.format("select 1") !== "SELECT 1;\n") throw new Error("wasmBaseUrl engine did not format");
+relocated.dispose();
+
+// loadDefault throws when the dialect cannot be loaded.
+const missing = new Engine({runtime: engine.runtimeModule, wasmBaseUrl: new URL("./missing/", import.meta.url).href});
+await missing.load();
+let threw = false;
+try {
+  await new DialectManager().loadDefault(missing);
+} catch {
+  threw = true;
+}
+if (!threw) throw new Error("loadDefault did not throw for a missing dialect");
+missing.dispose();
+
 console.log("node smoke test: OK");

@@ -101,6 +101,8 @@ engine.analyze("SELECT id FROM logs", {
 
 A column is a name, or `{name, kind}` where `kind` is `"normal"`,
 `"generated"` or `"hidden"`. Omitting `columns` means they are unknown.
+Pass `strictSchema: true` to report unknown names as errors, and use
+`engine.analyzeText` with the same options for a rendered report.
 
 ## Documentation
 

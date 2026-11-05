@@ -4,6 +4,7 @@
 import type {
   AnalyzeOptions,
   AnalyzeResult,
+  AnalyzeTextOptions,
   DiagnosticEntry,
   DiagnosticsResult,
   DialectBinding,
@@ -27,6 +28,9 @@ const DEFAULT_RUNTIME_JS = new URL("../wasm/syntaqlite-runtime.js", import.meta.
 const DEFAULT_RUNTIME_WASM = new URL("../wasm/syntaqlite-runtime.wasm", import.meta.url).href;
 
 export interface EngineConfig {
+  /** URL of a copy of the package's `wasm/` directory, ending in `/`. The
+   *  runtime and the built-in SQLite dialect are loaded from it. */
+  wasmBaseUrl?: string;
   runtimeJsPath?: string;
   runtimeWasmPath?: string;
   /** Reuse an already-loaded runtime module instead of loading a new one.
@@ -84,6 +88,11 @@ export class Engine {
 
   get ready(): boolean {
     return this.module !== undefined;
+  }
+
+  /** The `wasmBaseUrl` this engine was created with, if any. */
+  get wasmBaseUrl(): string | undefined {
+    return this.config.wasmBaseUrl;
   }
 
   /** The underlying Emscripten module, e.g. to share with another Engine
@@ -350,12 +359,16 @@ export class Engine {
    *  a catalog is provided via `schemaDdl`, `tables`, or `views`. Throws on
    *  malformed input. */
   analyze(sql: string, opts: AnalyzeOptions = {}): AnalyzeResult {
-    const request: Record<string, unknown> = {op: "analyze", sql};
-    if (opts.schemaDdl !== undefined) request.schema_ddl = opts.schemaDdl;
-    if (opts.tables !== undefined) request.tables = opts.tables;
-    if (opts.views !== undefined) request.views = opts.views;
-    if (opts.modules !== undefined) request.modules = opts.modules;
-    return this.rpc(request) as AnalyzeResult;
+    return this.rpc(analyzeRequest(sql, opts)) as AnalyzeResult;
+  }
+
+  /** Like `analyze`, but returns the diagnostics rendered as a terminal-style
+   *  report, with the source shown under each one. */
+  analyzeText(sql: string, opts: AnalyzeTextOptions = {}): string {
+    const request = analyzeRequest(sql, opts);
+    request.output = "text";
+    if (opts.sourceName !== undefined) request.render_options = {source_name: opts.sourceName};
+    return (this.rpc(request) as {rendered: string}).rendered;
   }
 
   /** One-shot JSON-RPC op — the CLI `serve json` protocol. Returns the
@@ -522,10 +535,21 @@ type RuntimeFactory = (config: EmscriptenModuleConfig) => Promise<EmscriptenModu
 // tools/build-web-playground.
 const FACTORY_NAME = "createSyntaqliteRuntime";
 
+function analyzeRequest(sql: string, opts: AnalyzeOptions): Record<string, unknown> {
+  const request: Record<string, unknown> = {op: "analyze", sql};
+  if (opts.schemaDdl !== undefined) request.schema_ddl = opts.schemaDdl;
+  if (opts.tables !== undefined) request.tables = opts.tables;
+  if (opts.views !== undefined) request.views = opts.views;
+  if (opts.modules !== undefined) request.modules = opts.modules;
+  if (opts.strictSchema) request.strict_schema = true;
+  return request;
+}
+
 async function loadRuntimeModule(config: EngineConfig): Promise<EmscriptenModule> {
-  const jsPath = config.runtimeJsPath ?? DEFAULT_RUNTIME_JS;
+  const baseJs = config.wasmBaseUrl ? new URL("syntaqlite-runtime.js", config.wasmBaseUrl).href : undefined;
+  const jsPath = config.runtimeJsPath ?? baseJs ?? DEFAULT_RUNTIME_JS;
   const wasmPath = config.runtimeWasmPath
-    ?? (config.runtimeJsPath ? config.runtimeJsPath.replace(/\.js$/, ".wasm") : DEFAULT_RUNTIME_WASM);
+    ?? (jsPath === DEFAULT_RUNTIME_JS ? DEFAULT_RUNTIME_WASM : jsPath.replace(/\.js$/, ".wasm"));
   const moduleConfig: EmscriptenModuleConfig = {
     noInitialRun: true,
     locateFile(path: string) {

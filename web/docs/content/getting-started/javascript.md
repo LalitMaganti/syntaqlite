@@ -61,6 +61,7 @@ await new DialectManager().loadDefault(engine);
 
 const result = engine.analyze("SELECT id, nme FROM users WHERE active = 1", {
   schemaDdl: "CREATE TABLE users (id INTEGER, name TEXT, email TEXT, active INTEGER);",
+  strictSchema: true,
 });
 for (const d of result.diagnostics) {
   console.log(`${d.severity}: ${d.message} (bytes ${d.start_offset}-${d.end_offset})`);
@@ -73,12 +74,12 @@ node analyze.js
 ```
 
 ```text
-warning: unknown column 'nme' (bytes 11-14)
+error: unknown column 'nme' (bytes 11-14)
   help: name
 ```
 
-Unknown tables and columns are reported as warnings. `help` holds the
-suggested replacement.
+`strictSchema` makes unknown tables and columns errors. Without it, they are
+reported as warnings. `help` holds the suggested replacement.
 
 ## 4. Parse and inspect the AST
 

@@ -160,6 +160,15 @@ export interface AnalyzeOptions {
   views?: RelationSpec[];
   /** Dotted module path to SQL source, resolving INCLUDE MODULE imports. */
   modules?: Record<string, string>;
+  /** Report unknown tables, columns, and functions as errors rather than
+   *  warnings, as the CLI does when given a schema. */
+  strictSchema?: boolean;
+}
+
+export interface AnalyzeTextOptions extends AnalyzeOptions {
+  /** Label shown for the source in the report, such as a file name.
+   *  Defaults to `<input>`. */
+  sourceName?: string;
 }
 
 export interface AnalyzeResult {
