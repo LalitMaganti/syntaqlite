@@ -8,6 +8,9 @@ export interface DialectPreset {
   id: string;
   label: string;
   wasmUrl: string;
+  /** File name within the `wasm/` directory, used instead of `wasmUrl`
+   *  when the engine has a `wasmBaseUrl`. */
+  wasmFile?: string;
   symbol: string;
 }
 
@@ -17,7 +20,13 @@ const DEFAULT_SQLITE_WASM = new URL("../wasm/syntaqlite-sqlite.wasm", import.met
 
 export const BUILTIN_PRESETS: DialectPreset[] = [
   // SQLite is a side module; the runtime loads it via loadDynamicLibrary.
-  {id: "sqlite", label: "SQLite", wasmUrl: DEFAULT_SQLITE_WASM, symbol: "syntaqlite_sqlite_dialect_template"},
+  {
+    id: "sqlite",
+    label: "SQLite",
+    wasmUrl: DEFAULT_SQLITE_WASM,
+    wasmFile: "syntaqlite-sqlite.wasm",
+    symbol: "syntaqlite_sqlite_dialect_template",
+  },
 ];
 
 export interface DialectManagerConfig {
@@ -44,18 +53,27 @@ export class DialectManager {
     return this.presets;
   }
 
+  /** Load the first preset, the SQLite dialect unless `presets` was given.
+   *  Throws if it fails to load. */
   async loadDefault(engine: Engine): Promise<void> {
-    await this.selectPreset(engine, this.presets[0]);
+    if (!(await this.selectPreset(engine, this.presets[0]))) {
+      throw new Error(engine.status);
+    }
   }
 
-  async selectPreset(engine: Engine, preset: DialectPreset): Promise<void> {
+  /** Load a preset and make it the engine's dialect. Returns false and sets
+   *  the engine's status message if it fails. */
+  async selectPreset(engine: Engine, preset: DialectPreset): Promise<boolean> {
     if (!engine.ready) {
       engine.updateStatus("Runtime is not initialized yet.", true);
       this.onDialectChanged?.();
-      return;
+      return false;
     }
+    const url = engine.wasmBaseUrl && preset.wasmFile
+      ? new URL(preset.wasmFile, engine.wasmBaseUrl).href
+      : preset.wasmUrl;
     try {
-      const binding = await this.loadCached(engine, preset.wasmUrl, preset.symbol, preset.label);
+      const binding = await this.loadCached(engine, url, preset.symbol, preset.label);
       engine.setDialectPointer(binding.ptr);
       this.active = binding;
       this.activePresetId = preset.id;
@@ -63,8 +81,11 @@ export class DialectManager {
       engine.updateStatus(`Dialect: ${preset.label}`);
     } catch (err) {
       engine.updateStatus(`Failed to load ${preset.label}: ${(err as Error).message}`, true);
+      this.onDialectChanged?.();
+      return false;
     }
     this.onDialectChanged?.();
+    return true;
   }
 
   async loadFromFile(engine: Engine, file: File, symbol: string): Promise<string | undefined> {

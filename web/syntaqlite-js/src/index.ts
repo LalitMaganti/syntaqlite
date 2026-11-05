@@ -27,6 +27,7 @@ export type {
   ColumnSpec,
   ColumnKind,
   AnalyzeOptions,
+  AnalyzeTextOptions,
   AnalyzeResult,
   CompletionEntry,
   CompletionsResult,

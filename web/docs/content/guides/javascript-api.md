@@ -8,9 +8,9 @@ weight = 3
 
 This guide picks up where the
 [libsyntaqlite for JavaScript tutorial](@/getting-started/javascript.md) leaves
-off. It covers formatter options, building a schema from objects, parse
-errors, tokens, the built-in language server, and loading the package in the
-browser. Each example starts by loading the engine as the tutorial does.
+off. It covers formatter options, building a schema from objects, rendered
+reports, parse errors, tokens, the built-in language server, and loading the
+package in the browser. Each example starts by loading the engine as the tutorial does.
 
 ## Customize formatting
 
@@ -81,7 +81,37 @@ for (const d of result.diagnostics) {
 warning at bytes 66-70: unknown column 'nmae'
 ```
 
-`schemaDdl`, `tables`, and `views` can be combined in one call.
+`schemaDdl`, `tables`, and `views` can be combined in one call. Pass
+`strictSchema: true` to report unknown names as errors.
+
+## Show a report
+
+`analyzeText` takes the same options as `analyze` and returns the diagnostics
+as a terminal-style report, with the source shown under each one:
+
+```js
+import {DialectManager, Engine} from "syntaqlite";
+
+const engine = new Engine();
+await engine.load();
+await new DialectManager().loadDefault(engine);
+
+const report = engine.analyzeText("SELECT id, nme FROM users WHERE active = 1", {
+  schemaDdl: "CREATE TABLE users (id INTEGER, name TEXT, email TEXT, active INTEGER);",
+  strictSchema: true,
+  sourceName: "query.sql",
+});
+process.stdout.write(report);
+```
+
+```text
+error: unknown column 'nme'
+ --> query.sql:1:12
+  |
+1 | SELECT id, nme FROM users WHERE active = 1
+  |            ^~~
+  = help: did you mean 'name'?
+```
 
 ## Parse errors
 
@@ -192,21 +222,19 @@ attachLspPort(engine, self);
 The package loads its WebAssembly files from its `wasm/` directory, which it
 finds relative to its own JavaScript files. If your bundler copies the package
 as is, there is nothing to configure. Otherwise, copy the whole `wasm/`
-directory to where you serve static files, and point the engine and the SQLite
-dialect at it:
+directory to where you serve static files and pass its URL as `wasmBaseUrl`.
+The runtime and the SQLite dialect are both loaded from there:
 
 ```js
-import {BUILTIN_PRESETS, DialectManager, Engine} from "syntaqlite";
+import {DialectManager, Engine} from "syntaqlite";
 
-const engine = new Engine({runtimeJsPath: "/assets/syntaqlite-runtime.js"});
+const engine = new Engine({wasmBaseUrl: "/assets/syntaqlite/"});
 await engine.load();
-await new DialectManager({
-  presets: [{...BUILTIN_PRESETS[0], wasmUrl: "/assets/syntaqlite-sqlite.wasm"}],
-}).loadDefault(engine);
+await new DialectManager().loadDefault(engine);
 ```
 
-The runtime's `.wasm` file is looked up next to `runtimeJsPath`, unless you set
-`runtimeWasmPath`.
+`loadDefault` throws if the dialect cannot be loaded, for example because a
+file is missing.
 
 ## Next steps
 
