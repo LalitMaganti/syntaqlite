@@ -25,27 +25,20 @@
 
 ## What is syntaqlite?
 
-syntaqlite is a set of tools for SQLite SQL. Use them through the `syntaqlite`
-command-line tool, in your editor, or as a library in your own code.
+syntaqlite is a formatter, static analyzer and language server for SQLite SQL,
+built on a parser generated from SQLite's own grammar. Use it from the command
+line, in your editor, or as a library.
 
-- **Formatter.** `syntaqlite fmt` formats files in place or checks them in CI,
-  with configurable line width, indentation and keyword case.
-- **Static analyzer.** Checks queries against your schema without opening a
-  database. It reports unknown tables and columns, wrong column or value counts
-  and other errors SQLite would raise, several in one pass, and suggests fixes.
-- **Language server.** Diagnostics, completion, hover, formatting, go to
-  definition, find references and rename in VS Code, Zed, Claude Code and
-  other editors.
-- **Libraries.** **libsyntaqlite** is the parser, formatter and analyzer for
-  Rust, Python, JavaScript and C. Its syntax tree keeps comments and
-  whitespace, for migration tools, code generators and other source-to-source
-  work. **libsyntaqlite-parser** is the parser alone, as a C library.
-
-All of them use a parser and tokenizer generated from SQLite's own grammar and
-source, so they accept and reject the same statements as the SQLite version and
-compile-time flags you target, such as SQLite 3.32 or a build with
-`SQLITE_ENABLE_MATH_FUNCTIONS`. SQLite-based dialects can add their own
-grammar, functions and formatting rules.
+- **Format SQL.** `syntaqlite fmt` formats files in place or checks them in CI.
+- **Catch mistakes before you run them.** The analyzer checks queries against
+  your schema without opening a database, and suggests fixes.
+- **Get help in your editor.** Diagnostics, completion, hover, go to definition
+  and rename in VS Code, Zed, Claude Code and other editors.
+- **Match your SQLite.** It accepts and rejects the same statements as the
+  SQLite version and compile-time flags you target.
+- **Build your own tools.** libsyntaqlite brings the parser, formatter and
+  analyzer to Rust, Python, JavaScript and C. libsyntaqlite-parser is the
+  parser alone, as a C library.
 
 ## Try it in your browser
 
