@@ -72,6 +72,7 @@ export class App {
     this.schemaContext = new SchemaContextManager();
 
     this.languageMode = this.urlState.current.languageMode;
+    this.runtime.setLanguageMode(this.languageMode);
 
     this.window = new WindowManager();
   }

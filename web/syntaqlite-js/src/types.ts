@@ -199,7 +199,8 @@ export type EmbeddedLanguage = "python" | "typescript";
 export interface EmbeddedHole {
   start: number;
   end: number;
-  placeholder: string;
+  /** Byte offset in the fragment's `sql` where the hole's placeholder sits. */
+  sqlOffset: number;
 }
 
 /** @experimental */
