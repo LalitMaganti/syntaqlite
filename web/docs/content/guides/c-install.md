@@ -1,7 +1,7 @@
 +++
 title = "Installing the C libraries"
 description = "Download and link libsyntaqlite and libsyntaqlite-parser on Linux, macOS, and Windows."
-weight = 4
+weight = 5
 +++
 
 # Installing the C libraries

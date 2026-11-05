@@ -1,7 +1,7 @@
 +++
 title = "Using libsyntaqlite from C"
 description = "Formatter options, schemas, diagnostics, and column lineage in libsyntaqlite's C API."
-weight = 3
+weight = 4
 +++
 
 # Using libsyntaqlite from C

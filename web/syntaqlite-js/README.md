@@ -92,7 +92,7 @@ const analysis = engine.analyze("SELECT c FROM users", {
   schemaDdl: "CREATE TABLE users(id INTEGER, name TEXT);",
 });
 console.log(analysis.diagnostics);
-// [{ message: "unknown column 'c'", severity: "error", ... }]
+// [{ severity: "warning", message: "unknown column 'c'", ... }]
 
 engine.analyze("SELECT id FROM logs", {
   tables: [{name: "logs", columns: ["id", "ts", {name: "day", kind: "generated"}]}],
