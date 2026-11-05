@@ -11,6 +11,10 @@ Scenarios are defined in Python under `tests/c_api_tests/<area>.py` as
 classes deriving from `CApiTestSuite`; the module filename selects the
 driver area (e.g. `formatter.py` → `formatter_driver.c`).
 
+The suite also builds the single `syntaqlite.h` shipped in the
+libsyntaqlite release and compiles it as C and C++, since the drivers
+use the per-module headers and would not notice clashes between them.
+
 Sanitizer mode: when `SYNTAQLITE_CAPI_SANITIZE=1`, drivers compile and
 link with `-fsanitize=address,undefined`. Point at a sanitizer-built
 libsyntaqlite.a via `SYNTAQLITE_STATIC_LIB=<path>`; otherwise the stock
@@ -174,6 +178,33 @@ def _compile_driver(
     return out_bin
 
 
+def _check_combined_header(root_dir: Path, out_dir: Path) -> list[tuple[str, str | None]]:
+    """Builds the release `syntaqlite.h` and compiles it as C and C++.
+
+    Returns (name, error output or None) per check.
+    """
+    header = out_dir / "syntaqlite.h"
+    subprocess.check_call(
+        ["cargo", "run", "-q", "-p", "syntaqlite-buildtools", "--", "amalgamate",
+         "--syntax-dir", str(root_dir / "syntaqlite-syntax"),
+         "--lib-dir", str(root_dir / "syntaqlite-capi"),
+         "--output", str(header)],
+        cwd=root_dir,
+    )
+    source = out_dir / "combined_header.c"
+    source.write_text('#include "syntaqlite.h"\nint main(void) { return 0; }\n')
+    flags = ["-Wall", "-Wextra", "-Werror", "-fsyntax-only", "-I", str(out_dir)]
+    checks = [
+        ("header.combined_c", ["cc", "-std=c11", *flags, str(source)]),
+        ("header.combined_cxx", ["c++", "-std=c++17", *flags, "-x", "c++", str(source)]),
+    ]
+    results = []
+    for name, cmd in checks:
+        proc = subprocess.run(cmd, capture_output=True, text=True)
+        results.append((name, None if proc.returncode == 0 else proc.stderr))
+    return results
+
+
 # ---------------------------------------------------------------------------
 # Scenario discovery
 # ---------------------------------------------------------------------------
@@ -226,6 +257,17 @@ def run(ctx: SuiteContext) -> int:
         out_dir = Path(tmp)
         results: list[tuple[str, bool]] = []
         failed: list[str] = []
+
+        if filter_re is None or filter_re.search("header."):
+            for name, error in _check_combined_header(root_dir, out_dir):
+                results.append((name, error is None))
+                if error is None:
+                    if ctx.verbose >= 1:
+                        print(f"{colorize('[       OK ]', Colors.GREEN)} {name}")
+                else:
+                    print(f"{colorize('[  FAILED  ]', Colors.RED)} {name}")
+                    print(error.rstrip())
+                    failed.append(name)
 
         for driver in _DRIVERS:
             scenarios = _load_scenarios(root_dir, driver.area)

@@ -15,22 +15,22 @@ pub struct SyntaqliteDiagnostic {
 }
 
 #[repr(C)]
-pub struct SyntaqliteColumnDef {
+pub struct SyntaqliteSchemaColumn {
     pub name: *const c_char,
     pub kind: u32,
 }
 
 #[repr(C)]
-pub struct SyntaqliteTableDef {
+pub struct SyntaqliteSchemaTable {
     pub name: *const c_char,
-    pub columns: *const SyntaqliteColumnDef,
+    pub columns: *const SyntaqliteSchemaColumn,
     pub column_count: u32,
 }
 
 #[repr(C)]
-pub struct SyntaqliteViewDef {
+pub struct SyntaqliteSchemaView {
     pub name: *const c_char,
-    pub columns: *const SyntaqliteColumnDef,
+    pub columns: *const SyntaqliteSchemaColumn,
     pub column_count: u32,
 }
 

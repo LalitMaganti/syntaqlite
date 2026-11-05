@@ -105,21 +105,21 @@ typedef enum {
 typedef struct {
   const char* name;
   SyntaqliteColumnKind kind;
-} SyntaqliteColumnDef;
+} SyntaqliteSchemaColumn;
 
 // Table definition for batch catalog registration.
 typedef struct {
   const char* name;
-  const SyntaqliteColumnDef* columns;  // NULL = columns unknown
+  const SyntaqliteSchemaColumn* columns;  // NULL = columns unknown
   uint32_t column_count;               // ignored when columns is NULL
-} SyntaqliteTableDef;
+} SyntaqliteSchemaTable;
 
 // View definition for batch catalog registration.
 typedef struct {
   const char* name;
-  const SyntaqliteColumnDef* columns;  // NULL = columns unknown
+  const SyntaqliteSchemaColumn* columns;  // NULL = columns unknown
   uint32_t column_count;               // ignored when columns is NULL
-} SyntaqliteViewDef;
+} SyntaqliteSchemaView;
 
 // Relation kind (table vs. view).
 typedef enum {
@@ -278,14 +278,14 @@ SYNTAQLITE_API void syntaqlite_analyzer_reset_catalog(SyntaqliteAnalyzer* v);
 // A table with an out-of-range column kind is not added.
 SYNTAQLITE_API void syntaqlite_analyzer_add_tables(
     SyntaqliteAnalyzer* v,
-    const SyntaqliteTableDef* tables,
+    const SyntaqliteSchemaTable* tables,
     uint32_t count);
 
 // Add views to the database layer of the catalog. `columns` are the view's
 // output columns. A view with an out-of-range column kind is not added.
 SYNTAQLITE_API void syntaqlite_analyzer_add_views(
     SyntaqliteAnalyzer* v,
-    const SyntaqliteViewDef* views,
+    const SyntaqliteSchemaView* views,
     uint32_t count);
 
 // Load schema from DDL statements (CREATE TABLE, CREATE VIEW, etc.).

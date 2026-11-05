@@ -179,7 +179,7 @@ static void add_relation_one(SyntaqliteAnalyzer* v, int is_view,
                              const char* name, const char* cols_csv) {
   char** cols = NULL;
   uint32_t n = split_csv(cols_csv, &cols);
-  SyntaqliteColumnDef* defs = n ? calloc(n, sizeof(SyntaqliteColumnDef)) : NULL;
+  SyntaqliteSchemaColumn* defs = n ? calloc(n, sizeof(SyntaqliteSchemaColumn)) : NULL;
   for (uint32_t i = 0; i < n; i++) {
     char* sep = strchr(cols[i], ':');
     defs[i].name = cols[i];
@@ -191,10 +191,10 @@ static void add_relation_one(SyntaqliteAnalyzer* v, int is_view,
     }
   }
   if (is_view) {
-    SyntaqliteViewDef def = {name, defs, n};
+    SyntaqliteSchemaView def = {name, defs, n};
     syntaqlite_analyzer_add_views(v, &def, 1);
   } else {
-    SyntaqliteTableDef def = {name, defs, n};
+    SyntaqliteSchemaTable def = {name, defs, n};
     syntaqlite_analyzer_add_tables(v, &def, 1);
   }
   free(defs);

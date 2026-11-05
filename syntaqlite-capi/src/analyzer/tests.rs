@@ -123,13 +123,13 @@ impl Validator {
     fn add_table_with_kinds(&self, name: &str, cols: &[(&str, u32)]) {
         let c_name = CString::new(name).unwrap();
         let (_keep_cstrs, defs) = column_defs(cols);
-        let table = SyntaqliteTableDef {
+        let table = SyntaqliteSchemaTable {
             name: c_name.as_ptr(),
             columns: defs_ptr(&defs),
             column_count: u32::try_from(defs.len()).unwrap(),
         };
         // SAFETY: FFI test — handle from `syntaqlite_analyzer_create_sqlite`;
-        // all C strings and the `SyntaqliteTableDef` outlive the call.
+        // all C strings and the `SyntaqliteSchemaTable` outlive the call.
         unsafe { syntaqlite_analyzer_add_tables(self.0, &raw const table, 1) };
     }
 
@@ -139,13 +139,13 @@ impl Validator {
         let c_name = CString::new(name).unwrap();
         let cols: Vec<(&str, u32)> = cols.iter().map(|&c| (c, 0)).collect();
         let (_keep_cstrs, defs) = column_defs(&cols);
-        let view = SyntaqliteViewDef {
+        let view = SyntaqliteSchemaView {
             name: c_name.as_ptr(),
             columns: defs_ptr(&defs),
             column_count: u32::try_from(defs.len()).unwrap(),
         };
         // SAFETY: FFI test — handle from `syntaqlite_analyzer_create_sqlite`;
-        // all C strings and the `SyntaqliteViewDef` outlive the call.
+        // all C strings and the `SyntaqliteSchemaView` outlive the call.
         unsafe { syntaqlite_analyzer_add_views(self.0, &raw const view, 1) };
     }
 
@@ -203,7 +203,7 @@ impl Validator {
 
 /// Column definitions for `(name, kind)` pairs, with the C strings they
 /// point into.
-fn column_defs(cols: &[(&str, u32)]) -> (Vec<CString>, Vec<SyntaqliteColumnDef>) {
+fn column_defs(cols: &[(&str, u32)]) -> (Vec<CString>, Vec<SyntaqliteSchemaColumn>) {
     let names: Vec<CString> = cols
         .iter()
         .map(|(c, _)| CString::new(*c).unwrap())
@@ -211,7 +211,7 @@ fn column_defs(cols: &[(&str, u32)]) -> (Vec<CString>, Vec<SyntaqliteColumnDef>)
     let defs = names
         .iter()
         .zip(cols)
-        .map(|(name, &(_, kind))| SyntaqliteColumnDef {
+        .map(|(name, &(_, kind))| SyntaqliteSchemaColumn {
             name: name.as_ptr(),
             kind,
         })
@@ -220,7 +220,7 @@ fn column_defs(cols: &[(&str, u32)]) -> (Vec<CString>, Vec<SyntaqliteColumnDef>)
 }
 
 /// NULL for no columns, which registers the columns as unknown.
-fn defs_ptr(defs: &[SyntaqliteColumnDef]) -> *const SyntaqliteColumnDef {
+fn defs_ptr(defs: &[SyntaqliteSchemaColumn]) -> *const SyntaqliteSchemaColumn {
     if defs.is_empty() {
         std::ptr::null()
     } else {
