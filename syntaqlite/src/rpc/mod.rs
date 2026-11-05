@@ -23,7 +23,7 @@
 //!   `{"formatted":"..."}`.
 //! - `{"op":"tokenize","sql":"..."}` →
 //!   `{"tokens":[{"text","offset","length","type","category"},...]}`.
-//! - `{"op":"analyze","sql":"...","tables"?:[...],"views"?:[...],"schema_ddl"?:"...","output"?:"structured"|"text"}` →
+//! - `{"op":"analyze","sql":"...","tables"?:[...],"views"?:[...],"schema_ddl"?:"...","strict_schema"?:bool,"output"?:"structured"|"text"}` →
 //!   `{"diagnostics":[...],"statements":[...],"lineage":<lineage>|null}` (or `{"rendered":"..."}` when `output="text"`).
 //!
 //! Response values are built from borrowed `Serialize` views where possible
@@ -386,6 +386,9 @@ struct ValidateReq {
     /// `INCLUDE MODULE` imports. Callers must supply every module they
     /// expect to be referenced (transitively).
     modules: Option<HashMap<String, String>>,
+    /// Report unknown tables, columns, and functions as errors rather than
+    /// warnings, as the CLI does when given a schema.
+    strict_schema: Option<bool>,
     /// Output format: `"structured"` (default) returns a typed result
     /// object; `"text"` returns rendered diagnostics.
     output: Option<String>,
@@ -393,12 +396,24 @@ struct ValidateReq {
     render_options: Option<RenderOptions>,
 }
 
-#[derive(Deserialize, Default)]
+#[derive(Deserialize)]
 struct RenderOptions {
     /// Source label shown in rendered diagnostics (analogous to a file path).
-    /// Defaults to the empty string.
-    #[serde(default)]
+    #[serde(default = "default_source_name")]
     source_name: String,
+}
+
+impl Default for RenderOptions {
+    fn default() -> Self {
+        Self {
+            source_name: default_source_name(),
+        }
+    }
+}
+
+/// The label the C API also uses when the caller gives none.
+fn default_source_name() -> String {
+    "<input>".to_string()
 }
 
 /// Construct the [`ModuleResolver`] for this request, if any.
@@ -464,7 +479,10 @@ fn handle_analyze(
         layer.insert_view(view);
     }
 
-    let config = AnalysisConfig::default();
+    let mut config = AnalysisConfig::default();
+    if req.strict_schema.unwrap_or(false) {
+        config = config.with_strict_schema();
+    }
     let resolver = build_module_resolver(&req);
     let mut ctx = AnalysisContext::new(&mut catalog).with_config(config);
     if let Some(r) = resolver.as_deref() {

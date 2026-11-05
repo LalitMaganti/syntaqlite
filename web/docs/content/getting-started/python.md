@@ -59,6 +59,7 @@ with syntaqlite.Syntaqlite() as sq:
         schema,
         output=AnalysisOutput.TEXT,
         render_options=RenderOptions(source_name="query.sql"),
+        strict_schema=True,
     )
     print(report, end="")
 ```
@@ -68,7 +69,7 @@ python analyze.py
 ```
 
 ```text
-warning: unknown column 'nme'
+error: unknown column 'nme'
  --> query.sql:1:12
   |
 1 | SELECT id, nme FROM users WHERE active = 1
@@ -76,8 +77,9 @@ warning: unknown column 'nme'
   = help: did you mean 'name'?
 ```
 
-`AnalysisOutput.TEXT` returns the report as text. Without it, `analyze`
-returns the diagnostics as objects, as the
+`strict_schema=True` makes unknown tables and columns errors. Without it, they
+are reported as warnings. `AnalysisOutput.TEXT` returns the report as text;
+without it, `analyze` returns the diagnostics as objects, as the
 [Python guide](@/guides/python-api.md) shows.
 
 ## 4. Parse and inspect the AST

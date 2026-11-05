@@ -123,9 +123,9 @@ class RenderOptions:
 
     __slots__ = ("source_name",)
 
-    def __init__(self, *, source_name: str = ""):
+    def __init__(self, *, source_name: str = "<input>"):
         #: Source label shown in rendered diagnostics (analogous to a file
-        #: path). Defaults to an empty string.
+        #: path).
         self.source_name: str = source_name
 
     def _to_request(self) -> dict:
@@ -154,6 +154,18 @@ class Diagnostic:
 
     def __repr__(self):
         return f"Diagnostic({self.severity}: {self.message!r})"
+
+
+class ParseResult(list):
+    """The statements :meth:`Syntaqlite.parse` parsed, as a list.
+
+    ``errors`` holds a :class:`Diagnostic` for each statement that failed
+    to parse and was left out.
+    """
+
+    def __init__(self, statements: list, errors: list[Diagnostic]):
+        super().__init__(statements)
+        self.errors: list[Diagnostic] = errors
 
 
 class DefinedRelation:
@@ -588,10 +600,17 @@ class Syntaqlite:
 
     # ── Public API ──────────────────────────────────────────────────────────
 
-    def parse(self, sql: str) -> list:
-        """Parse SQL into typed AST nodes."""
+    def parse(self, sql: str) -> ParseResult:
+        """Parse SQL into typed AST nodes.
+
+        Returns the statements that parsed, as a list. Statements that fail
+        to parse are left out; their errors are in the result's ``errors``.
+        """
         resp = self._call("parse", sql=sql)
-        return [_wrap(d) for d in resp["statements"]]
+        return ParseResult(
+            [_wrap(d) for d in resp["statements"]],
+            [Diagnostic(e) for e in resp["errors"]],
+        )
 
     def parse_raw(self, sql: str) -> list:
         """Parse SQL into JSON-shaped dicts (no typed wrapping)."""
@@ -641,6 +660,7 @@ class Syntaqlite:
         *,
         output: AnalysisOutput | str = AnalysisOutput.STRUCTURED,
         render_options: RenderOptions | None = None,
+        strict_schema: bool = False,
     ) -> Analysis | str:
         """Analyze SQL against an optional schema.
 
@@ -654,6 +674,9 @@ class Syntaqlite:
             render_options: Fine-grained options for
                 :attr:`AnalysisOutput.TEXT` (e.g. source label). Ignored
                 for other outputs.
+            strict_schema: Report unknown tables, columns, and functions as
+                errors rather than warnings, as the CLI does when given a
+                schema.
         """
         output = AnalysisOutput(output)
         params: dict[str, Any] = {"sql": sql, "output": output.value}
@@ -661,6 +684,8 @@ class Syntaqlite:
             params.update(schema._to_request())
         if render_options is not None:
             params["render_options"] = render_options._to_request()
+        if strict_schema:
+            params["strict_schema"] = True
 
         resp = self._call("analyze", **params)
         if output is AnalysisOutput.TEXT:
