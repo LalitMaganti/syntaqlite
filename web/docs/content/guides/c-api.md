@@ -6,9 +6,9 @@ weight = 2
 
 # Using libsyntaqlite from C
 
-This guide covers libsyntaqlite's formatter and analyzer from C and C++. To
-get started, follow the [libsyntaqlite for C tutorial](@/getting-started/c.md).
-To download and link the library, see
+This guide goes further into libsyntaqlite's formatter and analyzer. If you
+haven't used libsyntaqlite before, start with the
+[tutorial](@/getting-started/c.md). For downloads and linking, see
 [Installing the C libraries](@/guides/c-install.md).
 
 ## Format a query
@@ -164,4 +164,5 @@ return NULL.
 
 - See the [libsyntaqlite C API reference](@/reference/c-api.md) for all functions, types,
   and the memory model
-- To only parse SQL, see [libsyntaqlite-parser for C](@/getting-started/c-parser.md)
+- If you only need to parse SQL, see
+  [libsyntaqlite-parser for C](@/getting-started/c-parser.md)

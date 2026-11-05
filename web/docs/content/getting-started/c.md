@@ -6,14 +6,12 @@ weight = 5
 
 # Using libsyntaqlite from C
 
-libsyntaqlite provides C APIs for parsing, formatting, and analyzing SQLite
-SQL. This tutorial downloads the prebuilt library, formats a query, validates
-it against a schema, and prints its syntax tree.
+libsyntaqlite is syntaqlite's C library. In this tutorial you download it,
+format a query, check the query against a schema, and print its syntax tree.
 
-> **Only need to parse SQL?** [libsyntaqlite-parser](@/getting-started/c-parser.md)
-> is libsyntaqlite's parser and tokenizer on their own. It has the same
-> functions, needs no Rust runtime, and is available as prebuilt libraries or
-> as two C files to compile into your project.
+> **Only parsing SQL?** Use [libsyntaqlite-parser](@/getting-started/c-parser.md)
+> instead. It is a smaller library with just the parser and tokenizer, and you
+> can either link it or compile its source into your project.
 
 ## 1. Download libsyntaqlite
 
@@ -24,9 +22,9 @@ mkdir sql-check && cd sql-check
 curl -L https://github.com/LalitMaganti/syntaqlite/releases/download/v0.13.5/libsyntaqlite-0.13.5.tar.gz | tar xz
 ```
 
-It contains the header, `syntaqlite.h`, and a shared library for each
-platform. The commands below use the Linux x64 library; see
-[Installing the C libraries](@/guides/c-install.md) for macOS and Windows.
+The archive has the header, `syntaqlite.h`, and a shared library for each
+platform. This tutorial uses the Linux x64 library. For macOS and Windows, see
+[Installing the C libraries](@/guides/c-install.md).
 
 ## 2. Format a query
 
@@ -63,8 +61,8 @@ cc -o format format.c -I. -Llinux-x64 -lsyntaqlite -Wl,-rpath,'$ORIGIN/linux-x64
 SELECT id, name, email FROM users WHERE active = 1 ORDER BY name;
 ```
 
-The formatter is reusable: create it once and call
-`syntaqlite_formatter_format` for each query.
+You can keep one formatter and call `syntaqlite_formatter_format` for every
+query you need to format.
 
 ## 3. Validate against a schema
 
@@ -116,8 +114,8 @@ error: unknown column 'nme'
   = help: did you mean 'name'?
 ```
 
-Strict schema mode reports unknown tables and columns as errors rather than
-warnings.
+`syntaqlite_analyzer_set_strict_schema` makes unknown tables and columns
+errors. Without it, they are reported as warnings.
 
 ## 4. Parse and inspect the AST
 
@@ -186,15 +184,14 @@ SelectStmt
   ...
 ```
 
-These parser functions are the same ones libsyntaqlite-parser provides, so this
-code also works with libsyntaqlite-parser after changing the header to
-`libsyntaqlite_parser.h`.
+libsyntaqlite-parser has the same parser functions, so this program also
+builds against it if you include `libsyntaqlite_parser.h` instead.
 
 ## Next steps
 
 - [Using libsyntaqlite from C](@/guides/c-api.md): formatter configuration,
   table registration, and column lineage
 - [Installing the C libraries](@/guides/c-install.md): linking on macOS and
-  Windows, and the libsyntaqlite-parser downloads
+  Windows
 - [libsyntaqlite C API reference](@/reference/c-api.md): all functions, types,
   and the memory model

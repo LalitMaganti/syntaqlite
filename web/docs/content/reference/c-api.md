@@ -8,9 +8,9 @@ weight = 5
 
 ## Distribution
 
-libsyntaqlite is an embeddable parser, formatter, and static analyzer for SQLite
-SQL. libsyntaqlite-parser is its parser and tokenizer on their own, with the
-same functions:
+libsyntaqlite parses, formats, and analyzes SQLite SQL. libsyntaqlite-parser is
+a smaller library with only the parser and tokenizer, whose functions are the
+same as libsyntaqlite's.
 
 | Library | Contains | Header | Released as |
 |---------|----------|--------|-------------|

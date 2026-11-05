@@ -1,23 +1,22 @@
 +++
 title = "libsyntaqlite-parser for C"
-description = "Parse SQLite SQL from C with libsyntaqlite-parser, the dependency-free parser library."
+description = "Parse SQLite SQL from C with libsyntaqlite-parser."
 weight = 6
 +++
 
 # Using libsyntaqlite-parser from C
 
-libsyntaqlite-parser is libsyntaqlite's parser and tokenizer on their own. It
-needs nothing beyond a C compiler. This tutorial parses queries, prints their
-AST, recovers from errors, and lists the tokens produced by the tokenizer.
+libsyntaqlite-parser is the part of libsyntaqlite that parses SQL. In this
+tutorial you use it to parse a few queries and print their syntax trees, see
+how the parser handles errors, and list the tokens it read.
 
-To also format or analyze SQL, use
-[libsyntaqlite](@/getting-started/c.md) instead. It includes the same parser
-functions.
+If you also want to format or analyze SQL, use
+[libsyntaqlite](@/getting-started/c.md). Its parser functions are the same.
 
 ## 1. Get libsyntaqlite-parser
 
-libsyntaqlite-parser is released as prebuilt libraries and as C source. Use
-whichever suits your build:
+You can download libsyntaqlite-parser as a prebuilt library or as C source.
+The code in this tutorial is the same for both.
 
 <div class="tabs" data-tab-group="parser-get">
   <div class="tab-buttons">
@@ -27,12 +26,12 @@ whichever suits your build:
   <div class="tab-panel active" data-tab="prebuilt">
     <pre><code class="language-bash">mkdir sql-parser &amp;&amp; cd sql-parser
 curl -L https://github.com/LalitMaganti/syntaqlite/releases/download/v0.13.5/libsyntaqlite-parser-0.13.5.tar.gz | tar xz</code></pre>
-    <p>Contains <code>libsyntaqlite_parser.h</code> and a static and shared library for each platform.</p>
+    <p>The header, plus a static and a shared library for each platform.</p>
   </div>
   <div class="tab-panel" data-tab="source">
     <pre><code class="language-bash">mkdir sql-parser &amp;&amp; cd sql-parser
 curl -L https://github.com/LalitMaganti/syntaqlite/releases/download/v0.13.5/libsyntaqlite-parser-0.13.5-src.tar.gz | tar xz</code></pre>
-    <p>Contains <code>libsyntaqlite_parser.h</code> and <code>libsyntaqlite_parser.c</code>, to compile into your program.</p>
+    <p>The header and <code>libsyntaqlite_parser.c</code>, which you compile with your program.</p>
   </div>
 </div>
 
@@ -85,22 +84,22 @@ int main(int argc, char** argv) {
 
 ## 3. Compile and run
 
-With the prebuilt library, link the static library for your platform:
+If you downloaded the prebuilt library, link the static library for your
+platform:
 
 ```bash
 cc -o parse parse.c -I. linux-x64/libsyntaqlite_parser.a -ldl
 ```
 
-With the C source, compile it alongside your program:
+If you downloaded the source, compile it with your program:
 
 ```bash
 cc -O2 -o parse parse.c libsyntaqlite_parser.c -ldl
 ```
 
-On Linux, `-ldl` is needed with glibc older than 2.34.
-
-See [Installing the C libraries](@/guides/c-install.md) for macOS, Windows, and
-shared-library commands.
+`-ldl` is only needed on Linux systems with glibc older than 2.34. For macOS,
+Windows, and the shared library, see
+[Installing the C libraries](@/guides/c-install.md).
 
 Run it with the default query:
 
@@ -166,11 +165,11 @@ SelectStmt
   ...
 ```
 
-Statement 1 failed but statement 2 still parsed successfully.
+The first statement fails, but the parser carries on and parses the second.
 
 ## 5. Access tokens
 
-Enable the token side-table to see what the tokenizer produced:
+To see the tokens the parser read, turn on token collection before parsing:
 
 ```c
 syntaqlite_parser_set_collect_tokens(p, 1);
@@ -200,7 +199,7 @@ token 3: type=40 offset=15 len=5
 
 - [libsyntaqlite for C](@/getting-started/c.md): format and analyze SQL as well
   as parse it
-- [Installing the C libraries](@/guides/c-install.md): linking on every
-  platform
+- [Installing the C libraries](@/guides/c-install.md): linking on macOS and
+  Windows
 - [libsyntaqlite C API reference](@/reference/c-api.md): all parser and
   tokenizer functions

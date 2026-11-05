@@ -13,8 +13,10 @@ syntaqlite has two C libraries:
 | **libsyntaqlite** | Parser, tokenizer, formatter, and analyzer | You need formatting or analysis |
 | **libsyntaqlite-parser** | Parser and tokenizer | You only need to parse SQL |
 
-libsyntaqlite-parser is libsyntaqlite's parser and tokenizer on their own, with
-the same functions. Every release includes three archives:
+libsyntaqlite has the same parser functions as libsyntaqlite-parser, so code
+written for one builds against the other with a change of header.
+
+Each release has three C archives:
 
 | Archive | Contents |
 |---|---|
@@ -22,7 +24,7 @@ the same functions. Every release includes three archives:
 | `libsyntaqlite-parser-<version>.tar.gz` | `libsyntaqlite_parser.h` and a static and shared library per platform |
 | `libsyntaqlite-parser-<version>-src.tar.gz` | `libsyntaqlite_parser.h` and `libsyntaqlite_parser.c` |
 
-Each release's notes list every file with its SHA-256.
+The release notes give the SHA-256 of every file.
 
 ## libsyntaqlite
 
@@ -52,8 +54,8 @@ cc -o my_program my_program.c -I. -Llinux-x64 -lsyntaqlite -Wl,-rpath,'$ORIGIN/l
 cc -o my_program my_program.c -I. -Lmacos-arm64 -lsyntaqlite -Wl,-rpath,@executable_path/macos-arm64
 ```
 
-On Windows, link the import library from a Developer Command Prompt and put the
-DLL next to your program:
+On Windows, link against the import library from a Developer Command Prompt,
+then copy the DLL next to your program:
 
 ```bat
 cl /MD /std:c11 /I. my_program.c windows-x64\syntaqlite.dll.lib
@@ -80,8 +82,8 @@ windows-x64/syntaqlite_parser.dll.lib
 ...
 ```
 
-The archive also has `linux-arm64`, `macos-x64`, and `windows-arm64`
-directories. Link the static library to build it into your program:
+There are also `linux-arm64`, `macos-x64`, and `windows-arm64` directories. To
+build the parser into your program, link the static library:
 
 ```bash
 # Linux
@@ -96,10 +98,10 @@ cc -o my_program my_program.c -I. macos-arm64/libsyntaqlite_parser.a
 cl /MD /std:c11 /I. my_program.c windows-x64\syntaqlite_parser.lib
 ```
 
-On Linux, `-ldl` is needed with glibc older than 2.34, where `dlopen` is not
-part of libc. libsyntaqlite-parser uses it to load custom dialects.
+On Linux with glibc older than 2.34, add `-ldl`. The parser uses `dlopen` to
+load custom dialects, and older glibc versions keep it in a separate library.
 
-Or link the shared library:
+To link the shared library instead:
 
 ```bash
 # Linux
@@ -115,8 +117,8 @@ cl /MD /std:c11 /I. my_program.c windows-x64\syntaqlite_parser.dll.lib
 copy windows-x64\syntaqlite_parser.dll .
 ```
 
-The Windows libraries use the dynamic C runtime, so compile your program with
-`/MD`.
+The Windows libraries are built against the dynamic C runtime, so compile your
+program with `/MD` too.
 
 ### C source
 
@@ -124,14 +126,13 @@ The Windows libraries use the dynamic C runtime, so compile your program with
 curl -L https://github.com/LalitMaganti/syntaqlite/releases/download/v0.13.5/libsyntaqlite-parser-0.13.5-src.tar.gz | tar xz
 ```
 
-The archive contains `libsyntaqlite_parser.h` and `libsyntaqlite_parser.c`.
-Compile the `.c` file with the rest of your program. It needs a C11 compiler
-and nothing else:
+The archive has `libsyntaqlite_parser.h` and `libsyntaqlite_parser.c`. Add the
+`.c` file to your build. It needs a C11 compiler:
 
 ```bash
 cc -O2 -o my_program my_program.c libsyntaqlite_parser.c -ldl
 ```
 
-As with the static library, `-ldl` is needed on Linux with glibc older than
-2.34. On Windows, compile it with clang-cl, since MSVC's C compiler does not
-support all the C11 features it uses.
+Again, add `-ldl` on Linux with glibc older than 2.34. On Windows, use
+clang-cl: MSVC's C compiler doesn't support all the C11 features the parser
+uses.
