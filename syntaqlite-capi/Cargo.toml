@@ -6,7 +6,7 @@ description = "C API for syntaqlite (libsyntaqlite)"
 license = "Apache-2.0"
 repository.workspace = true
 homepage.workspace = true
-publish = false
+readme = "README.md"
 
 [package.metadata.dist]
 dist = false
@@ -25,4 +25,4 @@ dynload = ["syntaqlite/dynload"]
 workspace = true
 
 [dependencies]
-syntaqlite = { path = "../syntaqlite", default-features = false, features = ["fmt", "analysis", "rpc"] }
+syntaqlite = { version = "0.13.5", path = "../syntaqlite", default-features = false, features = ["fmt", "analysis", "rpc"] }
