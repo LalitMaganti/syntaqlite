@@ -149,8 +149,25 @@ Click the screenshot to open this example.
   agrees with SQLite on 99.7% of about 396,000 statements from
   [SQLite's test suite](https://sqlite.org/testing.html), and parses all 40
   statements of a corpus of SQLite-specific syntax the same way `sqlite3` does.
-- **Formatting is safe.** Each of those 40 statements formats to SQL that
-  SQLite compiles to the same bytecode as the original.
+- **It knows which SQLite you run.** Pin a version and compile-time flags once
+  in `syntaqlite.toml`, and every tool checks against them: `RETURNING` is a
+  syntax error before SQLite 3.35, and `sin()` is unknown unless you build with
+  `SQLITE_ENABLE_MATH_FUNCTIONS`.
+- **It checks SQL without a database.** The analyzer works from your schema
+  file, so CI and code review can catch a misspelled column or an `INSERT`
+  with the wrong number of values without a database, fixtures or migrations.
+- **Formatting is safe.** The formatter keeps comments, and each of the 40
+  statements in that corpus formats to SQL that SQLite compiles to the same
+  bytecode as the original.
+- **One engine everywhere.** The CLI, the language server and the libraries
+  share one parser and analyzer, so your editor, your CI and your own tools
+  agree on what is valid SQL.
+- **It embeds wherever SQLite does.** The parser is C, so it builds for the
+  same platforms SQLite does, and libsyntaqlite also runs in Python, in Node
+  and in the browser through WebAssembly.
+- **It extends to SQLite-based dialects.** A dialect can add grammar,
+  functions and formatting rules on the same runtime.
+  [Perfetto](https://perfetto.dev) builds PerfettoSQL this way.
 
 The [comparison](https://docs.syntaqlite.com/latest/reference/comparison/)
 runs the same tests on other SQL tools, with their versions and how to
