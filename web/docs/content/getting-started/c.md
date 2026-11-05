@@ -10,8 +10,8 @@ libsyntaqlite is syntaqlite's C library. In this tutorial you download it,
 format a query, check the query against a schema, and print its syntax tree.
 
 > **Only parsing SQL?** Use [libsyntaqlite-parser](@/getting-started/c-parser.md)
-> instead. It is a smaller library with just the parser and tokenizer, and you
-> can either link it or compile its source into your project.
+> instead. It is a few hundred kilobytes rather than a megabyte or more, and you
+> can build it from source with just a C compiler.
 
 ## 1. Download libsyntaqlite
 

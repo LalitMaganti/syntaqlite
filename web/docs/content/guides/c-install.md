@@ -13,6 +13,12 @@ syntaqlite has two C libraries:
 | **libsyntaqlite** | Parser, tokenizer, formatter, and analyzer | You need formatting or analysis |
 | **libsyntaqlite-parser** | Parser and tokenizer | You only need to parse SQL |
 
+If you only need to parse SQL, libsyntaqlite-parser has two advantages. It is
+much smaller: a few hundred kilobytes, where libsyntaqlite is a megabyte or
+more. And it is plain C, so you can build it from source with nothing but a C
+compiler and add it to any build system. libsyntaqlite's formatter and analyzer
+are written in Rust, so it is only released prebuilt.
+
 libsyntaqlite has the same parser functions as libsyntaqlite-parser, so code
 written for one builds against the other with a change of header.
 

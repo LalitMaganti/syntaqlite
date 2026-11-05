@@ -6,9 +6,11 @@ weight = 6
 
 # Using libsyntaqlite-parser from C
 
-libsyntaqlite-parser is the part of libsyntaqlite that parses SQL. In this
-tutorial you use it to parse a few queries and print their syntax trees, see
-how the parser handles errors, and list the tokens it read.
+libsyntaqlite-parser is the part of libsyntaqlite that parses SQL. It is a
+fraction of libsyntaqlite's size, and because it is plain C, you can compile it
+into your project with no other tools. In this tutorial you use it to parse a
+few queries and print their syntax trees, see how the parser handles errors,
+and list the tokens it read.
 
 If you also want to format or analyze SQL, use
 [libsyntaqlite](@/getting-started/c.md). Its parser functions are the same.
