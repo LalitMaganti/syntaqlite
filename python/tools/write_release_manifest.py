@@ -25,6 +25,9 @@ binary. This tool merges those parts with the archives' SHA-256 digests:
     }
 
 Bump MANIFEST_VERSION only for changes that existing clients cannot read.
+
+With --release-notes, it also writes a Downloads table built from the
+manifest into the given release notes file.
 """
 
 from __future__ import annotations
@@ -37,6 +40,23 @@ from pathlib import Path
 
 MANIFEST_NAME = "syntaqlite-release.json"
 MANIFEST_VERSION = 1
+
+DOWNLOADS_BEGIN = "<!-- downloads -->"
+DOWNLOADS_END = "<!-- /downloads -->"
+
+PLATFORM_LABELS = {
+    "aarch64-apple-darwin": "Apple Silicon macOS",
+    "x86_64-apple-darwin": "Intel macOS",
+    "aarch64-unknown-linux-gnu": "ARM64 Linux",
+    "x86_64-unknown-linux-gnu": "x64 Linux",
+    "aarch64-pc-windows-msvc": "ARM64 Windows",
+    "x86_64-pc-windows-msvc": "x64 Windows",
+}
+
+FILE_LABELS = {
+    "libsyntaqlite": "C library, all platforms",
+    "amalgamation": "Parser C source",
+}
 
 
 class ManifestError(RuntimeError):
@@ -86,6 +106,35 @@ def build_manifest(
     }
 
 
+def downloads_table(manifest: dict, repo: str) -> str:
+    base = f"https://github.com/{repo}/releases/download/v{manifest['version']}"
+    rows = []
+    for entries, labels in ((manifest["cli"], PLATFORM_LABELS), (manifest["files"], FILE_LABELS)):
+        order = list(labels)
+        keys = sorted(entries, key=lambda k: (order.index(k) if k in order else len(order), k))
+        rows += [(entries[k], labels.get(k, k)) for k in keys]
+    lines = [
+        DOWNLOADS_BEGIN,
+        "### Downloads",
+        "",
+        "| File | Platform | SHA-256 |",
+        "|------|----------|---------|",
+    ]
+    lines += [f"| [{e['name']}]({base}/{e['name']}) | {label} | `{e['sha256']}` |" for e, label in rows]
+    lines.append(DOWNLOADS_END)
+    return "\n".join(lines)
+
+
+def with_downloads_table(notes: str, table: str) -> str:
+    """Return `notes` with its Downloads table replaced by `table`."""
+    start = notes.find(DOWNLOADS_BEGIN)
+    end = notes.find(DOWNLOADS_END)
+    if start != -1 and end > start:
+        notes = notes[:start] + notes[end + len(DOWNLOADS_END):]
+    notes = notes.rstrip()
+    return f"{notes}\n\n{table}\n" if notes else f"{table}\n"
+
+
 def _parse_file(value: str) -> tuple[str, Path]:
     kind, sep, path = value.partition("=")
     if not sep or not kind or not path:
@@ -103,7 +152,14 @@ def main(argv: list[str] | None = None) -> int:
         help="Another release file to list under `files` (repeatable).",
     )
     parser.add_argument("--output", type=Path, default=Path(MANIFEST_NAME))
+    parser.add_argument(
+        "--release-notes", type=Path,
+        help="Release notes file to rewrite with a Downloads table. Requires --repo.",
+    )
+    parser.add_argument("--repo", help="GitHub repository the release belongs to, as OWNER/NAME.")
     args = parser.parse_args(argv)
+    if args.release_notes and not args.repo:
+        parser.error("--release-notes requires --repo")
 
     try:
         manifest = build_manifest(args.version, args.parts, args.cli_dir, dict(args.file))
@@ -112,4 +168,9 @@ def main(argv: list[str] | None = None) -> int:
         return 1
     args.output.write_text(json.dumps(manifest, indent=2) + "\n")
     print(f"wrote {args.output} ({len(manifest['cli'])} CLI targets)")
+    if args.release_notes:
+        notes = args.release_notes.read_text()
+        table = downloads_table(manifest, args.repo)
+        args.release_notes.write_text(with_downloads_table(notes, table))
+        print(f"wrote the Downloads table to {args.release_notes}")
     return 0
