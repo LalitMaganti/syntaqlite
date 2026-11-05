@@ -815,13 +815,12 @@ impl Catalog {
     /// Returns `(catalog, errors)`. `errors` contains the human-readable
     /// message for each statement that failed to parse. Partial results from
     /// successfully parsed statements are always accumulated.
-    #[cfg(feature = "sqlite")]
     pub fn from_ddl(dialect: impl Into<AnyDialect>, sources: &[&str]) -> (Self, Vec<String>) {
-        use syntaqlite_syntax::ParseOutcome;
+        use syntaqlite_syntax::any::{AnyParser, ParseOutcome};
         let dialect = dialect.into();
         let mut catalog = Catalog::new(dialect.clone());
         let mut errors: Vec<String> = Vec::new();
-        let parser = syntaqlite_syntax::Parser::new();
+        let parser = AnyParser::new(dialect.syntax_dialect().clone());
         for &source in sources {
             let mut session = parser.parse(source);
             loop {
@@ -833,10 +832,9 @@ impl Catalog {
                         continue;
                     }
                 };
-                let Some(root) = stmt.root() else { continue };
-                let root_id: AnyNodeId = root.node_id().into();
-                let erased = stmt.erase();
-                catalog.accumulate_ddl(CatalogLayer::Database, &erased, root_id, &dialect);
+                let stmt = stmt.erase();
+                let root_id = stmt.root_id();
+                catalog.accumulate_ddl(CatalogLayer::Database, &stmt, root_id, &dialect);
             }
         }
         (catalog, errors)

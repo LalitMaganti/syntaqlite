@@ -121,7 +121,6 @@
 
 // ── Modules ─────────────────────────────────────────────────────────────────
 
-#[cfg(feature = "fmt")]
 pub(crate) mod dialect;
 
 #[cfg(feature = "fmt")]
@@ -267,11 +266,9 @@ pub mod any {
     pub use syntaqlite_syntax::any::*;
 
     #[doc(inline)]
-    #[cfg(feature = "fmt")]
     pub use crate::dialect::AnyDialect;
 
     /// C-ABI types for loading external dialect plugins.
-    #[cfg(feature = "fmt")]
     pub mod ffi {
         #[doc(inline)]
         pub use syntaqlite_syntax::typed::CDialectTemplate;
@@ -284,7 +281,6 @@ pub mod typed {
     pub use syntaqlite_syntax::typed::*;
 
     #[doc(inline)]
-    #[cfg(feature = "fmt")]
     pub use crate::dialect::TypedDialect;
 }
 
