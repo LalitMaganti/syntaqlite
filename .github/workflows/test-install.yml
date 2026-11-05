@@ -64,7 +64,20 @@ jobs:
         os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: cargo-bins/cargo-binstall@v1.26.2
+      # The cargo-binstall action isn't on the repo's action allowlist, so run
+      # the installer scripts it wraps.
+      - name: Install cargo-binstall
+        if: runner.os != 'Windows'
+        env:
+          BINSTALL_VERSION: v1.26.2
+        run: curl -sSfL https://raw.githubusercontent.com/cargo-bins/cargo-binstall/v1.26.2/install-from-binstall-release.sh | bash
+
+      - name: Install cargo-binstall (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          BINSTALL_VERSION: v1.26.2
+        run: Invoke-Expression (Invoke-WebRequest -UseBasicParsing https://raw.githubusercontent.com/cargo-bins/cargo-binstall/v1.26.2/install-from-binstall-release.ps1).Content
 
       # Disabling the fallbacks makes a mismatch between the binstall
       # metadata and the release assets fail instead of building from source.
