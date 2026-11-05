@@ -64,6 +64,19 @@ _DEAD_CODE_LINTS: list[str] = [
 ]
 
 
+def _per_crate_dead_code_checks(cargo) -> list[tuple[str, list[str]]]:
+    """Dead code checks for crates built on their own.
+
+    A workspace build enables every member's features at once, so code only
+    one feature uses (such as lsp, which the CLI enables) never looks dead.
+    """
+    return [
+        (f"dead code check: {pkg} alone",
+         cargo("clippy", "--all-targets", "-p", pkg, "--", *_DEAD_CODE_LINTS))
+        for pkg in ("syntaqlite", "syntaqlite-capi")
+    ]
+
+
 def _cargo_path() -> str:
     return os.path.join(ROOT_DIR, "tools", "cargo")
 
@@ -526,6 +539,7 @@ def _run(fix: bool, verbosity: int, run_all: bool, cargo: Callable[..., list[str
                 ("dead code check: no default features",
                  cargo("clippy", "--all-targets", "--no-default-features",
                        "--", *_DEAD_CODE_LINTS)),
+                *_per_crate_dead_code_checks(cargo),
             ]:
                 r = run_step(desc, cmd, verbosity)
                 if not r.ok:
@@ -551,6 +565,7 @@ def _run(fix: bool, verbosity: int, run_all: bool, cargo: Callable[..., list[str
                 ("dead code check: no default features",
                  cargo("clippy", "--all-targets", "--no-default-features",
                        "--", *_DEAD_CODE_LINTS)),
+                *_per_crate_dead_code_checks(cargo),
             ])
         else:
             _skip("cargo clippy --all-features")

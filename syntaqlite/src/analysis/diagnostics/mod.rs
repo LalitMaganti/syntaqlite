@@ -428,6 +428,7 @@ impl BuiltinChange {
         }
     }
 
+    #[cfg(feature = "serde")]
     fn as_str(self) -> &'static str {
         match self {
             Self::Drop => "drop",
@@ -448,6 +449,7 @@ pub enum QualifiedRefContext {
 }
 
 impl QualifiedRefContext {
+    #[cfg(feature = "serde")]
     fn as_str(self) -> &'static str {
         match self {
             Self::IndexExpression => "index_expression",

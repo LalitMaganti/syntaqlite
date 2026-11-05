@@ -8,6 +8,10 @@ repository.workspace = true
 homepage.workspace = true
 readme = "README.md"
 
+[[example]]
+name = "token_preservation"
+required-features = ["serde-json"]
+
 [features]
 default = ["sqlite", "fmt", "analysis"]
 fmt = ["syntaqlite-syntax/fmt"]                     # formatter (bytecode interpreter)
