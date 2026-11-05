@@ -201,6 +201,9 @@ pub fn amalgamate_dialect(
 
 /// Produce `syntaqlite_<dialect>.{h,c}` with the runtime inlined.
 ///
+/// `output_name` replaces `syntaqlite_<dialect>` as the header's file name
+/// and include guard, e.g. `libsyntaqlite_parser` for the released parser.
+///
 /// When `omit_macros` is true, `SYNTAQLITE_OMIT_MACROS` is injected into
 /// the amalgamation header and source, compiling out all macro expansion
 /// code.
@@ -218,6 +221,7 @@ pub fn amalgamate_full(
     runtime_dir: &Path,
     dialect_dir: &Path,
     omit_macros: bool,
+    output_name: Option<&str>,
 ) -> Result<AmalgamateOutput, String> {
     let runtime_files = collect_files(&[&runtime_dir.join("csrc"), &runtime_dir.join("include")])?;
     let dialect_files = collect_files(&[&dialect_dir.join("csrc"), &dialect_dir.join("include")])?;
@@ -242,6 +246,7 @@ pub fn amalgamate_full(
         EmitMode::Full {
             dialect,
             runtime_keys: &runtime_keys,
+            output_name,
         },
         omit_macros,
     ))
@@ -414,6 +419,7 @@ enum EmitMode<'a> {
     Full {
         dialect: &'a str,
         runtime_keys: &'a HashSet<String>,
+        output_name: Option<&'a str>,
     },
 }
 
@@ -737,6 +743,10 @@ fn detect_include_guard(content: &str) -> Option<String> {
 )]
 fn emit(files: &FileMap, mode: EmitMode, omit_macros: bool) -> AmalgamateOutput {
     let (guard, header_filename) = match &mode {
+        EmitMode::Full {
+            output_name: Some(name),
+            ..
+        } => (format!("{}_H", name.to_uppercase()), format!("{name}.h")),
         EmitMode::DialectOnly { dialect: d, .. } | EmitMode::Full { dialect: d, .. } => (
             format!("SYNTAQLITE_{}_H", d.to_uppercase()),
             format!("syntaqlite_{d}.h"),
@@ -1098,6 +1108,7 @@ mod tests {
             EmitMode::Full {
                 dialect: "sqlite",
                 runtime_keys: &runtime_keys,
+                output_name: None,
             },
             false,
         );
@@ -1168,6 +1179,7 @@ mod tests {
             EmitMode::Full {
                 dialect: "sqlite",
                 runtime_keys: &runtime_keys,
+                output_name: None,
             },
             false,
         );
@@ -1313,6 +1325,7 @@ mod tests {
             EmitMode::Full {
                 dialect: "sqlite",
                 runtime_keys: &runtime_keys,
+                output_name: None,
             },
             false,
         );
@@ -1347,10 +1360,29 @@ mod tests {
             EmitMode::Full {
                 dialect: "sqlite",
                 runtime_keys: &runtime_keys,
+                output_name: None,
             },
             false,
         );
         assert!(out.source.contains("SynqSqliteParseAlloc"));
+    }
+
+    #[test]
+    fn full_mode_output_name_sets_header_name_and_guard() {
+        let files = flat_dialect_files(&[("csrc/parser.c", "void runtime_api(void) {}\n")]);
+        let runtime_keys = runtime_set(&["csrc/parser.c"]);
+        let out = emit(
+            &files,
+            EmitMode::Full {
+                dialect: "sqlite",
+                runtime_keys: &runtime_keys,
+                output_name: Some("libsyntaqlite_parser"),
+            },
+            false,
+        );
+        assert!(out.header.contains("#ifndef LIBSYNTAQLITE_PARSER_H"));
+        assert!(out.source.contains("#include \"libsyntaqlite_parser.h\""));
+        assert!(!out.source.contains("syntaqlite_sqlite.h"));
     }
 
     #[test]
@@ -1368,6 +1400,7 @@ mod tests {
             EmitMode::Full {
                 dialect: "perfetto",
                 runtime_keys: &runtime_keys,
+                output_name: None,
             },
             false,
         );
@@ -1390,6 +1423,7 @@ mod tests {
             EmitMode::Full {
                 dialect: "sqlite",
                 runtime_keys: &runtime_keys,
+                output_name: None,
             },
             false,
         );

@@ -1,7 +1,7 @@
 # Build all release artifacts and publish.
 #
-# On version tag push: builds CLI binaries, Python wheels, C libraries,
-# amalgamation archives, and publishes to PyPI and GitHub Releases.
+# On version tag push: builds CLI binaries, Python wheels, C libraries, the
+# libsyntaqlite-parser source, and publishes to PyPI and GitHub Releases.
 # On pull_request: builds Python wheels only (smoke test).
 name: Release
 
@@ -423,7 +423,7 @@ jobs:
         with:
           packages-dir: dist/
 
-  # Package libsyntaqlite + syntax amalgamation, then upload them to the GH
+  # Package libsyntaqlite + libsyntaqlite-parser source, then upload them to the GH
   # Release with the manifest describing every release file.
   package-c-artifacts:
     name: Package C artifacts
@@ -472,19 +472,18 @@ jobs:
           done
           tar -czf "libsyntaqlite-$VERSION.tar.gz" -C staging .
 
-      # -- Syntax amalgamation --
-      - name: Generate syntax amalgamation
+      # -- libsyntaqlite-parser source --
+      - name: Generate libsyntaqlite-parser source
         run: |
-          mkdir -p amalgamation-out
+          mkdir -p parser-out
           bin/syntaqlite-buildtools amalgamate-syntax \
             --dialect sqlite \
             --runtime-dir syntaqlite-syntax \
             --dialect-dir syntaqlite-syntax \
-            --output-dir amalgamation-out
-          cp amalgamation-out/syntaqlite_sqlite.h amalgamation-out/syntaqlite_syntax.h
-          cp amalgamation-out/syntaqlite_sqlite.c amalgamation-out/syntaqlite_syntax.c
-          tar -czf "syntaqlite-syntax-amalgamation-$VERSION.tar.gz" \
-            -C amalgamation-out syntaqlite_syntax.h syntaqlite_syntax.c
+            --output-dir parser-out \
+            --output-name libsyntaqlite_parser
+          tar -czf "libsyntaqlite-parser-$VERSION-src.tar.gz" \
+            -C parser-out libsyntaqlite_parser.h libsyntaqlite_parser.c
 
       # -- Release manifest --
       - name: Download all CLI archives
@@ -510,7 +509,7 @@ jobs:
             --parts manifest-parts \
             --cli-dir archives \
             --file libsyntaqlite="libsyntaqlite-$VERSION.tar.gz" \
-            --file amalgamation="syntaqlite-syntax-amalgamation-$VERSION.tar.gz" \
+            --file libsyntaqlite-parser-src="libsyntaqlite-parser-$VERSION-src.tar.gz" \
             --output syntaqlite-release.json \
             --release-notes release-notes.md \
             --repo "${{ github.repository }}" \
@@ -524,7 +523,7 @@ jobs:
         run: |
           gh release upload "${{ github.ref_name }}" \
             "libsyntaqlite-$VERSION.tar.gz" \
-            "syntaqlite-syntax-amalgamation-$VERSION.tar.gz" \
+            "libsyntaqlite-parser-$VERSION-src.tar.gz" \
             --clobber
           gh release upload "${{ github.ref_name }}" syntaqlite-release.json --clobber
           gh release edit "${{ github.ref_name }}" --notes-file release-notes.md

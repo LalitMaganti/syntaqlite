@@ -118,7 +118,8 @@ def bump(old_ver, new_ver):
     for f in RELEASE_URL_FILES:
         tag_changed = replace_in_file(f, f"/download/v{old_ver}/", f"/download/v{new_ver}/")
         name_changed = replace_in_file(f, f"-{old_ver}.tar.gz", f"-{new_ver}.tar.gz")
-        if tag_changed or name_changed:
+        src_changed = replace_in_file(f, f"-{old_ver}-src.tar.gz", f"-{new_ver}-src.tar.gz")
+        if tag_changed or name_changed or src_changed:
             changed.append(f)
 
     # 7. CHANGELOG: insert new version section, keep old entries

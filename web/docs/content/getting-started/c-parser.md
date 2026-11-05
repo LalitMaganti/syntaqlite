@@ -1,36 +1,36 @@
 +++
-title = "C parser amalgamation"
-description = "Parse SQLite SQL from C with the dependency-free source amalgamation."
+title = "libsyntaqlite-parser for C"
+description = "Parse SQLite SQL from C with libsyntaqlite-parser, a dependency-free C source library."
 weight = 5
 +++
 
 # Parsing SQLite SQL from C
 
-The source amalgamation lets you add SQLite parsing to a C program without any
+libsyntaqlite-parser lets you add SQLite parsing to a C program without any
 dependencies beyond a C compiler. The example below parses queries, prints their
 AST, recovers from errors, and lists the tokens produced by the tokenizer.
 
-syntaqlite has two C distributions. This tutorial uses the **source
-amalgamation**, which provides the parser and tokenizer as two C files that you
-compile into your project. The prebuilt libsyntaqlite library also includes
-formatting and static analysis, as described in the
+syntaqlite has two C libraries. This tutorial uses **libsyntaqlite-parser**,
+which provides the parser and tokenizer as two C files that you compile into
+your project. The prebuilt libsyntaqlite library also includes formatting and
+static analysis, as described in the
 [libsyntaqlite C guide](@/guides/c-api.md).
 
-## 1. Download the amalgamation
+## 1. Download libsyntaqlite-parser
 
-The source amalgamation is two files: `syntaqlite_syntax.h` (header) and
-`syntaqlite_syntax.c` (implementation). Download them from the latest release:
+libsyntaqlite-parser is two files: `libsyntaqlite_parser.h` (header) and
+`libsyntaqlite_parser.c` (implementation). Download them from the latest release:
 
 ```bash
 mkdir sql-parser && cd sql-parser
-curl -L https://github.com/LalitMaganti/syntaqlite/releases/download/v0.13.5/syntaqlite-syntax-amalgamation-0.13.5.tar.gz | tar xz
+curl -L https://github.com/LalitMaganti/syntaqlite/releases/download/v0.13.5/libsyntaqlite-parser-0.13.5-src.tar.gz | tar xz
 ```
 
 You should have:
 
 ```bash
 ls
-# syntaqlite_syntax.c  syntaqlite_syntax.h
+# libsyntaqlite_parser.c  libsyntaqlite_parser.h
 ```
 
 ## 2. Write the program
@@ -38,7 +38,7 @@ ls
 Create `parse.c`:
 
 ```c
-#include "syntaqlite_syntax.h"
+#include "libsyntaqlite_parser.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -82,7 +82,7 @@ int main(int argc, char** argv) {
 ## 3. Compile and run
 
 ```bash
-cc -O2 -o parse parse.c syntaqlite_syntax.c
+cc -O2 -o parse parse.c libsyntaqlite_parser.c
 ```
 
 Run it with the default query:

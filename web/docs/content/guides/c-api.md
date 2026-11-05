@@ -7,20 +7,21 @@ weight = 2
 # Using libsyntaqlite from C
 
 libsyntaqlite is an embeddable parser, formatter, and static analyzer for SQLite
-SQL. It provides a C API for C and C++ projects, with two distribution options:
+SQL. C and C++ projects can use it, or libsyntaqlite-parser if they only need
+the parser and tokenizer:
 
-| | Source amalgamation | Prebuilt shared library |
+| | libsyntaqlite-parser | libsyntaqlite |
 |---|---|---|
-| **Package** | `syntaqlite-syntax-amalgamation` | `libsyntaqlite` |
+| **Package** | `libsyntaqlite-parser` (C source) | `libsyntaqlite` (prebuilt) |
 | **Contents** | Two C files to compile yourself | Shared library + header per platform |
 | **Parser & tokenizer** | Yes | Yes |
 | **Formatter** | No | Yes |
 | **Validator** | No | Yes |
 | **Dependencies** | None (just a C compiler) | Link against the shared library |
 
-## Option 1: Source amalgamation (parser and tokenizer only)
+## Option 1: libsyntaqlite-parser (parser and tokenizer only)
 
-The source amalgamation contains the **parser and tokenizer** as two compilable C
+libsyntaqlite-parser contains the **parser and tokenizer** as two compilable C
 files. It does **not** include the formatter or analyzer; those require the
 Rust runtime and are only available via the prebuilt shared library (option 2).
 
@@ -28,16 +29,16 @@ Download from the
 [latest release](https://github.com/LalitMaganti/syntaqlite/releases):
 
 ```bash
-curl -LO https://github.com/LalitMaganti/syntaqlite/releases/download/v0.13.5/syntaqlite-syntax-amalgamation-0.13.5.tar.gz
-tar xf syntaqlite-syntax-amalgamation-0.13.5.tar.gz
+curl -LO https://github.com/LalitMaganti/syntaqlite/releases/download/v0.13.5/libsyntaqlite-parser-0.13.5-src.tar.gz
+tar xf libsyntaqlite-parser-0.13.5-src.tar.gz
 ```
 
-The archive contains `syntaqlite_syntax.h` and `syntaqlite_syntax.c`. Add both
-to your project and compile them:
+The archive contains `libsyntaqlite_parser.h` and `libsyntaqlite_parser.c`. Add
+both to your project and compile them:
 
 ```bash
-cc -c -O2 syntaqlite_syntax.c -o syntaqlite_syntax.o
-cc -o my_program my_program.c syntaqlite_syntax.o
+cc -c -O2 libsyntaqlite_parser.c -o libsyntaqlite_parser.o
+cc -o my_program my_program.c libsyntaqlite_parser.o
 ```
 
 See the [C parser tutorial](@/getting-started/c-parser.md) for a complete

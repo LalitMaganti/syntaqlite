@@ -179,6 +179,9 @@ struct AmalgamateSyntaxArgs {
     /// Use for dialects that do not use macro calls.
     #[arg(long, default_value_t = false)]
     omit_macros: bool,
+    /// Base name of the output files and header guard (default: `syntaqlite_<dialect>`).
+    #[arg(long)]
+    output_name: Option<String>,
 }
 
 // ── amalgamate ────────────────────────────────────────────────────────────────
@@ -242,10 +245,15 @@ fn main() {
                 runtime,
                 dialect,
                 args.omit_macros,
+                args.output_name.as_deref(),
             )?;
             std::fs::create_dir_all(output).map_err(|e| format!("creating output dir: {e}"))?;
-            let h_path = output.join(format!("syntaqlite_{}.h", args.dialect));
-            let c_path = output.join(format!("syntaqlite_{}.c", args.dialect));
+            let name = args
+                .output_name
+                .clone()
+                .unwrap_or_else(|| format!("syntaqlite_{}", args.dialect));
+            let h_path = output.join(format!("{name}.h"));
+            let c_path = output.join(format!("{name}.c"));
             std::fs::write(&h_path, &out.header)
                 .map_err(|e| format!("writing {}: {e}", h_path.display()))?;
             std::fs::write(&c_path, &out.source)
