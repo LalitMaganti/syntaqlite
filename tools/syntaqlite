@@ -19,6 +19,7 @@ Usage:
     curl -sSf https://raw.githubusercontent.com/LalitMaganti/syntaqlite/main/tools/syntaqlite | python3 - install /usr/local/bin
 """
 
+import hashlib
 import io
 import json
 import os
@@ -35,14 +36,23 @@ from pathlib import Path
 REPO = "LalitMaganti/syntaqlite"
 UPDATE_CHECK_INTERVAL = 7 * 24 * 60 * 60  # 7 days
 
+# Rust target triple, plus the platform name used in archive names by
+# releases that predate the release manifest.
 TARGETS = {
-    ("Darwin", "arm64"): "macos-arm64",
-    ("Darwin", "x86_64"): "macos-x64",
-    ("Linux", "x86_64"): "linux-x64",
-    ("Linux", "aarch64"): "linux-arm64",
-    ("Windows", "AMD64"): "windows-x64",
-    ("Windows", "ARM64"): "windows-arm64",
+    ("Darwin", "arm64"): ("aarch64-apple-darwin", "macos-arm64"),
+    ("Darwin", "x86_64"): ("x86_64-apple-darwin", "macos-x64"),
+    ("Linux", "x86_64"): ("x86_64-unknown-linux-gnu", "linux-x64"),
+    ("Linux", "aarch64"): ("aarch64-unknown-linux-gnu", "linux-arm64"),
+    ("Windows", "AMD64"): ("x86_64-pc-windows-msvc", "windows-x64"),
+    ("Windows", "ARM64"): ("aarch64-pc-windows-msvc", "windows-arm64"),
 }
+
+MANIFEST_NAME = "syntaqlite-release.json"
+MANIFEST_VERSION = 1
+
+
+class DownloadError(Exception):
+    """A release download that cannot be completed."""
 
 
 def _cache_dir() -> Path:
@@ -57,7 +67,7 @@ def _binary_name() -> str:
     return "syntaqlite.exe" if platform.system() == "Windows" else "syntaqlite"
 
 
-def _detect_target() -> str:
+def _detect_target() -> tuple[str, str]:
     key = (platform.system(), platform.machine())
     if key not in TARGETS:
         sys.exit(f"Unsupported platform: {key[0]} {key[1]}")
@@ -107,17 +117,34 @@ def _download_asset(release: dict, asset_name: str) -> bytes:
     return urllib.request.urlopen(url).read()
 
 
-def _download(target: str, dest: Path, release: dict | None = None) -> None:
-    is_windows = "windows" in target
-    binary_name = _binary_name()
-    archive = f"syntaqlite-{target}.{'zip' if is_windows else 'tar.gz'}"
+def _cli_archive(release: dict, target: tuple[str, str]) -> tuple[str, str | None, str]:
+    """Return the CLI archive for `target`: its name, SHA-256 if known, and binary."""
+    triple, legacy_name = target
+    if not any(a["name"] == MANIFEST_NAME for a in release.get("assets", [])):
+        ext = "zip" if "windows" in triple else "tar.gz"
+        return f"syntaqlite-{legacy_name}.{ext}", None, _binary_name()
 
-    print(f"Downloading syntaqlite ({target})...", file=sys.stderr)
-    if release:
-        data = _download_asset(release, archive)
-    else:
-        url = f"https://github.com/{REPO}/releases/latest/download/{archive}"
-        data = urllib.request.urlopen(url).read()
+    manifest = json.loads(_download_asset(release, MANIFEST_NAME))
+    if manifest.get("manifest_version") != MANIFEST_VERSION:
+        raise DownloadError(
+            f"{release['tag_name']} uses release manifest version "
+            f"{manifest.get('manifest_version')}, which this script does not support. "
+            f"Fetch the latest script from https://github.com/{REPO}."
+        )
+    entry = manifest["cli"].get(triple)
+    if entry is None:
+        raise DownloadError(f"{release['tag_name']} has no CLI build for {triple}")
+    return entry["name"], entry["sha256"], entry["binary"]
+
+
+def _download(target: tuple[str, str], dest: Path, release: dict) -> None:
+    archive, sha256, binary_name = _cli_archive(release, target)
+    is_windows = archive.endswith(".zip")
+
+    print(f"Downloading {archive}...", file=sys.stderr)
+    data = _download_asset(release, archive)
+    if sha256 is not None and hashlib.sha256(data).hexdigest() != sha256:
+        raise DownloadError(f"{archive} does not match the SHA-256 in {MANIFEST_NAME}")
 
     if is_windows:
         with zipfile.ZipFile(io.BytesIO(data)) as zf:
@@ -137,7 +164,7 @@ def _download(target: str, dest: Path, release: dict | None = None) -> None:
                         dest.chmod(dest.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
                         return
 
-    sys.exit("Binary not found in archive")
+    raise DownloadError(f"{binary_name} not found in {archive}")
 
 
 def _needs_update_check(cache: Path) -> bool:
@@ -187,9 +214,9 @@ def _ensure_binary() -> Path:
                 _download(_detect_target(), binary, release)
                 _write_version(cache, latest)
             _touch_stamp(cache)
-        except Exception:
-            # Network failure during update check — use cached binary.
-            pass
+        except Exception as e:
+            print(f"warning: could not update syntaqlite, using the cached binary: {e}",
+                  file=sys.stderr)
 
     return binary
 
@@ -261,4 +288,7 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except DownloadError as e:
+        sys.exit(f"error: {e}")
