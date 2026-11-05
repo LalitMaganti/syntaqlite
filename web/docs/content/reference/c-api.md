@@ -8,19 +8,17 @@ weight = 5
 
 ## Distribution
 
-libsyntaqlite is an embeddable parser, formatter, and static analyzer for SQLite
-SQL. C and C++ programs can use it, or libsyntaqlite-parser for just the parser
-and tokenizer:
+libsyntaqlite parses, formats, and analyzes SQLite SQL. libsyntaqlite-parser is
+a smaller library with only the parser and tokenizer, whose functions are the
+same as libsyntaqlite's.
 
-| Package | Contents | Header |
-|---------|----------|--------|
-| `libsyntaqlite-parser` | Parser and tokenizer as compilable C source (`.c` + `.h`) | `libsyntaqlite_parser.h` |
-| `libsyntaqlite` | Prebuilt shared library (parser + formatter + analyzer) for all platforms | `syntaqlite.h` |
+| Library | Contains | Header | Released as |
+|---------|----------|--------|-------------|
+| `libsyntaqlite` | Parser, tokenizer, formatter, and analyzer | `syntaqlite.h` | Static and shared libraries |
+| `libsyntaqlite-parser` | Parser and tokenizer | `libsyntaqlite_parser.h` | Static and shared libraries, or C source |
 
-Both are attached to each
-[GitHub release](https://github.com/LalitMaganti/syntaqlite/releases).
-See [Using libsyntaqlite from C](@/guides/c-api.md) for compilation
-instructions.
+See [Installing the C libraries](@/guides/c-install.md) for downloads and
+linking.
 
 ## Parser
 
