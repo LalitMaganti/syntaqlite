@@ -116,6 +116,21 @@ jobs:
           name: cli-${{ matrix.name }}
           path: syntaqlite-${{ matrix.name }}.${{ matrix.archive }}
 
+      - name: Describe CLI archive for the release manifest
+        shell: bash
+        run: |
+          mkdir -p manifest-part
+          printf '{"target": "%s", "name": "%s", "binary": "%s"}\n' \
+            "${{ matrix.target }}" \
+            "syntaqlite-${{ matrix.name }}.${{ matrix.archive }}" \
+            "${{ matrix.binary }}" > "manifest-part/${{ matrix.name }}.json"
+
+      - name: Upload release manifest part
+        uses: actions/upload-artifact@v6
+        with:
+          name: manifest-part-${{ matrix.name }}
+          path: manifest-part/${{ matrix.name }}.json
+
       - name: Upload static library
         if: matrix.staticlib
         uses: actions/upload-artifact@v6
@@ -381,7 +396,8 @@ jobs:
         with:
           packages-dir: dist/
 
-  # Package libsyntaqlite + syntax amalgamation and upload to GH Release.
+  # Package libsyntaqlite + syntax amalgamation, then upload them to the GH
+  # Release with the manifest describing every release file.
   package-c-artifacts:
     name: Package C artifacts
     needs:
@@ -440,10 +456,39 @@ jobs:
           tar -czf "syntaqlite-syntax-amalgamation.tar.gz" \
             -C amalgamation-out syntaqlite_syntax.h syntaqlite_syntax.c
 
-      # -- Upload both to GH Release --
+      # -- Release manifest --
+      - name: Download all CLI archives
+        uses: actions/download-artifact@v7
+        with:
+          pattern: cli-*
+          path: archives/
+          merge-multiple: true
+
+      - name: Download release manifest parts
+        uses: actions/download-artifact@v7
+        with:
+          pattern: manifest-part-*
+          path: manifest-parts/
+          merge-multiple: true
+
+      - name: Write release manifest
+        run: |
+          TAG="${{ github.ref_name }}"
+          tools/write-release-manifest \
+            --version "${TAG#v}" \
+            --parts manifest-parts \
+            --cli-dir archives \
+            --file libsyntaqlite=libsyntaqlite.tar.gz \
+            --file amalgamation=syntaqlite-syntax-amalgamation.tar.gz \
+            --output syntaqlite-release.json
+          cat syntaqlite-release.json
+
+      # -- Upload to GH Release --
+      # The manifest goes last so clients only see it once its files exist.
       - name: Upload to GitHub Release
         run: |
           gh release upload "${{ github.ref_name }}" \
             "libsyntaqlite.tar.gz" \
             "syntaqlite-syntax-amalgamation.tar.gz" \
             --clobber
+          gh release upload "${{ github.ref_name }}" syntaqlite-release.json --clobber

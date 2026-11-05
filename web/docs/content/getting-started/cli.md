@@ -46,6 +46,17 @@ Check that it installed:
 syntaqlite --version
 ```
 
+### Download release files from scripts
+
+Releases after 0.13.5 include `syntaqlite-release.json`, which lists every
+release file with its SHA-256, keying the CLI archives by Rust target triple.
+Scripts and integrations that download syntaqlite should read file names from
+it rather than hard-coding them, because release file names may change.
+
+```bash
+curl -sSL https://github.com/LalitMaganti/syntaqlite/releases/latest/download/syntaqlite-release.json
+```
+
 ## Format a query
 
 Run this to see formatting in action:

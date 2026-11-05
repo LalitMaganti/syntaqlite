@@ -267,6 +267,14 @@ _API_TEST_PATHS = (
     "tests/c_api",
 )
 
+# Inputs to the download script suite, which needs no compiled code.
+_RELEASE_TEST_PATHS = (
+    "tools/syntaqlite",
+    "tools/write-release-manifest",
+    "python/tools/write_release_manifest.py",
+    "python/dev/integration_tests/suites/download_script.py",
+)
+
 # C/H files under these paths only affect amalgamation tests.
 _AMALG_C_PATHS = ("sqlite-amalgamations/",)
 
@@ -318,6 +326,7 @@ def _classify(changed: set[str] | None) -> dict[str, bool]:
         "run_ast": True, "run_fmt": True, "run_amalg": True,
         "run_perfetto_fmt": True, "run_perfetto_val": True,
         "run_grammar": True, "run_cli": True, "run_api": True,
+        "run_release": True,
     }
     if changed is None:
         return all_true
@@ -339,6 +348,8 @@ def _classify(changed: set[str] | None) -> dict[str, bool]:
             f["run_cli"] = True
         if is_rust or is_c or is_synq or path.endswith(".y") or path.startswith(_API_TEST_PATHS):
             f["run_api"] = True
+        if path in _RELEASE_TEST_PATHS:
+            f["run_release"] = True
 
         # .y grammar action files affect token IDs in all dialects.
         if path.endswith(".y"):
@@ -629,6 +640,7 @@ def _run(fix: bool, verbosity: int, run_all: bool, cargo: Callable[..., list[str
         ("run_cli",           "token-preservation"),
         ("run_api",           "python-api"),
         ("run_api",           "c-api"),
+        ("run_release",       "download-script"),
     ):
         if flags[key]:
             diff_lanes.append([(
