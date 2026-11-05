@@ -51,6 +51,12 @@ VERSION_REF_FILES = [
     "syntaqlite-syntax/src/lib.rs",
 ]
 
+# Docs with release download URLs (e.g. download/vX.Y.Z/libsyntaqlite-X.Y.Z.tar.gz).
+RELEASE_URL_FILES = [
+    "web/docs/content/guides/c-api.md",
+    "web/docs/content/getting-started/c-parser.md",
+]
+
 # Cargo.toml dependency version refs (e.g. version = "X.Y.Z", path = ...).
 CARGO_DEP_FILES = [
     "syntaqlite/Cargo.toml",
@@ -108,7 +114,14 @@ def bump(old_ver, new_ver):
         if replace_in_file(f, f'version = "{old_ver}"', f'version = "{new_ver}"'):
             changed.append(f)
 
-    # 6. CHANGELOG: insert new version section, keep old entries
+    # 6. Release download URLs in docs
+    for f in RELEASE_URL_FILES:
+        tag_changed = replace_in_file(f, f"/download/v{old_ver}/", f"/download/v{new_ver}/")
+        name_changed = replace_in_file(f, f"-{old_ver}.tar.gz", f"-{new_ver}.tar.gz")
+        if tag_changed or name_changed:
+            changed.append(f)
+
+    # 7. CHANGELOG: insert new version section, keep old entries
     changelog = ROOT / "CHANGELOG.md"
     text = changelog.read_text()
     old_header = f"## {old_ver}"

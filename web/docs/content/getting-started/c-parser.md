@@ -23,7 +23,7 @@ The source amalgamation is two files: `syntaqlite_syntax.h` (header) and
 
 ```bash
 mkdir sql-parser && cd sql-parser
-curl -L https://github.com/LalitMaganti/syntaqlite/releases/latest/download/syntaqlite-syntax-amalgamation.tar.gz | tar xz
+curl -L https://github.com/LalitMaganti/syntaqlite/releases/download/v0.13.5/syntaqlite-syntax-amalgamation-0.13.5.tar.gz | tar xz
 ```
 
 You should have:

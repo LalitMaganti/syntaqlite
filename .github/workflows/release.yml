@@ -92,13 +92,17 @@ jobs:
           echo "select 1" | target/release/${{ matrix.binary }} analyze
 
       # -- Package CLI archive --
+      - name: Name CLI archive
+        shell: bash
+        run: echo "CLI_ARCHIVE=syntaqlite-${GITHUB_REF_NAME#v}-${{ matrix.name }}.${{ matrix.archive }}" >> "$GITHUB_ENV"
+
       - name: Package CLI (tar.gz)
         if: matrix.archive == 'tar.gz'
         shell: bash
         run: |
           mkdir -p staging/
           cp target/release/${{ matrix.binary }} staging/
-          tar -czf "syntaqlite-${{ matrix.name }}.tar.gz" -C staging ${{ matrix.binary }}
+          tar -czf "$CLI_ARCHIVE" -C staging ${{ matrix.binary }}
 
       - name: Package CLI (zip)
         if: matrix.archive == 'zip'
@@ -107,14 +111,30 @@ jobs:
           mkdir -p staging/
           BINARY_DIR=${{ !matrix.staticlib && format('target/{0}/release', matrix.target) || 'target/release' }}
           cp "$BINARY_DIR/${{ matrix.binary }}" staging/
-          cd staging && 7z a -tzip "../syntaqlite-${{ matrix.name }}.zip" "${{ matrix.binary }}"
+          cd staging && 7z a -tzip "../$CLI_ARCHIVE" "${{ matrix.binary }}"
 
       # -- Upload all artifacts --
       - name: Upload CLI archive
         uses: actions/upload-artifact@v6
         with:
           name: cli-${{ matrix.name }}
-          path: syntaqlite-${{ matrix.name }}.${{ matrix.archive }}
+          path: ${{ env.CLI_ARCHIVE }}
+
+      # TODO(#514): stop publishing the old names once Zed users have an
+      # extension version that reads the release manifest.
+      - name: Copy CLI archive to its old name for the Zed extension
+        if: startsWith(matrix.name, 'macos-') || startsWith(matrix.name, 'linux-')
+        shell: bash
+        run: |
+          mkdir -p legacy
+          cp "$CLI_ARCHIVE" "legacy/syntaqlite-${{ matrix.name }}.${{ matrix.archive }}"
+
+      - name: Upload CLI archive under its old name
+        if: startsWith(matrix.name, 'macos-') || startsWith(matrix.name, 'linux-')
+        uses: actions/upload-artifact@v6
+        with:
+          name: legacy-cli-${{ matrix.name }}
+          path: legacy/syntaqlite-${{ matrix.name }}.${{ matrix.archive }}
 
       - name: Describe CLI archive for the release manifest
         shell: bash
@@ -122,7 +142,7 @@ jobs:
           mkdir -p manifest-part
           printf '{"target": "%s", "name": "%s", "binary": "%s"}\n' \
             "${{ matrix.target }}" \
-            "syntaqlite-${{ matrix.name }}.${{ matrix.archive }}" \
+            "$CLI_ARCHIVE" \
             "${{ matrix.binary }}" > "manifest-part/${{ matrix.name }}.json"
 
       - name: Upload release manifest part
@@ -171,6 +191,13 @@ jobs:
           path: archives/
           merge-multiple: true
 
+      - name: Download CLI archives under their old names
+        uses: actions/download-artifact@v7
+        with:
+          pattern: legacy-cli-*
+          path: archives/
+          merge-multiple: true
+
       - name: Upload to GitHub Release
         run: |
           TAG="${{ github.ref_name }}"
@@ -189,10 +216,10 @@ jobs:
         run: |
           TAG="${{ github.ref_name }}"
           VERSION="${TAG#v}"
-          SHA_MACOS_ARM64=$(sha256sum archives/syntaqlite-macos-arm64.tar.gz | cut -d' ' -f1)
-          SHA_MACOS_X64=$(sha256sum archives/syntaqlite-macos-x64.tar.gz | cut -d' ' -f1)
-          SHA_LINUX_X64=$(sha256sum archives/syntaqlite-linux-x64.tar.gz | cut -d' ' -f1)
-          SHA_LINUX_ARM64=$(sha256sum archives/syntaqlite-linux-arm64.tar.gz | cut -d' ' -f1)
+          SHA_MACOS_ARM64=$(sha256sum archives/syntaqlite-${VERSION}-macos-arm64.tar.gz | cut -d' ' -f1)
+          SHA_MACOS_X64=$(sha256sum archives/syntaqlite-${VERSION}-macos-x64.tar.gz | cut -d' ' -f1)
+          SHA_LINUX_X64=$(sha256sum archives/syntaqlite-${VERSION}-linux-x64.tar.gz | cut -d' ' -f1)
+          SHA_LINUX_ARM64=$(sha256sum archives/syntaqlite-${VERSION}-linux-arm64.tar.gz | cut -d' ' -f1)
 
           cat > formula.rb << FORMULA
           class Syntaqlite < Formula
@@ -203,20 +230,20 @@ jobs:
 
             on_macos do
               if Hardware::CPU.arm?
-                url "https://github.com/LalitMaganti/syntaqlite/releases/download/${TAG}/syntaqlite-macos-arm64.tar.gz"
+                url "https://github.com/LalitMaganti/syntaqlite/releases/download/${TAG}/syntaqlite-${VERSION}-macos-arm64.tar.gz"
                 sha256 "${SHA_MACOS_ARM64}"
               else
-                url "https://github.com/LalitMaganti/syntaqlite/releases/download/${TAG}/syntaqlite-macos-x64.tar.gz"
+                url "https://github.com/LalitMaganti/syntaqlite/releases/download/${TAG}/syntaqlite-${VERSION}-macos-x64.tar.gz"
                 sha256 "${SHA_MACOS_X64}"
               end
             end
 
             on_linux do
               if Hardware::CPU.arm?
-                url "https://github.com/LalitMaganti/syntaqlite/releases/download/${TAG}/syntaqlite-linux-arm64.tar.gz"
+                url "https://github.com/LalitMaganti/syntaqlite/releases/download/${TAG}/syntaqlite-${VERSION}-linux-arm64.tar.gz"
                 sha256 "${SHA_LINUX_ARM64}"
               else
-                url "https://github.com/LalitMaganti/syntaqlite/releases/download/${TAG}/syntaqlite-linux-x64.tar.gz"
+                url "https://github.com/LalitMaganti/syntaqlite/releases/download/${TAG}/syntaqlite-${VERSION}-linux-x64.tar.gz"
                 sha256 "${SHA_LINUX_X64}"
               end
             end
@@ -419,6 +446,9 @@ jobs:
       - name: Make buildtools executable
         run: chmod +x bin/syntaqlite-buildtools
 
+      - name: Set version
+        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
+
       # -- libsyntaqlite archive --
       - name: Generate amalgamated header
         run: |
@@ -440,7 +470,7 @@ jobs:
             mkdir -p "staging/$platform"
             cp "$dir"/* "staging/$platform/"
           done
-          tar -czf "libsyntaqlite.tar.gz" -C staging .
+          tar -czf "libsyntaqlite-$VERSION.tar.gz" -C staging .
 
       # -- Syntax amalgamation --
       - name: Generate syntax amalgamation
@@ -453,7 +483,7 @@ jobs:
             --output-dir amalgamation-out
           cp amalgamation-out/syntaqlite_sqlite.h amalgamation-out/syntaqlite_syntax.h
           cp amalgamation-out/syntaqlite_sqlite.c amalgamation-out/syntaqlite_syntax.c
-          tar -czf "syntaqlite-syntax-amalgamation.tar.gz" \
+          tar -czf "syntaqlite-syntax-amalgamation-$VERSION.tar.gz" \
             -C amalgamation-out syntaqlite_syntax.h syntaqlite_syntax.c
 
       # -- Release manifest --
@@ -473,17 +503,18 @@ jobs:
 
       - name: Write release manifest and Downloads table
         run: |
-          TAG="${{ github.ref_name }}"
-          gh release view "$TAG" --json body --jq .body > release-notes.md
+          gh release view "${{ github.ref_name }}" --json body --jq .body > release-notes.md
+          # TODO(#514): drop the note once the old names stop being published.
           tools/write-release-manifest \
-            --version "${TAG#v}" \
+            --version "$VERSION" \
             --parts manifest-parts \
             --cli-dir archives \
-            --file libsyntaqlite=libsyntaqlite.tar.gz \
-            --file amalgamation=syntaqlite-syntax-amalgamation.tar.gz \
+            --file libsyntaqlite="libsyntaqlite-$VERSION.tar.gz" \
+            --file amalgamation="syntaqlite-syntax-amalgamation-$VERSION.tar.gz" \
             --output syntaqlite-release.json \
             --release-notes release-notes.md \
-            --repo "${{ github.repository }}"
+            --repo "${{ github.repository }}" \
+            --note "The macOS and Linux CLI archives are also published under their old names, such as \`syntaqlite-linux-x64.tar.gz\`, for older versions of the Zed extension. These copies will stop being published; see #514."
           cat syntaqlite-release.json
 
       # -- Upload to GH Release --
@@ -492,8 +523,8 @@ jobs:
       - name: Upload to GitHub Release
         run: |
           gh release upload "${{ github.ref_name }}" \
-            "libsyntaqlite.tar.gz" \
-            "syntaqlite-syntax-amalgamation.tar.gz" \
+            "libsyntaqlite-$VERSION.tar.gz" \
+            "syntaqlite-syntax-amalgamation-$VERSION.tar.gz" \
             --clobber
           gh release upload "${{ github.ref_name }}" syntaqlite-release.json --clobber
           gh release edit "${{ github.ref_name }}" --notes-file release-notes.md

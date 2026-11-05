@@ -14,13 +14,13 @@ binary. This tool merges those parts with the archives' SHA-256 digests:
       "version": "0.13.6",
       "cli": {
         "x86_64-unknown-linux-gnu": {
-          "name": "syntaqlite-linux-x64.tar.gz",
+          "name": "syntaqlite-0.13.6-linux-x64.tar.gz",
           "sha256": "...",
           "binary": "syntaqlite"
         }
       },
       "files": {
-        "libsyntaqlite": {"name": "libsyntaqlite.tar.gz", "sha256": "..."}
+        "libsyntaqlite": {"name": "libsyntaqlite-0.13.6.tar.gz", "sha256": "..."}
       }
     }
 
@@ -106,7 +106,7 @@ def build_manifest(
     }
 
 
-def downloads_table(manifest: dict, repo: str) -> str:
+def downloads_table(manifest: dict, repo: str, notes: list[str] = ()) -> str:
     base = f"https://github.com/{repo}/releases/download/v{manifest['version']}"
     rows = []
     for entries, labels in ((manifest["cli"], PLATFORM_LABELS), (manifest["files"], FILE_LABELS)):
@@ -121,6 +121,8 @@ def downloads_table(manifest: dict, repo: str) -> str:
         "|------|----------|---------|",
     ]
     lines += [f"| [{e['name']}]({base}/{e['name']}) | {label} | `{e['sha256']}` |" for e, label in rows]
+    for note in notes:
+        lines += ["", note]
     lines.append(DOWNLOADS_END)
     return "\n".join(lines)
 
@@ -157,6 +159,10 @@ def main(argv: list[str] | None = None) -> int:
         help="Release notes file to rewrite with a Downloads table. Requires --repo.",
     )
     parser.add_argument("--repo", help="GitHub repository the release belongs to, as OWNER/NAME.")
+    parser.add_argument(
+        "--note", action="append", default=[],
+        help="Paragraph to add below the Downloads table (repeatable).",
+    )
     args = parser.parse_args(argv)
     if args.release_notes and not args.repo:
         parser.error("--release-notes requires --repo")
@@ -170,7 +176,7 @@ def main(argv: list[str] | None = None) -> int:
     print(f"wrote {args.output} ({len(manifest['cli'])} CLI targets)")
     if args.release_notes:
         notes = args.release_notes.read_text()
-        table = downloads_table(manifest, args.repo)
+        table = downloads_table(manifest, args.repo, args.note)
         args.release_notes.write_text(with_downloads_table(notes, table))
         print(f"wrote the Downloads table to {args.release_notes}")
     return 0
