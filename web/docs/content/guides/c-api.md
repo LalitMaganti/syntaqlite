@@ -28,8 +28,8 @@ Download from the
 [latest release](https://github.com/LalitMaganti/syntaqlite/releases):
 
 ```bash
-curl -LO https://github.com/LalitMaganti/syntaqlite/releases/latest/download/syntaqlite-syntax-amalgamation.tar.gz
-tar xf syntaqlite-syntax-amalgamation.tar.gz
+curl -LO https://github.com/LalitMaganti/syntaqlite/releases/download/v0.13.5/syntaqlite-syntax-amalgamation-0.13.5.tar.gz
+tar xf syntaqlite-syntax-amalgamation-0.13.5.tar.gz
 ```
 
 The archive contains `syntaqlite_syntax.h` and `syntaqlite_syntax.c`. Add both
@@ -52,8 +52,8 @@ archive contains a single `syntaqlite.h` header and shared libraries for each
 platform:
 
 ```bash
-curl -LO https://github.com/LalitMaganti/syntaqlite/releases/latest/download/libsyntaqlite.tar.gz
-tar xf libsyntaqlite.tar.gz
+curl -LO https://github.com/LalitMaganti/syntaqlite/releases/download/v0.13.5/libsyntaqlite-0.13.5.tar.gz
+tar xf libsyntaqlite-0.13.5.tar.gz
 ```
 
 ```

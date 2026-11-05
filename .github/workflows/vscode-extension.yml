@@ -71,7 +71,7 @@ jobs:
         shell: bash
         run: |
           mkdir -p target/${{ matrix.rust-target }}/release/
-          ARCHIVE=$(find archives/ -name "syntaqlite-${{ matrix.build-name }}.*" | head -1)
+          ARCHIVE=$(find archives/ -name "syntaqlite-*-${{ matrix.build-name }}.*" | head -1)
           echo "Found archive: $ARCHIVE"
           if [[ "$ARCHIVE" == *.zip ]]; then
             unzip "$ARCHIVE" -d target/${{ matrix.rust-target }}/release/

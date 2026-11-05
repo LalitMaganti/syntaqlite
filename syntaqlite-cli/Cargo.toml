@@ -27,23 +27,23 @@ bin-dir = "{ bin }{ binary-ext }"
 pkg-fmt = "tgz"
 
 [package.metadata.binstall.overrides.x86_64-unknown-linux-gnu]
-pkg-url = "{ repo }/releases/download/v{ version }/syntaqlite-linux-x64.tar.gz"
+pkg-url = "{ repo }/releases/download/v{ version }/syntaqlite-{ version }-linux-x64.tar.gz"
 
 [package.metadata.binstall.overrides.aarch64-unknown-linux-gnu]
-pkg-url = "{ repo }/releases/download/v{ version }/syntaqlite-linux-arm64.tar.gz"
+pkg-url = "{ repo }/releases/download/v{ version }/syntaqlite-{ version }-linux-arm64.tar.gz"
 
 [package.metadata.binstall.overrides.x86_64-apple-darwin]
-pkg-url = "{ repo }/releases/download/v{ version }/syntaqlite-macos-x64.tar.gz"
+pkg-url = "{ repo }/releases/download/v{ version }/syntaqlite-{ version }-macos-x64.tar.gz"
 
 [package.metadata.binstall.overrides.aarch64-apple-darwin]
-pkg-url = "{ repo }/releases/download/v{ version }/syntaqlite-macos-arm64.tar.gz"
+pkg-url = "{ repo }/releases/download/v{ version }/syntaqlite-{ version }-macos-arm64.tar.gz"
 
 [package.metadata.binstall.overrides.x86_64-pc-windows-msvc]
-pkg-url = "{ repo }/releases/download/v{ version }/syntaqlite-windows-x64.zip"
+pkg-url = "{ repo }/releases/download/v{ version }/syntaqlite-{ version }-windows-x64.zip"
 pkg-fmt = "zip"
 
 [package.metadata.binstall.overrides.aarch64-pc-windows-msvc]
-pkg-url = "{ repo }/releases/download/v{ version }/syntaqlite-windows-arm64.zip"
+pkg-url = "{ repo }/releases/download/v{ version }/syntaqlite-{ version }-windows-arm64.zip"
 pkg-fmt = "zip"
 
 [features]

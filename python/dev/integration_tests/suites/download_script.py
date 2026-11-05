@@ -151,6 +151,8 @@ def _test_downloads_table_lists_every_file(script: ModuleType, tmp: Path) -> Non
         f"| [libsyntaqlite.tar.gz]({base}/libsyntaqlite.tar.gz) "
         f"| C library, all platforms | `{lib_entry['sha256']}` |"
     ) in table, table
+    noted = downloads_table(manifest, "OWNER/REPO", ["Old names are going away."])
+    assert noted.endswith("\n\nOld names are going away.\n<!-- /downloads -->"), noted
 
 
 def _test_downloads_table_replaces_previous_table(script: ModuleType, tmp: Path) -> None:
