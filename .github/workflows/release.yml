@@ -479,11 +479,18 @@ jobs:
         with:
           python-version: "3.12"
 
+      # Only GitHub-owned and verified actions are allowed here, so load the
+      # MSVC environment from vcvarsall directly.
       - name: Set up MSVC
         if: ${{ matrix.msvc_arch }}
-        uses: ilammy/msvc-dev-cmd@v1
-        with:
-          arch: ${{ matrix.msvc_arch }}
+        shell: pwsh
+        run: |
+          $vs = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -products * -property installationPath
+          cmd /c "`"$vs\VC\Auxiliary\Build\vcvarsall.bat`" ${{ matrix.msvc_arch }} >nul && set" | ForEach-Object {
+            if ($_ -match '^([^=]+)=(.*)$') {
+              "$($matches[1])=$($matches[2])" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+            }
+          }
 
       - name: Download libsyntaqlite-parser source
         uses: actions/download-artifact@v7

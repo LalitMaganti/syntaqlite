@@ -13,7 +13,8 @@ Output names follow libsyntaqlite's:
     macOS    libsyntaqlite_parser.a    libsyntaqlite_parser.dylib
     Windows  syntaqlite_parser.lib     syntaqlite_parser.dll + syntaqlite_parser.dll.lib
 
-On Windows this uses clang-cl and expects the MSVC environment for the
+On Windows the libraries are built with clang-cl and the smoke test with
+MSVC's cl, as most users would. Both expect the MSVC environment for the
 target architecture to be set up already.
 """
 
@@ -61,7 +62,7 @@ def _build_unix(src: Path, out: Path, work: Path, run: bool) -> None:
     _run(cc + ["-I", str(src), str(SMOKE_TEST), str(out / "libsyntaqlite_parser.a"),
                "-o", str(static_exe)])
     shared_exe = work / "smoke_shared"
-    _run(cc + ["-DSYNTAQLITE_SHARED", "-I", str(src), str(SMOKE_TEST),
+    _run(cc + ["-I", str(src), str(SMOKE_TEST),
                "-L", str(out), "-lsyntaqlite_parser", f"-Wl,-rpath,{out}",
                "-o", str(shared_exe)])
     if run:
@@ -85,14 +86,15 @@ def _build_windows(src: Path, out: Path, work: Path, target: str | None, run: bo
     for leftover in out.glob("syntaqlite_parser.exp"):
         leftover.unlink()
 
+    msvc = ["cl", "/nologo", "/std:c11", "/MD"]
     static_exe = work / "smoke_static.exe"
-    _run(cl + ["/I", str(src), str(SMOKE_TEST), str(out / "syntaqlite_parser.lib"),
-               f"/Fe{static_exe}", f"/Fo{work}\\"])
+    _run(msvc + ["/I", str(src), str(SMOKE_TEST), str(out / "syntaqlite_parser.lib"),
+                 f"/Fe{static_exe}", f"/Fo{work}\\"])
     shared_dir = work / "shared"
     shared_dir.mkdir()
     shared_exe = shared_dir / "smoke_shared.exe"
-    _run(cl + ["-DSYNTAQLITE_SHARED", "/I", str(src), str(SMOKE_TEST),
-               str(out / "syntaqlite_parser.dll.lib"), f"/Fe{shared_exe}", f"/Fo{work}\\"])
+    _run(msvc + ["/I", str(src), str(SMOKE_TEST), str(out / "syntaqlite_parser.dll.lib"),
+                 f"/Fe{shared_exe}", f"/Fo{work}\\"])
     shutil.copy(dll, shared_dir)
     if run:
         _run([str(static_exe)])
