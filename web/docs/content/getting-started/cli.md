@@ -31,7 +31,8 @@ weight = 2
     <pre><code class="language-bash">brew install LalitMaganti/tap/syntaqlite</code></pre>
   </div>
   <div class="tab-panel" data-tab="cargo">
-    <pre><code class="language-bash">cargo install syntaqlite-cli</code></pre>
+    <pre><code class="language-bash">cargo binstall syntaqlite-cli</code></pre>
+    <p>Downloads the prebuilt release binary with <a href="https://github.com/cargo-bins/cargo-binstall">cargo-binstall</a>. To build from source instead, run <code>cargo install syntaqlite-cli</code>.</p>
   </div>
 </div>
 

@@ -69,7 +69,8 @@ You can also install it with [mise](https://mise.jdx.dev), pip, Homebrew, or Car
 mise use github:LalitMaganti/syntaqlite
 pip install syntaqlite
 brew install LalitMaganti/tap/syntaqlite
-cargo install syntaqlite-cli
+cargo binstall syntaqlite-cli  # prebuilt binary
+cargo install syntaqlite-cli   # build from source
 ```
 
 See the [installation guide](https://docs.syntaqlite.com/latest/getting-started/cli/) for
