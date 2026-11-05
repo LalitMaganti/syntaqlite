@@ -70,7 +70,7 @@ copy windows-x64\syntaqlite.dll .
 ```
 
 To build libsyntaqlite into your program instead, link the static library.
-Because libsyntaqlite is partly written in Rust, the static library also
+Because libsyntaqlite is partly written in Rust, on Linux and Windows it also
 needs the system libraries Rust's standard library uses:
 
 ```bash
@@ -78,12 +78,12 @@ needs the system libraries Rust's standard library uses:
 cc -o my_program my_program.c -I. linux-x64/libsyntaqlite.a -lpthread -ldl -lm -lrt -lutil -lgcc_s
 
 # macOS
-cc -o my_program my_program.c -I. macos-arm64/libsyntaqlite.a -framework Security -framework SystemConfiguration -framework CoreFoundation -lc++
+cc -o my_program my_program.c -I. macos-arm64/libsyntaqlite.a
 ```
 
 ```bat
 :: Windows
-cl /MD /std:c11 /I. my_program.c windows-x64\syntaqlite.lib kernel32.lib advapi32.lib ntdll.lib userenv.lib ws2_32.lib bcrypt.lib
+cl /MD /std:c11 /I. my_program.c windows-x64\syntaqlite.lib ntdll.lib userenv.lib ws2_32.lib dbghelp.lib
 ```
 
 A program can only contain one static Rust library, because each brings its
