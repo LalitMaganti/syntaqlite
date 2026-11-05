@@ -4,7 +4,7 @@
 
 <h1>syntaqlite</h1>
 
-<p><strong>A parser, formatter, static analyzer and language server for SQLite SQL, built from SQLite's own grammar.</strong></p>
+<p><strong>A fast parser, formatter, static analyzer and language server for SQLite SQL, built from SQLite's own grammar.</strong></p>
 
 <p>
   <a href="https://crates.io/crates/syntaqlite-cli"><img alt="Crates.io version" src="https://img.shields.io/crates/v/syntaqlite-cli?style=for-the-badge"></a>
@@ -25,20 +25,33 @@
 
 ## What is syntaqlite?
 
-syntaqlite is a formatter, static analyzer and language server for SQLite SQL,
-built on a parser generated from SQLite's own grammar. Use it from the command
-line, in your editor, or as a library.
+syntaqlite is a parser, formatter, static analyzer and language server for
+SQLite SQL. You use them through the `syntaqlite` command-line tool, an editor
+extension, or a library.
 
-- **Format SQL.** `syntaqlite fmt` formats files in place or checks them in CI.
-- **Catch mistakes before you run them.** The analyzer checks queries against
-  your schema without opening a database, and suggests fixes.
-- **Get help in your editor.** Diagnostics, completion, hover, go to definition
-  and rename in VS Code, Zed, Claude Code and other editors.
-- **Match your SQLite.** It accepts and rejects the same statements as the
-  SQLite version and compile-time flags you target.
-- **Build your own tools.** libsyntaqlite brings the parser, formatter and
-  analyzer to Rust, Python, JavaScript and C. libsyntaqlite-parser is the
-  parser alone, as a C library.
+- **Parser.** A C parser and tokenizer generated from SQLite's own grammar and
+  tokenizer. It turns SQL into a syntax tree that keeps comments and
+  whitespace, and accepts exactly what the SQLite version and compile-time
+  flags you target accept. Every other piece is built on it.
+- **Formatter.** Lays statements out to a target line width and keeps their
+  comments, with configurable indentation, keyword case and semicolons.
+  `syntaqlite fmt` formats files in place or checks them in CI.
+- **Static analyzer.** Resolves the tables, columns and functions each
+  statement uses against your schema, given as `CREATE` statements such as the
+  output of SQLite's `.schema`. Without opening a database, it reports unknown
+  names with suggestions, wrong numbers of function arguments, and errors
+  SQLite raises when preparing a statement, such as an `INSERT` with the wrong
+  number of values.
+- **Language server.** `syntaqlite lsp` shows the analyzer's diagnostics as you
+  type, and completes keywords, tables and columns from what is valid at the
+  cursor: only tables after `FROM`, only the columns of `t` after `t.`. Hover
+  shows a table's columns or a function's signature, and go to definition, find
+  references and rename work on tables, columns and CTEs. It has extensions for
+  VS Code, Zed and Claude Code, and works with any other LSP client.
+- **Libraries.** libsyntaqlite provides the parser, formatter and analyzer as
+  the `syntaqlite` Rust crate, a Python package, an npm package built on
+  WebAssembly, and a C library. libsyntaqlite-parser is the parser and
+  tokenizer alone, as a C library.
 
 ## Quick start
 
@@ -125,18 +138,19 @@ Click the screenshot to open this example.
 
 ## Why syntaqlite?
 
-Most SQL tools treat SQLite as a dialect of generic SQL. That works for common
-queries, but can miss syntax only SQLite has, such as `UPSERT`, `RETURNING`,
-`STRICT` tables and window frames with `EXCLUDE`.
-
-- **It parses what SQLite parses.** Across about 396,000 statements from
-  [SQLite's test suite](https://sqlite.org/testing.html), it agrees with SQLite
-  on 99.7%, and it parses all 40 statements of a corpus of SQLite-specific
-  syntax the same way `sqlite3` does.
+- **It's fast.** On an Intel Ice Lake server, syntaqlite parses 29,000
+  statements, 3.5 MB of SQL, in about 40 ms and formats them in about 170 ms,
+  counting process startup. A single statement takes a few milliseconds from
+  start to exit. That makes it cheap to run on every keystroke in an editor,
+  on every file in a pre-commit hook, and over large generated SQL in CI.
+- **It parses what SQLite parses.** Most SQL tools treat SQLite as a dialect
+  of generic SQL, which can miss syntax only SQLite has, such as `UPSERT`,
+  `RETURNING`, `STRICT` tables and window frames with `EXCLUDE`. syntaqlite
+  agrees with SQLite on 99.7% of about 396,000 statements from
+  [SQLite's test suite](https://sqlite.org/testing.html), and parses all 40
+  statements of a corpus of SQLite-specific syntax the same way `sqlite3` does.
 - **Formatting is safe.** Each of those 40 statements formats to SQL that
   SQLite compiles to the same bytecode as the original.
-- **It's fast enough for every keystroke.** The parser and tokenizer are C, and
-  parsing is incremental.
 
 The [comparison](https://docs.syntaqlite.com/latest/reference/comparison/)
 runs the same tests on other SQL tools, with their versions and how to
