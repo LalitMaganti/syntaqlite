@@ -1,4 +1,5 @@
-# Test published package install methods (pip, Homebrew, download script).
+# Test published package install methods (pip, Homebrew, cargo-binstall,
+# download script).
 # Runs after a GitHub Release is published. Can also be triggered manually.
 name: Test Install
 
@@ -50,6 +51,40 @@ jobs:
         run: brew install LalitMaganti/tap/syntaqlite
 
       - name: Verify
+        run: |
+          syntaqlite --version
+          echo "SELECT 1" | syntaqlite fmt
+          echo "SELECT 1" | syntaqlite analyze
+
+  test-binstall:
+    name: cargo-binstall (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: cargo-bins/cargo-binstall@v1.26.2
+
+      # Disabling the fallbacks makes a mismatch between the binstall
+      # metadata and the release assets fail instead of building from source.
+      # crates.io publishing is async — retry until the version is available.
+      - name: Install via cargo-binstall
+        shell: bash
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          spec="syntaqlite-cli${TAG:+@${TAG#v}}"
+          for attempt in 1 2 3 4 5 6; do
+            if cargo binstall --no-confirm --disable-strategies quick-install,compile "$spec"; then
+              break
+            fi
+            echo "Attempt $attempt: install failed, waiting 60s..."
+            sleep 60
+          done
+
+      - name: Verify
+        shell: bash
         run: |
           syntaqlite --version
           echo "SELECT 1" | syntaqlite fmt

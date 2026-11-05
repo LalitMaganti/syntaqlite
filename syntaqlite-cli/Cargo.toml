@@ -22,6 +22,30 @@ name = "cli_wrapper"
 path = "examples/cli_wrapper.rs"
 required-features = ["bundled-sqlite-dialect"]
 
+[package.metadata.binstall]
+bin-dir = "{ bin }{ binary-ext }"
+pkg-fmt = "tgz"
+
+[package.metadata.binstall.overrides.x86_64-unknown-linux-gnu]
+pkg-url = "{ repo }/releases/download/v{ version }/syntaqlite-linux-x64.tar.gz"
+
+[package.metadata.binstall.overrides.aarch64-unknown-linux-gnu]
+pkg-url = "{ repo }/releases/download/v{ version }/syntaqlite-linux-arm64.tar.gz"
+
+[package.metadata.binstall.overrides.x86_64-apple-darwin]
+pkg-url = "{ repo }/releases/download/v{ version }/syntaqlite-macos-x64.tar.gz"
+
+[package.metadata.binstall.overrides.aarch64-apple-darwin]
+pkg-url = "{ repo }/releases/download/v{ version }/syntaqlite-macos-arm64.tar.gz"
+
+[package.metadata.binstall.overrides.x86_64-pc-windows-msvc]
+pkg-url = "{ repo }/releases/download/v{ version }/syntaqlite-windows-x64.zip"
+pkg-fmt = "zip"
+
+[package.metadata.binstall.overrides.aarch64-pc-windows-msvc]
+pkg-url = "{ repo }/releases/download/v{ version }/syntaqlite-windows-arm64.zip"
+pkg-fmt = "zip"
+
 [features]
 default = ["bundled-sqlite-dialect", "dynload", "codegen", "mcp"]
 # Bake in the SQLite dialect and ship the default `syntaqlite` binary.

@@ -63,10 +63,12 @@ Install the latest release on macOS, Linux, or Windows:
 curl -sSf https://raw.githubusercontent.com/LalitMaganti/syntaqlite/main/tools/syntaqlite | python3 - install
 ```
 
-You can also install it with [mise](https://mise.jdx.dev), pip, Homebrew, or Cargo:
+You can also install it with [mise](https://mise.jdx.dev),
+[cargo-binstall](https://github.com/cargo-bins/cargo-binstall), pip, Homebrew, or Cargo:
 
 ```bash
 mise use github:LalitMaganti/syntaqlite
+cargo binstall syntaqlite-cli
 pip install syntaqlite
 brew install LalitMaganti/tap/syntaqlite
 cargo install syntaqlite-cli
