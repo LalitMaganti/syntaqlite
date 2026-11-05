@@ -153,6 +153,7 @@ Rules:
 - Exclude internal refactors, code cleanup, clippy fixes, CI/release plumbing, dev tooling.
 - Categories are areas such as CLI, Parser, Formatter, Analyzer, C library, Rust API, Python, JavaScript, Docs.
 - Be direct and specific: say what changed for the user. No filler, no marketing language, no parenthetical asides.
+- Describe what users can now do, what they will notice, or what they must change. Leave out how a change was implemented and internal causes of bugs; those belong in the PRs.
 - No thanks or contributor sections.
 - Every change links its PR in the form ([#NNN](https://github.com/LalitMaganti/syntaqlite/pull/NNN)). Take the number from commit subjects ending in `(#NNN)`; skip changes whose commits have no PR number.
 - Output ONLY the section body: no `## {version}` header, no code fences, no commentary. The output is inserted verbatim under the header.
