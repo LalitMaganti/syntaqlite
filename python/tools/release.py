@@ -119,18 +119,46 @@ def draft_changelog_via_claude(tag: str | None, version: str) -> str | None:
         picked = [f"## {s.rstrip()}" for s in sections[1:4] if s.strip()]
         style_ref = "\n\n".join(picked)
 
-    prompt = f"""Draft CHANGELOG.md entries for syntaqlite {version} from the commits below.
+    minor = version.endswith(".0")
+    if minor:
+        shape = """This is a minor release, so it may break things. Use this shape:
 
-Output rules:
+1. An opening paragraph of two or three sentences. Name the most important
+   changes concretely and say who needs to change anything when upgrading.
+   No themes or taglines such as "this release is about".
+2. `### Highlights`: the three to five changes users most need to know
+   about. Each is a paragraph starting with a bold one-line summary ending
+   in a period, then a sentence or two on the problem it solves and what
+   users can now do, then its PR links.
+3. `### Breaking changes`: one paragraph per change, starting with a bold
+   summary. Say what it was before, what it is now, who is affected and
+   what to do. Use a Before/After table when there are several renames.
+   Omit the section if nothing breaks.
+4. `### Changes for packagers`: changes to release file names, archive
+   contents, published packages or build requirements that affect people
+   who package or redistribute syntaqlite. Omit it if there are none.
+5. `### Other changes`: the remaining user-visible changes under
+   **Category** headers, one line each."""
+    else:
+        shape = """This is a patch release. Output only the changes, under **Category**
+headers, one line each. No opening, highlights or other sections."""
+
+    prompt = f"""Draft the CHANGELOG.md section for syntaqlite {version} from the commits below.
+It is also used as the GitHub release notes.
+
+{shape}
+
+Rules:
 - User-visible changes only: new features, user-facing bug fixes, breaking changes, notable doc updates.
 - Exclude internal refactors, code cleanup, clippy fixes, CI/release plumbing, dev tooling.
-- Group entries under **Category:** headers (Parser, Formatter, CLI, C API, Build, Analysis and validator, JavaScript package, Breaking, etc.) matching the style reference.
-- One concise line per entry, past-tense or imperative voice matching the style reference.
-- Every entry ends with a PR link in the form ([#NNN](https://github.com/LalitMaganti/syntaqlite/pull/NNN)). Extract the number from commit subjects that end in `(#NNN)`; skip entries whose commits have no PR number.
-- Output ONLY the section body — no `## {version}` header, no code fences, no commentary. The output will be inserted verbatim under the header.
+- Categories are areas such as CLI, Parser, Formatter, Analyzer, C library, Rust API, Python, JavaScript, Docs.
+- Be direct and specific: say what changed for the user. No filler, no marketing language, no parenthetical asides.
+- No thanks or contributor sections.
+- Every change links its PR in the form ([#NNN](https://github.com/LalitMaganti/syntaqlite/pull/NNN)). Take the number from commit subjects ending in `(#NNN)`; skip changes whose commits have no PR number.
+- Output ONLY the section body: no `## {version}` header, no code fences, no commentary. The output is inserted verbatim under the header.
 - If nothing user-visible happened, output exactly: Internal improvements only.
 
-Style reference (recent CHANGELOG sections — match this format):
+Recent CHANGELOG sections, for tone. Follow the shape above where it differs:
 ---
 {style_ref}
 ---
@@ -285,6 +313,23 @@ def prepare(version: str | None, *, manual: bool) -> int:
     return 0
 
 
+def install_notes(version: str) -> str:
+    """The install section appended to the GitHub release notes."""
+    return f"""
+
+### Install
+
+```sh
+pip install syntaqlite=={version}
+cargo binstall syntaqlite-cli@{version}
+brew install LalitMaganti/tap/syntaqlite
+npm install syntaqlite@{version}
+```
+
+To use it from Rust, run `cargo add syntaqlite@{version}`. The C libraries are listed under Downloads.
+"""
+
+
 def publish() -> int:
     ensure_clean_worktree()
 
@@ -321,7 +366,7 @@ def publish() -> int:
         "gh", "release", "create", tag,
         "--draft",
         "--title", tag,
-        "--notes", section,
+        "--notes", section + install_notes(version),
     ])
     print()
     print(f"Draft release {tag} created. Once build workflows finish and")
