@@ -116,7 +116,7 @@ pub(super) fn interpret_core<'a>(
         let Some(tag) = ctx.reader.extract_fields_into(root_id, fields) else {
             return NIL_DOC;
         };
-        let Some((ops_bytes, ops_len)) = ctx.dialect.fmt_dispatch(tag) else {
+        let Some(mut ops) = ctx.dialect.fmt_dispatch(tag) else {
             return NIL_DOC;
         };
         scratch.group_nest.clear();
@@ -124,8 +124,6 @@ pub(super) fn interpret_core<'a>(
         scratch.for_each.clear();
 
         let mut cur_node_id: AnyNodeId = root_id;
-        let mut ops: &[[u8; 6]] = &ops_bytes.as_chunks::<6>().0[..ops_len];
-        let mut ops_count: usize = ops_len;
         let mut running: DocId = NIL_DOC;
         let mut pending: DocId = NIL_DOC;
         let mut gn_save = scratch.group_nest.len();
@@ -143,8 +141,7 @@ pub(super) fn interpret_core<'a>(
         }
 
         macro_rules! push_call_frame {
-            ($child_id:expr, $child_ops_bytes:expr, $child_ops_len:expr,
-         $return_action_val:expr) => {{
+            ($child_id:expr, $child_ops:expr, $return_action_val:expr) => {{
                 let frame = CallFrame {
                     ip: ip + 1,
                     node_id: cur_node_id,
@@ -157,8 +154,7 @@ pub(super) fn interpret_core<'a>(
                 scratch.calls.push(frame);
 
                 cur_node_id = $child_id;
-                ops = &$child_ops_bytes.as_chunks::<6>().0[..$child_ops_len];
-                ops_count = $child_ops_len;
+                ops = $child_ops;
                 running = NIL_DOC;
                 pending = NIL_DOC;
                 gn_save = scratch.group_nest.len();
@@ -169,7 +165,7 @@ pub(super) fn interpret_core<'a>(
         }
 
         loop {
-            if ip >= ops_count {
+            if ip >= ops.len() {
                 let result = arena.cat(running, pending);
                 scratch.group_nest.truncate(gn_save);
                 scratch.for_each.truncate(fe_save);
@@ -187,12 +183,10 @@ pub(super) fn interpret_core<'a>(
                 let Some(restored_tag) = ctx.reader.extract_fields_into(cur_node_id, fields) else {
                     panic!("restored node must resolve to fields");
                 };
-                let Some((restored_ops, restored_ops_len)) = ctx.dialect.fmt_dispatch(restored_tag)
-                else {
+                let Some(restored_ops) = ctx.dialect.fmt_dispatch(restored_tag) else {
                     panic!("restored node must resolve to formatter ops");
                 };
-                ops = &restored_ops.as_chunks::<6>().0[..restored_ops_len];
-                ops_count = restored_ops_len;
+                ops = restored_ops;
                 running = frame.running;
                 pending = frame.pending;
                 gn_save = frame.gn_save;
@@ -313,15 +307,9 @@ pub(super) fn interpret_core<'a>(
                         }
 
                         if let Some(ctag) = ctx.reader.extract_fields_into(child_id, fields)
-                            && let Some((child_ops_bytes, child_ops_len)) =
-                                ctx.dialect.fmt_dispatch(ctag)
+                            && let Some(child_ops) = ctx.dialect.fmt_dispatch(ctag)
                         {
-                            push_call_frame!(
-                                child_id,
-                                child_ops_bytes,
-                                child_ops_len,
-                                return_action
-                            );
+                            push_call_frame!(child_id, child_ops, return_action);
                         }
                         restore_parent_fields!();
                     }
@@ -401,12 +389,12 @@ pub(super) fn interpret_core<'a>(
                         panic!("ForEachStart: field {idx} is not a NodeId");
                     };
                     if list_id.is_null() {
-                        ip = skip_to_foreach_end(ops, ops_count, ip);
+                        ip = skip_to_foreach_end(ops, ip);
                     } else {
                         let children: &'a [AnyNodeId] =
                             ctx.reader.list_children(list_id).unwrap_or(&[]);
                         if children.is_empty() {
-                            ip = skip_to_foreach_end(ops, ops_count, ip);
+                            ip = skip_to_foreach_end(ops, ip);
                         } else {
                             scratch.for_each.push(ForEachState {
                                 list_id,
@@ -465,10 +453,9 @@ pub(super) fn interpret_core<'a>(
                     }
 
                     if let Some(ctag) = ctx.reader.extract_fields_into(child_id, fields)
-                        && let Some((child_ops_bytes, child_ops_len)) =
-                            ctx.dialect.fmt_dispatch(ctag)
+                        && let Some(child_ops) = ctx.dialect.fmt_dispatch(ctag)
                     {
-                        push_call_frame!(child_id, child_ops_bytes, child_ops_len, return_action);
+                        push_call_frame!(child_id, child_ops, return_action);
                     }
                     restore_parent_fields!();
                 }
@@ -487,7 +474,7 @@ pub(super) fn interpret_core<'a>(
                         let sep = arena.text(sep_text);
                         running = arena.cat(running, sep);
                     } else {
-                        ip = skip_to_foreach_end(ops, ops_count, ip);
+                        ip = skip_to_foreach_end(ops, ip);
                         continue;
                     }
                 }
@@ -560,7 +547,7 @@ pub(super) fn interpret_core<'a>(
                         .list_children(cur_node_id)
                         .expect("ForEachSelfStart on non-list node");
                     if children.is_empty() {
-                        ip = skip_to_foreach_end(ops, ops_count, ip);
+                        ip = skip_to_foreach_end(ops, ip);
                     } else {
                         scratch.for_each.push(ForEachState {
                             list_id: cur_node_id,
@@ -609,8 +596,7 @@ pub(super) fn interpret_core<'a>(
                         }
 
                         if let Some(ctag) = ctx.reader.extract_fields_into(child_id, fields)
-                            && let Some((child_ops_bytes, child_ops_len)) =
-                                ctx.dialect.fmt_dispatch(ctag)
+                            && let Some(child_ops) = ctx.dialect.fmt_dispatch(ctag)
                         {
                             if return_action != ReturnAction::Discard && parent_prec > 0 {
                                 return_action = child_prec_action(
@@ -622,12 +608,7 @@ pub(super) fn interpret_core<'a>(
                                     fields,
                                 );
                             }
-                            push_call_frame!(
-                                child_id,
-                                child_ops_bytes,
-                                child_ops_len,
-                                return_action
-                            );
+                            push_call_frame!(child_id, child_ops, return_action);
                         }
                         restore_parent_fields!();
                     }
@@ -662,18 +643,12 @@ pub(super) fn interpret_core<'a>(
                         }
 
                         if let Some(ctag) = ctx.reader.extract_fields_into(child_id, fields)
-                            && let Some((child_ops_bytes, child_ops_len)) =
-                                ctx.dialect.fmt_dispatch(ctag)
+                            && let Some(child_ops) = ctx.dialect.fmt_dispatch(ctag)
                         {
                             if return_action != ReturnAction::Discard && ctx.dialect.is_list(ctag) {
                                 return_action = ReturnAction::WrapInParens;
                             }
-                            push_call_frame!(
-                                child_id,
-                                child_ops_bytes,
-                                child_ops_len,
-                                return_action
-                            );
+                            push_call_frame!(child_id, child_ops, return_action);
                         }
                         restore_parent_fields!();
                     }
@@ -712,8 +687,7 @@ pub(super) fn interpret_core<'a>(
                         }
 
                         if let Some(ctag) = ctx.reader.extract_fields_into(child_id, fields)
-                            && let Some((child_ops_bytes, child_ops_len)) =
-                                ctx.dialect.fmt_dispatch(ctag)
+                            && let Some(child_ops) = ctx.dialect.fmt_dispatch(ctag)
                         {
                             if return_action != ReturnAction::Discard && parent_prec > 0 {
                                 return_action = child_prec_action(
@@ -725,12 +699,7 @@ pub(super) fn interpret_core<'a>(
                                     fields,
                                 );
                             }
-                            push_call_frame!(
-                                child_id,
-                                child_ops_bytes,
-                                child_ops_len,
-                                return_action
-                            );
+                            push_call_frame!(child_id, child_ops, return_action);
                         }
                         restore_parent_fields!();
                     }
@@ -865,19 +834,14 @@ fn drain_comments_before_child<'a>(
 )]
 #[inline(always)]
 fn op_at(ops: &[[u8; 6]], ip: usize) -> FmtOp {
-    let [opcode, a, b0, b1, c0, c1] = ops[ip];
-    FmtOp::decode(
-        opcode,
-        a,
-        u16::from_le_bytes([b0, b1]),
-        u16::from_le_bytes([c0, c1]),
-    )
+    let (opcode, a, b, c) = crate::dialect::split_fmt_op(ops[ip]);
+    FmtOp::decode(opcode, a, b, c)
 }
 
-fn skip_to_foreach_end(ops: &[[u8; 6]], ops_count: usize, from_ip: usize) -> usize {
+fn skip_to_foreach_end(ops: &[[u8; 6]], from_ip: usize) -> usize {
     let mut depth = 1u32;
     let mut ip = from_ip + 1;
-    while ip < ops_count {
+    while ip < ops.len() {
         match op_at(ops, ip) {
             FmtOp::ForEachStart(_) | FmtOp::ForEachSelfStart => depth += 1,
             FmtOp::ForEachEnd => {
