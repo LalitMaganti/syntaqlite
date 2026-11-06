@@ -42,8 +42,103 @@ pub fn is_shell_script(dialect: impl Into<AnyDialect>, source: &str) -> bool {
 
 /// Whether any line starts with `.` or `#`, the only lines that can make a
 /// file a shell script. Lets ordinary SQL skip the line-by-line scan.
+///
+/// Reads the input once: each 64-byte block is checked with SIMD for a
+/// newline followed by a marker.
 fn may_have_shell_lines(source: &str) -> bool {
-    source.starts_with(['.', '#']) || source.contains("\n.") || source.contains("\n#")
+    let bytes = source.as_bytes();
+    if matches!(bytes.first(), Some(b'.' | b'#')) {
+        return true;
+    }
+    let mut i = 0;
+    while let Some(block) = bytes[i..].first_chunk::<65>() {
+        if newline_then_marker(block) {
+            return true;
+        }
+        i += 64;
+    }
+    newline_then_marker_scalar(&bytes[i..])
+}
+
+fn newline_then_marker_scalar(bytes: &[u8]) -> bool {
+    bytes
+        .windows(2)
+        .any(|w| w[0] == b'\n' && matches!(w[1], b'.' | b'#'))
+}
+
+/// Whether a newline in the first 64 bytes of `block` is followed by a marker.
+#[cfg(target_arch = "x86_64")]
+fn newline_then_marker(block: &[u8; 65]) -> bool {
+    use std::arch::x86_64::{
+        _mm_and_si128, _mm_cmpeq_epi8, _mm_loadu_si128, _mm_movemask_epi8, _mm_or_si128,
+        _mm_set1_epi8, _mm_setzero_si128,
+    };
+    // SAFETY: SSE2 is part of the x86_64 baseline, and every 16-byte load
+    // starts at or before offset 49 of the 65-byte block.
+    unsafe {
+        let newline = _mm_set1_epi8(b'\n'.cast_signed());
+        let dot = _mm_set1_epi8(b'.'.cast_signed());
+        let hash = _mm_set1_epi8(b'#'.cast_signed());
+        let mut hits = _mm_setzero_si128();
+        for k in (0..64).step_by(16) {
+            let cur = _mm_loadu_si128(block.as_ptr().add(k).cast());
+            let next = _mm_loadu_si128(block.as_ptr().add(k + 1).cast());
+            let markers = _mm_or_si128(_mm_cmpeq_epi8(next, dot), _mm_cmpeq_epi8(next, hash));
+            hits = _mm_or_si128(hits, _mm_and_si128(_mm_cmpeq_epi8(cur, newline), markers));
+        }
+        _mm_movemask_epi8(hits) != 0
+    }
+}
+
+#[cfg(target_arch = "aarch64")]
+fn newline_then_marker(block: &[u8; 65]) -> bool {
+    use std::arch::aarch64::{vandq_u8, vceqq_u8, vdupq_n_u8, vld1q_u8, vmaxvq_u8, vorrq_u8};
+    // SAFETY: NEON is part of the aarch64 baseline, and every 16-byte load
+    // starts at or before offset 49 of the 65-byte block.
+    unsafe {
+        let newline = vdupq_n_u8(b'\n');
+        let dot = vdupq_n_u8(b'.');
+        let hash = vdupq_n_u8(b'#');
+        let mut hits = vdupq_n_u8(0);
+        for k in (0..64).step_by(16) {
+            let cur = vld1q_u8(block.as_ptr().add(k));
+            let next = vld1q_u8(block.as_ptr().add(k + 1));
+            let markers = vorrq_u8(vceqq_u8(next, dot), vceqq_u8(next, hash));
+            hits = vorrq_u8(hits, vandq_u8(vceqq_u8(cur, newline), markers));
+        }
+        vmaxvq_u8(hits) != 0
+    }
+}
+
+#[cfg(all(target_arch = "wasm32", target_feature = "simd128"))]
+fn newline_then_marker(block: &[u8; 65]) -> bool {
+    use std::arch::wasm32::{u8x16_eq, u8x16_splat, v128_and, v128_any_true, v128_load, v128_or};
+    let newline = u8x16_splat(b'\n');
+    let dot = u8x16_splat(b'.');
+    let hash = u8x16_splat(b'#');
+    let mut hits = u8x16_splat(0);
+    for k in (0..64).step_by(16) {
+        // SAFETY: every 16-byte load starts at or before offset 49 of the
+        // 65-byte block.
+        let (cur, next) = unsafe {
+            (
+                v128_load(block.as_ptr().add(k).cast()),
+                v128_load(block.as_ptr().add(k + 1).cast()),
+            )
+        };
+        let markers = v128_or(u8x16_eq(next, dot), u8x16_eq(next, hash));
+        hits = v128_or(hits, v128_and(u8x16_eq(cur, newline), markers));
+    }
+    v128_any_true(hits)
+}
+
+#[cfg(not(any(
+    target_arch = "x86_64",
+    target_arch = "aarch64",
+    all(target_arch = "wasm32", target_feature = "simd128")
+)))]
+fn newline_then_marker(block: &[u8; 65]) -> bool {
+    newline_then_marker_scalar(block)
 }
 
 /// Extract the SQL fragments of a sqlite3 shell script.
@@ -224,6 +319,33 @@ mod tests {
 
     fn extract(source: &str) -> Vec<EmbeddedFragment<'_>> {
         extract_shell(sqlite(), source)
+    }
+
+    #[test]
+    fn may_have_shell_lines_finds_markers_at_line_starts() {
+        assert!(may_have_shell_lines(".read a.sql"));
+        assert!(may_have_shell_lines("SELECT 1;\n# note"));
+        assert!(may_have_shell_lines("SELECT 1;\r\n.mode csv"));
+        // A newline ending one 64-byte block and a marker starting the next.
+        let mut boundary = "x".repeat(63);
+        boundary.push_str("\n.read b.sql");
+        assert!(may_have_shell_lines(&boundary));
+        assert!(!may_have_shell_lines("SELECT t.a FROM t;\nSELECT 1.5;"));
+        assert!(!may_have_shell_lines(""));
+    }
+
+    #[test]
+    fn may_have_shell_lines_handles_every_offset() {
+        for len in [2, 64, 65, 66, 129, 200] {
+            for pos in 0..len - 1 {
+                for pair in ["\n.", "\n#", ".\n", "\nx"] {
+                    let mut s = "x".repeat(len);
+                    s.replace_range(pos..pos + 2, pair);
+                    let expected = s.starts_with('.') || pair == "\n." || pair == "\n#";
+                    assert_eq!(may_have_shell_lines(&s), expected, "{len} {pos} {pair:?}");
+                }
+            }
+        }
     }
 
     #[test]
