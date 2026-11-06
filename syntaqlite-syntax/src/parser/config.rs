@@ -20,7 +20,8 @@ pub struct ParserConfig {
 impl ParserConfig {
     /// Whether parser debug trace logging is enabled. Default: `false`.
     ///
-    /// Useful when debugging parser behavior; usually disabled in production.
+    /// Useful when debugging parser behavior. Only takes effect when built
+    /// with debug assertions.
     pub fn trace(&self) -> bool {
         self.trace
     }
@@ -33,7 +34,8 @@ impl ParserConfig {
         self.collect_tokens
     }
 
-    /// Enable or disable parser trace logging.
+    /// Enable or disable parser trace logging. Only takes effect when built
+    /// with debug assertions.
     #[must_use]
     pub fn with_trace(mut self, trace: bool) -> Self {
         self.trace = trace;

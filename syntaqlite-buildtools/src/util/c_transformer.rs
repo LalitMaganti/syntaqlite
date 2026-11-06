@@ -110,21 +110,44 @@ impl CTransformer {
         self
     }
 
-    /// Insert content after all include directives
+    /// Insert content after the last include directive outside any
+    /// preprocessor conditional, so the insertion is compiled whatever macros
+    /// (e.g. `NDEBUG`) are defined. Falls back to the last include anywhere,
+    /// for files whose includes all sit inside an include guard.
     pub(crate) fn insert_after_includes(mut self, content: &str) -> Self {
-        let Some(pos) = self.content.rfind("#include") else {
+        let mut depth = 0usize;
+        let mut offset = 0;
+        // (end offset, ends in newline) of the last include line, overall and
+        // outside any conditional.
+        let mut last_any = None;
+        let mut last_unconditional = None;
+        for line in self.content.split_inclusive('\n') {
+            let directive = line.trim_start();
+            if directive.starts_with("#if") {
+                depth += 1;
+            } else if directive.starts_with("#endif") {
+                depth = depth.saturating_sub(1);
+            } else if directive.starts_with("#include") {
+                let end = Some((offset + line.len(), line.ends_with('\n')));
+                last_any = end;
+                if depth == 0 {
+                    last_unconditional = end;
+                }
+            }
+            offset += line.len();
+        }
+        let Some((insert_pos, terminated)) = last_unconditional.or(last_any) else {
             self.record_error(
                 "insert_after_includes: no `#include` directive found in content".to_string(),
             );
             return self;
         };
-        let Some(newline_pos) = self.content[pos..].find('\n') else {
+        if !terminated {
             self.record_error(
                 "insert_after_includes: `#include` line not terminated by newline".to_string(),
             );
             return self;
-        };
-        let insert_pos = pos + newline_pos + 1;
+        }
         self.content
             .insert_str(insert_pos, &format!("\n{content}\n"));
         self
@@ -345,6 +368,17 @@ mod tests {
             .expect_err("should fail");
         assert!(err.contains("insert_after_includes"));
         assert!(err.contains("#include"));
+    }
+
+    #[test]
+    fn insert_after_includes_skips_conditional_includes() {
+        let src = "#include <assert.h>\n#ifndef NDEBUG\n#include <stdio.h>\n#endif\nint x;\n";
+        let out = CTransformer::new(src)
+            .insert_after_includes("#include \"extra.h\"")
+            .finish()
+            .expect("should succeed");
+        let extra = out.find("extra.h").unwrap();
+        assert!(extra < out.find("#ifndef NDEBUG").unwrap());
     }
 
     #[test]

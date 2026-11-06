@@ -17,6 +17,8 @@ fn main() {
     let target_os = env::var("CARGO_CFG_TARGET_OS").unwrap_or_default();
     let target_env = env::var("CARGO_CFG_TARGET_ENV").unwrap_or_default();
     let sqlite_enabled = env::var("CARGO_FEATURE_SQLITE").is_ok();
+    // C asserts and Lemon's parser tracing follow Rust's debug assertions.
+    let ndebug = env::var("CARGO_CFG_DEBUG_ASSERTIONS").is_err();
 
     // ── Stage generated headers for the `embedded-sources` feature ──────
     //
@@ -102,6 +104,9 @@ fn main() {
     if !sqlite_enabled {
         engine_build.define("SYNTAQLITE_OMIT_SQLITE_API", None);
     }
+    if ndebug {
+        engine_build.define("NDEBUG", None);
+    }
     if env::var("CARGO_FEATURE_FMT").is_ok() {
         engine_build.define("SYNTAQLITE_FMT", None);
     }
@@ -136,6 +141,9 @@ fn main() {
             .flag_if_supported("-Wno-type-limits")
             .flag_if_supported("-Wno-old-style-declaration")
             .flag_if_supported("-Wno-implicit-fallthrough");
+        if ndebug {
+            build.define("NDEBUG", None);
+        }
         if env::var("CARGO_FEATURE_FMT").is_ok() {
             build.define("SYNTAQLITE_FMT", None);
         }
