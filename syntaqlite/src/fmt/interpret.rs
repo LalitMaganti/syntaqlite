@@ -195,6 +195,7 @@ pub(super) fn interpret_core<'a>(
                 cur_node_id = frame.node_id;
                 cur_tag = frame.tag;
                 depth -= 1;
+                debug_assert_eq!(depth, scratch.calls.len());
                 ip = frame.ip;
                 let Some(restored_ops) = ctx.dialect.fmt_dispatch(cur_tag) else {
                     panic!("restored node must resolve to formatter ops");
