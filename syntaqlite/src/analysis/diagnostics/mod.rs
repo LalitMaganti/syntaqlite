@@ -275,6 +275,21 @@ pub enum DiagnosticMessage {
         /// single value.
         compared_with: Option<usize>,
     },
+    /// A table lists a column twice, or `ALTER TABLE` adds or renames a
+    /// column onto a name the table already has.
+    DuplicateColumn {
+        /// The table name.
+        table: String,
+        /// The duplicated column name.
+        column: String,
+    },
+    /// `ALTER TABLE` renames or drops a column the table doesn't have.
+    AlterUnknownColumn {
+        /// The table name.
+        table: String,
+        /// The missing column name.
+        column: String,
+    },
     /// A VALUES row has a different number of terms than the first row.
     ValuesTerms {
         /// Terms in the first row.
@@ -390,6 +405,12 @@ impl std::fmt::Display for DiagnosticMessage {
                 value_noun(*width),
                 value_noun(*other)
             ),
+            Self::DuplicateColumn { table, column } => {
+                write!(f, "duplicate column '{column}' in table '{table}'")
+            }
+            Self::AlterUnknownColumn { table, column } => {
+                write!(f, "table '{table}' has no column '{column}'")
+            }
             Self::ValuesTerms { first, row } => write!(
                 f,
                 "VALUES row has {row} terms, but the first row has {first}"
@@ -636,6 +657,18 @@ impl serde::Serialize for DiagnosticMessage {
                 kind_with(serializer, "row_value", len, |m| {
                     m.serialize_entry("width", width)?;
                     compared_with.map_or(Ok(()), |w| m.serialize_entry("compared_with", &w))
+                })
+            }
+            Self::DuplicateColumn { table, column } => {
+                kind_with(serializer, "duplicate_column", 2, |m| {
+                    m.serialize_entry("table", table)?;
+                    m.serialize_entry("column", column)
+                })
+            }
+            Self::AlterUnknownColumn { table, column } => {
+                kind_with(serializer, "alter_unknown_column", 2, |m| {
+                    m.serialize_entry("table", table)?;
+                    m.serialize_entry("column", column)
                 })
             }
             Self::ValuesTerms { first, row } => kind_with(serializer, "values_terms", 2, |m| {

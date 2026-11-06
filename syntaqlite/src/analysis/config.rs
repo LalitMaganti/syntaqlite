@@ -96,6 +96,8 @@ impl CheckLevel {
 /// | `insert-values` | [`insert_values`](Self::insert_values) | `INSERT` statements supplying a different number of values than the columns they fill | `deny` |
 /// | `subquery-columns` | [`subquery_columns`](Self::subquery_columns) | Subqueries returning a different number of columns than a value or `IN` takes | `deny` |
 /// | `row-value` | [`row_value`](Self::row_value) | Row values used as a single value, or compared with a row value of a different width | `deny` |
+/// | `duplicate-column` | [`duplicate_column`](Self::duplicate_column) | A column listed twice in `CREATE TABLE`, or added or renamed onto an existing name by `ALTER TABLE` | `deny` |
+/// | `alter-unknown-column` | [`alter_unknown_column`](Self::alter_unknown_column) | `ALTER TABLE` renaming or dropping a column the table doesn't have | `deny` |
 ///
 /// The group name `schema` is a shorthand for `unknown-table`,
 /// `unknown-column`, `unknown-function`, and `function-arity`.
@@ -118,6 +120,8 @@ pub struct CheckConfig {
     pub(crate) insert_values: CheckLevel,
     pub(crate) subquery_columns: CheckLevel,
     pub(crate) row_value: CheckLevel,
+    pub(crate) duplicate_column: CheckLevel,
+    pub(crate) alter_unknown_column: CheckLevel,
 }
 
 impl Default for CheckConfig {
@@ -140,6 +144,8 @@ impl Default for CheckConfig {
             insert_values: CheckLevel::Deny,
             subquery_columns: CheckLevel::Deny,
             row_value: CheckLevel::Deny,
+            duplicate_column: CheckLevel::Deny,
+            alter_unknown_column: CheckLevel::Deny,
         }
     }
 }
@@ -214,6 +220,14 @@ impl CheckConfig {
     /// Level for row values used as a single value or compared with a different width.
     pub fn row_value(&self) -> CheckLevel {
         self.row_value
+    }
+    /// Level for a column a table lists twice or gains twice.
+    pub fn duplicate_column(&self) -> CheckLevel {
+        self.duplicate_column
+    }
+    /// Level for `ALTER TABLE` renaming or dropping a column the table doesn't have.
+    pub fn alter_unknown_column(&self) -> CheckLevel {
+        self.alter_unknown_column
     }
 
     // ── Builders ─────────────────────────────────────────────────────────
@@ -320,6 +334,18 @@ impl CheckConfig {
         self.row_value = level;
         self
     }
+    /// Set the level for a column a table lists twice or gains twice.
+    #[must_use]
+    pub fn with_duplicate_column(mut self, level: CheckLevel) -> Self {
+        self.duplicate_column = level;
+        self
+    }
+    /// Set the level for `ALTER TABLE` renaming or dropping a column the table doesn't have.
+    #[must_use]
+    pub fn with_alter_unknown_column(mut self, level: CheckLevel) -> Self {
+        self.alter_unknown_column = level;
+        self
+    }
     /// Set all schema checks (`unknown-table`, `unknown-column`,
     /// `unknown-function`, `function-arity`).
     #[must_use]
@@ -350,6 +376,8 @@ impl CheckConfig {
         self.insert_values = level;
         self.subquery_columns = level;
         self.row_value = level;
+        self.duplicate_column = level;
+        self.alter_unknown_column = level;
         self
     }
 
@@ -374,6 +402,8 @@ impl CheckConfig {
         "insert-values",
         "subquery-columns",
         "row-value",
+        "duplicate-column",
+        "alter-unknown-column",
     ];
 
     /// Group names that expand to multiple categories.
@@ -403,6 +433,8 @@ impl CheckConfig {
             "insert-values" => self.insert_values = level,
             "subquery-columns" => self.subquery_columns = level,
             "row-value" => self.row_value = level,
+            "duplicate-column" => self.duplicate_column = level,
+            "alter-unknown-column" => self.alter_unknown_column = level,
             "schema" => self = self.with_schema(level),
             "all" => self = self.with_all(level),
             _ => return Err(format!("unknown check category: {name}")),
@@ -527,6 +559,8 @@ mod tests {
         assert_eq!(c.insert_values(), CheckLevel::Deny);
         assert_eq!(c.subquery_columns(), CheckLevel::Deny);
         assert_eq!(c.row_value(), CheckLevel::Deny);
+        assert_eq!(c.duplicate_column(), CheckLevel::Deny);
+        assert_eq!(c.alter_unknown_column(), CheckLevel::Deny);
     }
 
     #[test]

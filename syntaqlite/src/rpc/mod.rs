@@ -787,6 +787,8 @@ const DIAG_CODE_VALUES_TERMS: u32 = 14;
 const DIAG_CODE_INSERT_VALUES: u32 = 15;
 const DIAG_CODE_SUBQUERY_COLUMNS: u32 = 16;
 const DIAG_CODE_ROW_VALUE: u32 = 17;
+const DIAG_CODE_DUPLICATE_COLUMN: u32 = 18;
+const DIAG_CODE_ALTER_UNKNOWN_COLUMN: u32 = 19;
 
 fn diag_code(msg: &DiagnosticMessage) -> u32 {
     match msg {
@@ -808,5 +810,7 @@ fn diag_code(msg: &DiagnosticMessage) -> u32 {
         DiagnosticMessage::InsertValues { .. } => DIAG_CODE_INSERT_VALUES,
         DiagnosticMessage::SubqueryColumns { .. } => DIAG_CODE_SUBQUERY_COLUMNS,
         DiagnosticMessage::RowValue { .. } => DIAG_CODE_ROW_VALUE,
+        DiagnosticMessage::DuplicateColumn { .. } => DIAG_CODE_DUPLICATE_COLUMN,
+        DiagnosticMessage::AlterUnknownColumn { .. } => DIAG_CODE_ALTER_UNKNOWN_COLUMN,
     }
 }

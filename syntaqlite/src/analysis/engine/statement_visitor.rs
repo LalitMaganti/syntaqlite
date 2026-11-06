@@ -21,10 +21,11 @@ use crate::analysis::{AnalysisConfig, CheckConfig, CheckLevel};
 use crate::dialect::SemanticRole;
 
 use super::walker::{
-    BuiltinModifyEvent, CallEvent, ColumnRefEvent, CompoundColumnsEvent, CteBindingEvent,
-    CteColumnCountMismatchEvent, DropWrongKindEvent, IndexOnViewEvent, InsertValuesEvent,
-    OnClauseOrderEvent, RowValueEvent, ScopedSourceEvent, SemanticVisitor, SourceRefEvent,
-    SubqueryColumnsEvent, UncheckedRef, UnknownWindowEvent, ValuesTermsEvent, WalkCtx,
+    BuiltinModifyEvent, CallEvent, ColumnChangeEvent, ColumnRefEvent, CompoundColumnsEvent,
+    CteBindingEvent, CteColumnCountMismatchEvent, DropWrongKindEvent, IndexOnViewEvent,
+    InsertValuesEvent, OnClauseOrderEvent, RowValueEvent, ScopedSourceEvent, SemanticVisitor,
+    SourceRefEvent, SubqueryColumnsEvent, UncheckedRef, UnknownWindowEvent, ValuesTermsEvent,
+    WalkCtx,
 };
 
 /// Whether `name` is an embedded-SQL interpolation placeholder: an identifier of
@@ -153,6 +154,8 @@ impl CheckConfig {
             DiagnosticMessage::InsertValues { .. } => self.insert_values,
             DiagnosticMessage::SubqueryColumns { .. } => self.subquery_columns,
             DiagnosticMessage::RowValue { .. } => self.row_value,
+            DiagnosticMessage::DuplicateColumn { .. } => self.duplicate_column,
+            DiagnosticMessage::AlterUnknownColumn { .. } => self.alter_unknown_column,
             DiagnosticMessage::ParseError(_) => self.parse_errors,
         }
     }
@@ -328,6 +331,7 @@ impl<V: SemanticVisitor> SemanticVisitor for StatementVisitor<'_, V> {
     const WANTS_INSERT_VALUES: bool = true;
     const WANTS_SUBQUERY_COLUMNS: bool = true;
     const WANTS_ROW_VALUE: bool = true;
+    const WANTS_COLUMN_CHANGE: bool = true;
     // LineageCapture wants source refs, scoped sources, CTE bindings,
     // and enter/exit — all forwarded below.
     const WANTS_CTE_BINDING: bool = true;
@@ -584,6 +588,38 @@ impl<V: SemanticVisitor> SemanticVisitor for StatementVisitor<'_, V> {
             None,
         );
         self.extra.on_row_value(stmt, ev);
+    }
+
+    fn on_duplicate_column(
+        &mut self,
+        stmt: &mut AnyParsedStatement<'_>,
+        ev: ColumnChangeEvent<'_>,
+    ) {
+        self.emit_at(
+            ev.range,
+            DiagnosticMessage::DuplicateColumn {
+                table: ev.table.to_string(),
+                column: ev.column.to_string(),
+            },
+            None,
+        );
+        self.extra.on_duplicate_column(stmt, ev);
+    }
+
+    fn on_alter_unknown_column(
+        &mut self,
+        stmt: &mut AnyParsedStatement<'_>,
+        ev: ColumnChangeEvent<'_>,
+    ) {
+        self.emit_at(
+            ev.range,
+            DiagnosticMessage::AlterUnknownColumn {
+                table: ev.table.to_string(),
+                column: ev.column.to_string(),
+            },
+            None,
+        );
+        self.extra.on_alter_unknown_column(stmt, ev);
     }
 
     fn on_cte_binding(&mut self, stmt: &mut AnyParsedStatement<'_>, ev: CteBindingEvent<'_>) {

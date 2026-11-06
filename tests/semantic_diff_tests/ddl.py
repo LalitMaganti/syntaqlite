@@ -828,3 +828,106 @@ class BuiltinModify(TestSuite):
             sql="SELECT name FROM sqlite_schema;",
             out="",
         )
+
+
+class ColumnChanges(TestSuite):
+    def test_add_existing_column(self):
+        return DiffTestBlueprint(
+            sql="CREATE TABLE t (a); ALTER TABLE t ADD COLUMN A;",
+            out="""\
+                error: duplicate column 'A' in table 't'
+                 --> <stdin>:1:46
+                  |
+                1 | CREATE TABLE t (a); ALTER TABLE t ADD COLUMN A;
+                  |                                              ^
+            """,
+        )
+
+    def test_create_table_lists_column_twice(self):
+        return DiffTestBlueprint(
+            sql="CREATE TABLE t (a, b, A);",
+            out="""\
+                error: duplicate column 'a' in table 't'
+                 --> <stdin>:1:23
+                  |
+                1 | CREATE TABLE t (a, b, A);
+                  |                       ^
+            """,
+        )
+
+    def test_create_table_as_select_renames_duplicates(self):
+        return DiffTestBlueprint(
+            sql="CREATE TABLE t AS SELECT 1 AS a, 2 AS a;",
+            out="",
+        )
+
+    def test_rename_onto_existing_column(self):
+        return DiffTestBlueprint(
+            sql="CREATE TABLE t (a, b); ALTER TABLE t RENAME COLUMN a TO b;",
+            out="""\
+                error: duplicate column 'b' in table 't'
+                 --> <stdin>:1:57
+                  |
+                1 | CREATE TABLE t (a, b); ALTER TABLE t RENAME COLUMN a TO b;
+                  |                                                         ^
+            """,
+        )
+
+    def test_rename_column_to_its_own_name(self):
+        return DiffTestBlueprint(
+            sql="CREATE TABLE t (a); ALTER TABLE t RENAME COLUMN a TO A;",
+            out="",
+        )
+
+    def test_rename_missing_column(self):
+        return DiffTestBlueprint(
+            sql="CREATE TABLE t (a); ALTER TABLE t RENAME COLUMN z TO y;",
+            out="""\
+                error: table 't' has no column 'z'
+                 --> <stdin>:1:49
+                  |
+                1 | CREATE TABLE t (a); ALTER TABLE t RENAME COLUMN z TO y;
+                  |                                                 ^
+            """,
+        )
+
+    def test_drop_missing_column(self):
+        return DiffTestBlueprint(
+            sql="CREATE TABLE t (a, b); ALTER TABLE t DROP COLUMN z;",
+            out="""\
+                error: table 't' has no column 'z'
+                 --> <stdin>:1:50
+                  |
+                1 | CREATE TABLE t (a, b); ALTER TABLE t DROP COLUMN z;
+                  |                                                  ^
+            """,
+        )
+
+    def test_rejected_add_leaves_one_column(self):
+        return DiffTestBlueprint(
+            sql="CREATE TABLE t (a); ALTER TABLE t ADD COLUMN a; SELECT nope FROM t;",
+            strict_schema=True,
+            out="""\
+                error: duplicate column 'a' in table 't'
+                 --> <stdin>:1:46
+                  |
+                1 | CREATE TABLE t (a); ALTER TABLE t ADD COLUMN a; SELECT nope FROM t;
+                  |                                              ^
+                error: unknown column 'nope'
+                 --> <stdin>:1:56
+                  |
+                1 | CREATE TABLE t (a); ALTER TABLE t ADD COLUMN a; SELECT nope FROM t;
+                  |                                                        ^~~~
+            """,
+        )
+
+    def test_valid_changes(self):
+        return DiffTestBlueprint(
+            sql=(
+                "CREATE TABLE t (a, b); ALTER TABLE t ADD COLUMN c; "
+                "ALTER TABLE t RENAME COLUMN a TO d; ALTER TABLE t DROP COLUMN b; "
+                "SELECT c, d FROM t;"
+            ),
+            strict_schema=True,
+            out="",
+        )

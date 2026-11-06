@@ -384,6 +384,8 @@ syntaqlite.RenderOptions(*, source_name="")
 | `INSERT_VALUES` | `15` |
 | `SUBQUERY_COLUMNS` | `16` |
 | `ROW_VALUE` | `17` |
+| `DUPLICATE_COLUMN` | `18` |
+| `ALTER_UNKNOWN_COLUMN` | `19` |
 
 ### `DefinedRelation`
 

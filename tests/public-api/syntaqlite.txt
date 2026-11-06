@@ -105,11 +105,13 @@ pub fn syntaqlite::Catalog::new(impl core::convert::Into<syntaqlite::any::AnyDia
 pub fn syntaqlite::Catalog::new_connection(&mut self)
 pub fn syntaqlite::Catalog::new_database(&mut self)
 pub fn syntaqlite::Catalog::new_document(&mut self)
+pub fn syntaqlite::CheckConfig::alter_unknown_column(&self) -> syntaqlite::CheckLevel
 pub fn syntaqlite::CheckConfig::builtin_modify(&self) -> syntaqlite::CheckLevel
 pub fn syntaqlite::CheckConfig::compound_columns(&self) -> syntaqlite::CheckLevel
 pub fn syntaqlite::CheckConfig::cte_columns(&self) -> syntaqlite::CheckLevel
 pub fn syntaqlite::CheckConfig::default() -> Self
 pub fn syntaqlite::CheckConfig::drop_wrong_kind(&self) -> syntaqlite::CheckLevel
+pub fn syntaqlite::CheckConfig::duplicate_column(&self) -> syntaqlite::CheckLevel
 pub fn syntaqlite::CheckConfig::function_arity(&self) -> syntaqlite::CheckLevel
 pub fn syntaqlite::CheckConfig::index_on_view(&self) -> syntaqlite::CheckLevel
 pub fn syntaqlite::CheckConfig::insert_values(&self) -> syntaqlite::CheckLevel
@@ -125,10 +127,12 @@ pub fn syntaqlite::CheckConfig::unknown_table(&self) -> syntaqlite::CheckLevel
 pub fn syntaqlite::CheckConfig::unknown_window(&self) -> syntaqlite::CheckLevel
 pub fn syntaqlite::CheckConfig::values_terms(&self) -> syntaqlite::CheckLevel
 pub fn syntaqlite::CheckConfig::with_all(self, syntaqlite::CheckLevel) -> Self
+pub fn syntaqlite::CheckConfig::with_alter_unknown_column(self, syntaqlite::CheckLevel) -> Self
 pub fn syntaqlite::CheckConfig::with_builtin_modify(self, syntaqlite::CheckLevel) -> Self
 pub fn syntaqlite::CheckConfig::with_compound_columns(self, syntaqlite::CheckLevel) -> Self
 pub fn syntaqlite::CheckConfig::with_cte_columns(self, syntaqlite::CheckLevel) -> Self
 pub fn syntaqlite::CheckConfig::with_drop_wrong_kind(self, syntaqlite::CheckLevel) -> Self
+pub fn syntaqlite::CheckConfig::with_duplicate_column(self, syntaqlite::CheckLevel) -> Self
 pub fn syntaqlite::CheckConfig::with_function_arity(self, syntaqlite::CheckLevel) -> Self
 pub fn syntaqlite::CheckConfig::with_index_on_view(self, syntaqlite::CheckLevel) -> Self
 pub fn syntaqlite::CheckConfig::with_insert_values(self, syntaqlite::CheckLevel) -> Self
@@ -381,6 +385,9 @@ pub syntaqlite::analysis::ColumnOrigin::column: alloc::string::String
 pub syntaqlite::analysis::ColumnOrigin::table: alloc::string::String
 pub syntaqlite::analysis::DefinedRelation::is_view: bool
 pub syntaqlite::analysis::DefinedRelation::name: alloc::string::String
+pub syntaqlite::analysis::DiagnosticMessage::AlterUnknownColumn
+pub syntaqlite::analysis::DiagnosticMessage::AlterUnknownColumn::column: alloc::string::String
+pub syntaqlite::analysis::DiagnosticMessage::AlterUnknownColumn::table: alloc::string::String
 pub syntaqlite::analysis::DiagnosticMessage::BuiltinModify
 pub syntaqlite::analysis::DiagnosticMessage::BuiltinModify::change: syntaqlite::analysis::BuiltinChange
 pub syntaqlite::analysis::DiagnosticMessage::BuiltinModify::name: alloc::string::String
@@ -395,6 +402,9 @@ pub syntaqlite::analysis::DiagnosticMessage::CteColumnCountMismatch::name: alloc
 pub syntaqlite::analysis::DiagnosticMessage::DropWrongKind
 pub syntaqlite::analysis::DiagnosticMessage::DropWrongKind::is_view: bool
 pub syntaqlite::analysis::DiagnosticMessage::DropWrongKind::name: alloc::string::String
+pub syntaqlite::analysis::DiagnosticMessage::DuplicateColumn
+pub syntaqlite::analysis::DiagnosticMessage::DuplicateColumn::column: alloc::string::String
+pub syntaqlite::analysis::DiagnosticMessage::DuplicateColumn::table: alloc::string::String
 pub syntaqlite::analysis::DiagnosticMessage::FunctionArity
 pub syntaqlite::analysis::DiagnosticMessage::FunctionArity::expected: alloc::vec::Vec<usize>
 pub syntaqlite::analysis::DiagnosticMessage::FunctionArity::got: usize

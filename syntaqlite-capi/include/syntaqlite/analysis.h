@@ -76,6 +76,8 @@ typedef enum {
   SYNTAQLITE_DIAG_INSERT_VALUES               = 15,
   SYNTAQLITE_DIAG_SUBQUERY_COLUMNS            = 16,
   SYNTAQLITE_DIAG_ROW_VALUE            = 17,
+  SYNTAQLITE_DIAG_DUPLICATE_COLUMN     = 18,
+  SYNTAQLITE_DIAG_ALTER_UNKNOWN_COLUMN = 19,
 } SyntaqliteDiagnosticCode;
 
 // A single diagnostic from validation. Pointers are valid until the next

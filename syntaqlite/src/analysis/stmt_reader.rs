@@ -180,7 +180,10 @@ impl<'a, 'stmt> StmtReader<'a, 'stmt> {
             .filter(|name| !name.is_empty())
     }
 
-    fn column_def_name_span(&self, node_id: AnyNodeId) -> Option<(Cow<'stmt, str>, DocRange)> {
+    pub(crate) fn column_def_name_span(
+        &self,
+        node_id: AnyNodeId,
+    ) -> Option<(Cow<'stmt, str>, DocRange)> {
         let (SemanticRole::ColumnDef { name: name_idx, .. }, fields) =
             self.role_for_node(node_id)?
         else {

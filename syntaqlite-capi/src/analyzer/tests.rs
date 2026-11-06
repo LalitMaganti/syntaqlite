@@ -1180,6 +1180,20 @@ fn kind_code_row_value() {
 }
 
 #[test]
+fn kind_code_duplicate_column() {
+    let v = Validator::new();
+    v.analyze("CREATE TABLE t(a); ALTER TABLE t ADD COLUMN a;");
+    assert!(v.has_code(DIAG_CODE_DUPLICATE_COLUMN));
+}
+
+#[test]
+fn kind_code_alter_unknown_column() {
+    let v = Validator::new();
+    v.analyze("CREATE TABLE t(a); ALTER TABLE t DROP COLUMN z;");
+    assert!(v.has_code(DIAG_CODE_ALTER_UNKNOWN_COLUMN));
+}
+
+#[test]
 fn kind_code_per_statement_matches_aggregate() {
     let v = Validator::new();
     v.analyze("SELECT id FROM no_such_table");
@@ -1212,6 +1226,8 @@ fn diagnostic_code_to_c_covers_all_variants() {
     check(M::InsertValues { table: "t".into(), column_list: false, columns: 2, values: 1 }, DIAG_CODE_INSERT_VALUES);
     check(M::SubqueryColumns { got: 2, expected: 1 }, DIAG_CODE_SUBQUERY_COLUMNS);
     check(M::RowValue { width: 2, compared_with: None }, DIAG_CODE_ROW_VALUE);
+    check(M::DuplicateColumn { table: "t".into(), column: "a".into() }, DIAG_CODE_DUPLICATE_COLUMN);
+    check(M::AlterUnknownColumn { table: "t".into(), column: "z".into() }, DIAG_CODE_ALTER_UNKNOWN_COLUMN);
 }
 
 // ── Custom function / table-function registration ────────────────────

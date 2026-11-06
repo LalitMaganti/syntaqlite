@@ -711,6 +711,9 @@ pub struct Catalog {
     /// Relations the most recently accumulated statement removed, so its
     /// own existence check still sees them.
     retired_by_statement: HashSet<NameKey>,
+    /// The column change the current statement's `ALTER TABLE` made that
+    /// `SQLite` rejects, for the walker to report.
+    rejected_column_change: Option<RejectedColumnChange>,
 }
 
 impl Catalog {
@@ -739,6 +742,7 @@ impl Catalog {
         Self {
             layers,
             retired_by_statement: HashSet::default(),
+            rejected_column_change: None,
         }
     }
 
@@ -905,6 +909,7 @@ impl Catalog {
         dialect: &AnyDialect,
     ) {
         self.retired_by_statement.clear();
+        self.rejected_column_change = None;
         let Some((tag, fields)) = stmt.extract_fields(root) else {
             return;
         };
@@ -1050,6 +1055,20 @@ impl Catalog {
         }
     }
 
+    /// The column change the last statement's `ALTER TABLE` made that
+    /// `SQLite` rejects, which the catalog therefore did not apply.
+    pub(crate) fn rejected_column_change(&self) -> Option<&RejectedColumnChange> {
+        self.rejected_column_change.as_ref()
+    }
+
+    fn reject_column_change(&mut self, column: &str, field: u8, duplicate: bool) {
+        self.rejected_column_change = Some(RejectedColumnChange {
+            column: column.to_string(),
+            field,
+            duplicate,
+        });
+    }
+
     /// Apply an `ALTER TABLE` role's mutation to the catalog.
     ///
     /// Copy-on-write: the currently-visible relation entry is cloned, mutated,
@@ -1089,6 +1108,7 @@ impl Catalog {
                 if let (Some(cols), Some(col)) = (entry.columns.as_mut(), added) {
                     // SQLite rejects a column the table already has.
                     if cols.iter().any(|c| c.name.eq_ignore_ascii_case(&col)) {
+                        self.reject_column_change(&col, column, true);
                         return;
                     }
                     let kind = def.map_or(ColumnKind::Normal, |id| reader.column_def_kind(id));
@@ -1100,6 +1120,10 @@ impl Catalog {
                 if let (Some(cols), Some(col)) =
                     (entry.columns.as_mut(), alter_name(stmt, fields, old_name))
                 {
+                    if !cols.iter().any(|c| c.name.eq_ignore_ascii_case(&col)) {
+                        self.reject_column_change(&col, old_name, false);
+                        return;
+                    }
                     cols.retain(|c| !c.name.eq_ignore_ascii_case(&col));
                 }
                 self.layers[layer].insert_entry(&table_name, entry);
@@ -1114,7 +1138,12 @@ impl Catalog {
                     // another column's name.
                     let exists =
                         |name: &str| cols.iter().any(|c| c.name.eq_ignore_ascii_case(name));
-                    if !exists(&from) || (!from.eq_ignore_ascii_case(&to) && exists(&to)) {
+                    if !exists(&from) {
+                        self.reject_column_change(&from, old_name, false);
+                        return;
+                    }
+                    if !from.eq_ignore_ascii_case(&to) && exists(&to) {
+                        self.reject_column_change(&to, new_name, true);
                         return;
                     }
                     for c in cols.iter_mut() {
@@ -1404,6 +1433,17 @@ impl Catalog {
 }
 
 // ── ALTER TABLE helpers ────────────────────────────────────────────────────────
+
+/// An `ALTER TABLE` column change `SQLite` rejects.
+#[derive(Clone)]
+pub(crate) struct RejectedColumnChange {
+    /// The column name as written.
+    pub(crate) column: String,
+    /// The `ALTER` node field that names the column.
+    pub(crate) field: u8,
+    /// Whether the column already exists, rather than being missing.
+    pub(crate) duplicate: bool,
+}
 
 /// Whether two columns share a name, compared case-insensitively as SQLite does.
 pub(crate) fn has_duplicate_column(cols: &[Column]) -> bool {
