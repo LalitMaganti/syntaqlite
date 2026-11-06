@@ -39,13 +39,31 @@ SYNTAQLITE_DIALECT_API void synq_extent_fold_below_into_top(SynqParseCtx* pCtx);
 
 // Lemon stores `yyRuleInfoNRhs[r]` as the negative of the rule's RHS
 // symbol count, so the reduce macro negates it to recover `nrhs`.
-#define synq_on_shift(yypParser, yyMajor, yyMinor_ptr)             \
-  synq_extent_on_shift((yypParser)->pCtx, (unsigned int)(yyMajor), \
-                       (yyMinor_ptr))
+//
+// With extents and macros both off, the hooks only track `lemon_depth`, so
+// do that inline instead of calling into the runtime on every shift and
+// reduce.
+#define synq_on_shift(yypParser, yyMajor, yyMinor_ptr)                    \
+  do {                                                                    \
+    SynqParseCtx* synq_ctx_ = (yypParser)->pCtx;                          \
+    if (synq_ctx_->collect_node_extents | synq_ctx_->macro_root_layer) {  \
+      synq_extent_on_shift(synq_ctx_, (unsigned int)(yyMajor),            \
+                           (yyMinor_ptr));                                \
+    } else {                                                              \
+      synq_ctx_->lemon_depth++;                                           \
+    }                                                                     \
+  } while (0)
 
-#define synq_on_reduce(yypParser, yyruleno) \
-  synq_extent_on_reduce((yypParser)->pCtx,  \
-                        (unsigned int)(-yyRuleInfoNRhs[yyruleno]))
+#define synq_on_reduce(yypParser, yyruleno)                               \
+  do {                                                                    \
+    SynqParseCtx* synq_ctx_ = (yypParser)->pCtx;                          \
+    unsigned int synq_nrhs_ = (unsigned int)(-yyRuleInfoNRhs[yyruleno]);  \
+    if (synq_ctx_->collect_node_extents | synq_ctx_->macro_root_layer) {  \
+      synq_extent_on_reduce(synq_ctx_, synq_nrhs_);                       \
+    } else {                                                              \
+      synq_ctx_->lemon_depth = synq_ctx_->lemon_depth + 1 - synq_nrhs_;   \
+    }                                                                     \
+  } while (0)
 
 #ifdef __cplusplus
 }
