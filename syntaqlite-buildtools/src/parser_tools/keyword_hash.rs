@@ -156,6 +156,8 @@ struct KeywordPerfectHash {
     mult: u64,
     /// `slots[h]` is the 1-based keyword index hashing to `h`, or 0.
     slots: Vec<usize>,
+    /// `keys[i]` is the [`kw_key`] of keyword `i`; 0 for the unused index 0.
+    keys: Vec<u64>,
 }
 
 fn find_keyword_perfect_hash(
@@ -180,7 +182,17 @@ fn find_keyword_perfect_hash(
                 free
             });
             if collision_free {
-                return Ok(KeywordPerfectHash { bits, mult, slots });
+                let max_idx = keys.iter().map(|&(i, _)| i).max().unwrap_or(0);
+                let mut by_idx = vec![0u64; max_idx + 1];
+                for &(i, key) in &keys {
+                    by_idx[i] = key;
+                }
+                return Ok(KeywordPerfectHash {
+                    bits,
+                    mult,
+                    slots,
+                    keys: by_idx,
+                });
             }
         }
     }
@@ -210,6 +222,22 @@ fn keyword_lookup_code(hash: &KeywordPerfectHash) -> String {
         let _ = write!(out, "{v},");
     }
     out.push_str("\n};\n\n");
+    out.push_str(
+        "/* __SYNQ_DIALECT___aKWKey[i] is the lookup key of keyword i: its first\n\
+         ** two and last two bytes, uppercased, and its length. */\n",
+    );
+    let _ = write!(
+        out,
+        "static const uint64_t __SYNQ_DIALECT___aKWKey[{}] = {{",
+        hash.keys.len()
+    );
+    for (i, k) in hash.keys.iter().enumerate() {
+        if i % 4 == 0 {
+            out.push_str("\n  ");
+        }
+        let _ = write!(out, "0x{k:x}ull,");
+    }
+    out.push_str("\n};\n\n");
     let _ = write!(
         out,
         r"int synq_sqlite3_keywordCode(const SyntaqliteDialect *env, const char *z, int n, int *pType){{
@@ -222,9 +250,12 @@ fn keyword_lookup_code(hash: &KeywordPerfectHash) -> String {
          | (uint64_t)u[n-1]<<24) & 0xDFDFDFDFu;
   key |= (uint64_t)n<<32;
   i = __SYNQ_DIALECT___aKWSlot[(key*0x{mult:016x}ull) >> {shift}];
-  if( i==0 || aKWLen[i]!=n ) return n;
+  /* The key covers the length and the outer two bytes at each end, so only
+  ** the middle is left to compare. Empty slot 0 has key 0, which never
+  ** matches. */
+  if( __SYNQ_DIALECT___aKWKey[i]!=key ) return n;
   zKW = &zKWText[aKWOffset[i]];
-  for(j=0; j<n; j++){{
+  for(j=2; j<n-2; j++){{
     if( (z[j]&~0x20)!=zKW[j] ) return n;
   }}
   /* Version check: skip keywords newer than target version. */

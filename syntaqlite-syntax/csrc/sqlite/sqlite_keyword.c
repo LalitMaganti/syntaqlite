@@ -623,6 +623,49 @@ static const uint8_t synq_sqlite_aKWSlot[1024] = {
     0,  0,   0,   0,
 };
 
+/* synq_sqlite_aKWKey[i] is the lookup key of keyword i: its first
+** two and last two bytes, uppercased, and its length. */
+static const uint64_t synq_sqlite_aKWKey[149] = {
+    0x0ull,         0x758454552ull,  0x744454e49ull, 0x558454e49ull,
+    0x443534544ull, 0x645505345ull,  0x448434145ull, 0x54b434843ull,
+    0x35945454bull, 0x645524542ull,  0x74e474f46ull, 0x3524f4f46ull,
+    0x645524749ull, 0x650584552ull,  0x74e495845ull, 0x744414e49ull,
+    0x344444441ull, 0x845534144ull,  0x253415341ull, 0x654434553ull,
+    0x5454c4154ull, 0x45446454cull,  0x44e454854ull, 0x3444e4e45ull,
+    0xa454c4544ull, 0x445534c45ull,  0x745445845ull, 0x645544544ull,
+    0x959524554ull, 0x4504d4554ull,  0x2524f524full, 0x64c4c5349ull,
+    0x5534c554eull, 0x9544e4153ull,  0x954434e49ull, 0x453454954ull,
+    0x74c4c4f4eull, 0x3544f4f4eull,  0x24f4e4f4eull, 0x44c4c554eull,
+    0x4454b494cull, 0x654505845ull,  0xb4e4f5254ull, 0x64e4f4341ull,
+    0x24e4f4e4full, 0x74c41414eull,  0x552454c41ull, 0x545534152ull,
+    0x945565845ull, 0x653545845ull,  0xa544e4f43ull, 0x44f544e49ull,
+    0x65445464full, 0x2464f464full,  0x354454553ull, 0x752455254ull,
+    0x545474152ull, 0x944454547ull,  0x648434544ull, 0x6474e4148ull,
+    0x4424f4c47ull, 0x54e494542ull,  0x552454e49ull, 0xa53454552ull,
+    0x645554e55ull, 0x559525551ull,  0x754554957ull, 0x448544957ull,
+    0x55245554full, 0x745534552ull,  0x648435441ull, 0x74e454542ull,
+    0x7474e4f4eull, 0x653505247ull,  0x550555247ull, 0x745444143ull,
+    0x343535341ull, 0x7544c4544ull,  0x445534143ull, 0x745544f43ull,
+    0x645545243ull, 0xc45545543ull,  0x945544d49ull, 0x44e494f4aull,
+    0x654524e49ull, 0x54843414dull,  0x44e414c50ull, 0x7455a4e41ull,
+    0x6414d5250ull, 0xc4445414dull,  0x844454544ull, 0x854434944ull,
+    0x253495349ull, 0x645545055ull,  0x653454156ull, 0x74c414956ull,
+    0x653594c41ull, 0x44e454857ull,  0x545524857ull, 0x945564552ull,
+    0x64e494957ull, 0x9594c4e49ull,  0x34c4c4c41ull, 0x554524241ull,
+    0x552454641ull, 0x6454d4552ull,  0x3444e4e41ull, 0x4504f5244ull,
+    0x94e4f4150ull, 0xd544e5541ull,  0x24f544f54ull, 0x24e494e49ull,
+    0x454534143ull, 0x64e4d4f43ull,  0x654494f43ull, 0x854434f43ull,
+    0x553535243ull, 0x11504d5543ull, 0xc454d5543ull, 0x7544e5543ull,
+    0x9474e5250ull, 0x44c494146ull,  0x45453414cull, 0x652454946ull,
+    0x745434552ull, 0x554534946ull,  0x9474e4f46ull, 0x44d4f5246ull,
+    0x44c4c5546ull, 0x55449494cull,  0x246494649ull, 0x55245524full,
+    0x854434552ull, 0x65352544full,  0x45245564full, 0x9474e4552ull,
+    0x554484952ull, 0x84b434f52ull,  0x453574f52ull, 0x3574f4f52ull,
+    0x944454e55ull, 0x54e4f4e55ull,  0x5474e5355ull, 0x64d554156ull,
+    0x457454956ull, 0x6574f4957ull,  0x24f444f44ull, 0x259425942ull,
+    0x759525250ull,
+};
+
 int synq_sqlite3_keywordCode(const SyntaqliteDialect* env,
                              const char* z,
                              int n,
@@ -637,10 +680,13 @@ int synq_sqlite3_keywordCode(const SyntaqliteDialect* env,
         0xDFDFDFDFu;
   key |= (uint64_t)n << 32;
   i = synq_sqlite_aKWSlot[(key * 0x9afd134fb61fcebbull) >> 54];
-  if (i == 0 || synq_sqlite_aKWLen[i] != n)
+  /* The key covers the length and the outer two bytes at each end, so only
+  ** the middle is left to compare. Empty slot 0 has key 0, which never
+  ** matches. */
+  if (synq_sqlite_aKWKey[i] != key)
     return n;
   zKW = &synq_sqlite_zKWText[synq_sqlite_aKWOffset[i]];
-  for (j = 0; j < n; j++) {
+  for (j = 2; j < n - 2; j++) {
     if ((z[j] & ~0x20) != zKW[j])
       return n;
   }
