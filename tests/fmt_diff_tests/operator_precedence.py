@@ -809,3 +809,16 @@ class InWhereClause(TestSuite):
             sql="SELECT x FROM t WHERE name LIKE 'foo%' AND id IN (1, 2, 3)",
             out="SELECT x FROM t WHERE name LIKE 'foo%' AND id IN (1, 2, 3);",
         )
+
+    def test_double_negation_spacing_counts_toward_width(self):
+        """`- -` renders with a space, which must count when fitting a line."""
+        return DiffTestBlueprint(
+            sql="SELECT - -aaaaaaaa + bbbbbbbbb, - - - cccccccc * dddddddd FROM t",
+            line_width=53,
+            out="""\
+                SELECT
+                  - -aaaaaaaa + bbbbbbbbb,
+                  - - -cccccccc * dddddddd
+                FROM t;
+            """,
+        )
