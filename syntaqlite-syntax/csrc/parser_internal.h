@@ -10,6 +10,7 @@
 #include <stdio.h>
 
 #include "csrc/tokens.h"
+#include "syntaqlite/compiler.h"
 #include "syntaqlite/config.h"
 #include "syntaqlite/dialect.h"
 #include "syntaqlite/incremental.h"
@@ -38,14 +39,9 @@ typedef struct SynqTokenComments {
   ((SynqTokenComments){UINT32_MAX, 0, UINT32_MAX, 0})
 
 #if defined(__GNUC__) || defined(__clang__)
-#define SYNQ_NOINLINE __attribute__((noinline))
 #define SYNQ_PRINTF(fmt_idx, va_idx) \
   __attribute__((format(printf, fmt_idx, va_idx)))
-#elif defined(_MSC_VER)
-#define SYNQ_NOINLINE __declspec(noinline)
-#define SYNQ_PRINTF(fmt_idx, va_idx)
 #else
-#define SYNQ_NOINLINE
 #define SYNQ_PRINTF(fmt_idx, va_idx)
 #endif
 

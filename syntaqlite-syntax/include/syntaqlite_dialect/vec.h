@@ -13,6 +13,8 @@
 #include <stdint.h>
 #include <string.h>
 
+#include "syntaqlite/compiler.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -48,17 +50,29 @@ extern "C" {
     (v)->count = 0;             \
   } while (0)
 
+// Out of line so a push's common path has no call in it, and stays small
+// enough to inline.
+SYNQ_HEADER_NOINLINE SYNQ_COLD void* syntaqlite_vec_grow_(
+    void* data,
+    uint32_t* capacity,
+    uint32_t needed,
+    size_t elem_size,
+    void* (*xRealloc)(void*, size_t)) {
+  uint32_t cap = *capacity ? *capacity : 16;
+  while (cap < needed)
+    cap *= 2;
+  *capacity = cap;
+  return xRealloc(data, (size_t)cap * elem_size);
+}
+
 // Ensure capacity >= needed (capacity is always a power of two).
-#define syntaqlite_vec_ensure(v, needed, mem)             \
-  do {                                                    \
-    if ((needed) > (v)->capacity) {                       \
-      uint32_t _cap = (v)->capacity ? (v)->capacity : 16; \
-      while (_cap < (needed))                             \
-        _cap *= 2;                                        \
-      (v)->data = (__typeof__((v)->data))(mem).xRealloc(  \
-          (v)->data, (size_t)_cap * sizeof(*(v)->data));  \
-      (v)->capacity = _cap;                               \
-    }                                                     \
+#define syntaqlite_vec_ensure(v, needed, mem)                      \
+  do {                                                             \
+    if ((needed) > (v)->capacity) {                                \
+      (v)->data = (__typeof__((v)->data))syntaqlite_vec_grow_(     \
+          (v)->data, &(v)->capacity, (needed), sizeof(*(v)->data), \
+          (mem).xRealloc);                                         \
+    }                                                              \
   } while (0)
 
 // Append one element, grow if needed
