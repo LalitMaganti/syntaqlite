@@ -14,7 +14,11 @@
     "node-sql-parser": "^5.4.0",
     "prettier": "^3.8.1",
     "prettier-plugin-sql-cst": "^0.18.0",
+    "sql-language-server": "1.7.1",
     "sql-lint": "^1.0.1",
     "sql-parser-cst": "^0.38.2"
+  },
+  "overrides": {
+    "vscode-languageserver-protocol": "3.17.5"
   }
 }

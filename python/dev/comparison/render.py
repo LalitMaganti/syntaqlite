@@ -8,6 +8,8 @@ data from cached JSON results.
 import os
 import re
 
+from python.dev.comparison import bench
+
 FORMATTER_NAMES = ["syntaqlite", "prettier-cst", "sql-formatter", "sqlglot[c]", "sleek", "sqruff"]
 
 TMPL_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -204,7 +206,10 @@ def _build_formatter(ph, r):
 
     # Slow tools
     if r.get("slow_tools"):
-        slow_rows = [[st["name"], f"{st['time_ms']}ms"] for st in r["slow_tools"]]
+        slow_rows = [
+            [st["name"], "failed" if st["time_ms"] is None else f"{st['time_ms']}ms"]
+            for st in r["slow_tools"]
+        ]
         ph["FORMATTER_SLOW_TOOLS"] = (
             "\n### Slow tools (single timed run)\n\n"
             + _table(["Tool", "Time"], slow_rows, ['l', 'r'])
@@ -235,7 +240,9 @@ def _build_validator(ph, r):
     # Diagnostic quality table
     dq_rows = []
     for name in ["syntaqlite", "sqlite3", "sqlite-runner-lsp", "sql-lint"]:
-        d = demo.get(name, {})
+        if name not in demo:
+            continue
+        d = demo[name]
         found = d.get("errors_found", 0)
         finds_all = "Yes" if d.get("finds_all") else "No"
         dym = "Yes" if d.get("did_you_mean") else "No"
@@ -261,7 +268,9 @@ def _build_validator(ph, r):
     # Per-tool output showcase
     tool_output_lines = []
     for name in ["syntaqlite", "sqlite3", "sqlite-runner-lsp", "sql-lint"]:
-        d = demo.get(name, {})
+        if name not in demo:
+            continue
+        d = demo[name]
         tool_output_lines.append(f"### {name}\n")
         if d.get("description"):
             tool_output_lines.append(f"{d['description']}\n")
@@ -329,8 +338,8 @@ def _build_lsp(ph, r):
         ph["LSP_COMPLETION_DEPTH"] = ""
 
     # Speed
-    bench_md = r.get("speed", {}).get("hyperfine_md", "")
-    ph["LSP_SPEED"] = bench_md
+    speed = r.get("speed", {})
+    ph["LSP_SPEED"] = bench.markdown_table(speed.get("results", []), speed.get("untimed"))
 
     # Diagnostic detail
     if r.get("diagnostic_detail"):
@@ -349,8 +358,8 @@ def _build_lsp(ph, r):
 def _build_speed(ph, speed, prefix):
     bench_1x = speed.get("bench_1x", {})
     bench_30x = speed.get("bench_30x", {})
-    ph[f"{prefix}_SPEED_1X"] = bench_1x.get("hyperfine_md", "").strip()
-    ph[f"{prefix}_SPEED_30X"] = bench_30x.get("hyperfine_md", "").strip()
+    ph[f"{prefix}_SPEED_1X"] = bench.markdown_table(bench_1x.get("results", []))
+    ph[f"{prefix}_SPEED_30X"] = bench.markdown_table(bench_30x.get("results", []))
     ph[f"{prefix}_SPEED_1X_DESC"] = bench_1x.get("description", "")
     ph[f"{prefix}_SPEED_30X_DESC"] = bench_30x.get("description", "")
 

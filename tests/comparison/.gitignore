@@ -8,15 +8,10 @@ formatter/stmts/
 formatter/bench*.sql
 formatter/all_stmts*.sql
 formatter/large_test.sql
-formatter/bench_*.md
 lsp/bench.sql
-lsp/bench.md
 lsp/sqls_config.yml
 lsp/syntaqlite.toml
-lsp/_wrap_*.sh
 validator/bench.sql
 validator/bench_30x.sql
-validator/bench_*.md
-validator/_wrap_*.sh
 __pycache__/
 *.pyc
