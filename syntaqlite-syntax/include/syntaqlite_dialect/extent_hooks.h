@@ -10,6 +10,7 @@
 #ifndef SYNTAQLITE_INTERNAL_EXTENT_HOOKS_H
 #define SYNTAQLITE_INTERNAL_EXTENT_HOOKS_H
 
+#include "syntaqlite/compiler.h"  // for SYNQ_ALWAYS_INLINE, applied to yy_shift
 #include "syntaqlite_dialect/ast_builder.h"  // for SynqParseCtx, SynqParseToken
 #include "syntaqlite_dialect/dialect_abi.h"  // for SYNTAQLITE_DIALECT_API
 
@@ -36,13 +37,6 @@ SYNTAQLITE_DIALECT_API void synq_extent_on_reduce(SynqParseCtx* pCtx,
 // parent reduction that will never run.  Follow with
 // `synq_extent_record` to re-record the widened extent on the node.
 SYNTAQLITE_DIALECT_API void synq_extent_fold_below_into_top(SynqParseCtx* pCtx);
-
-// Applied to Lemon's `yy_shift` by the post-lemon patch step.
-#if defined(__GNUC__) || defined(__clang__)
-#define SYNQ_ALWAYS_INLINE __attribute__((always_inline)) inline
-#else
-#define SYNQ_ALWAYS_INLINE inline
-#endif
 
 // Lemon stores `yyRuleInfoNRhs[r]` as the negative of the rule's RHS
 // symbol count, so the reduce macro negates it to recover `nrhs`.

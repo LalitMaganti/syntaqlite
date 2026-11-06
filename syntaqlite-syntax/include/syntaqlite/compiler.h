@@ -32,4 +32,14 @@
                                       __LINE__)[(cond) ? 1 : -1]
 #endif
 
+// Forces a function inline, for hot paths where the compiler's own inlining
+// heuristics would leave a call.
+#if defined(__GNUC__) || defined(__clang__)
+#define SYNQ_ALWAYS_INLINE __attribute__((always_inline)) inline
+#elif defined(_MSC_VER)
+#define SYNQ_ALWAYS_INLINE __forceinline
+#else
+#define SYNQ_ALWAYS_INLINE inline
+#endif
+
 #endif  // SYNTAQLITE_COMPILER_H
