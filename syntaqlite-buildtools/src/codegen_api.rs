@@ -267,11 +267,6 @@ pub(crate) fn generate_runtime_tokens_header(token_defines: &[(String, u32)]) ->
     w.finish()
 }
 
-pub(crate) struct TokenizerExtractResult {
-    pub(crate) char_map: String,
-    pub(crate) upper_to_lower: String,
-}
-
 /// Parameters for a full codegen run.
 pub(crate) struct CodegenRequest<'a> {
     /// Dialect naming conventions.
@@ -668,14 +663,13 @@ pub(crate) fn generate_codegen_artifacts(
 
     // Assemble tokenizer and keyword hash from pre-extracted fragments.
     let fragments = sqlite_fragments::load();
-    let (tokenize_c, extract_result) = tokenizer_assembly::assemble(
+    let tokenize_c = tokenizer_assembly::assemble(
         &fragments,
         request.dialect.name(),
         &request.dialect_c_includes,
         request.literal_tokens,
     )?;
     let keyword_c = keyword_hash::generate(
-        &extract_result,
         &fragments,
         request.dialect.name(),
         request.extra_keywords,

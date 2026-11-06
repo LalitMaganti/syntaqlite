@@ -223,6 +223,44 @@ impl CTransformer {
     }
 
     /// Remove the first `/* ... */` block comment containing `needle`.
+    /// Remove the definition of array `name`, from its declaration line through
+    /// the closing `};`, together with the block comment directly above it.
+    pub(crate) fn remove_array_definition(mut self, name: &str) -> Self {
+        let decl = format!("{name}[");
+        let mut offset = 0;
+        let mut start = None;
+        for line in self.content.split_inclusive('\n') {
+            let code = line.trim_start();
+            let is_comment = code.starts_with("/*") || code.starts_with('*');
+            if !is_comment && code.contains(&decl) && code.contains('=') && code.contains('{') {
+                start = Some(offset);
+                break;
+            }
+            offset += line.len();
+        }
+        let Some(mut start) = start else {
+            self.record_error(format!(
+                "remove_array_definition: no definition of `{name}` found"
+            ));
+            return self;
+        };
+        let Some(end_rel) = self.content[start..].find("};\n") else {
+            self.record_error(format!(
+                "remove_array_definition: `{name}` has no closing `}};`"
+            ));
+            return self;
+        };
+        let end = start + end_rel + 3;
+        let before = self.content[..start].trim_end();
+        if before.ends_with("*/")
+            && let Some(comment) = before.rfind("/*")
+        {
+            start = comment;
+        }
+        self.content.replace_range(start..end, "");
+        self
+    }
+
     pub(crate) fn remove_block_comment_containing(mut self, needle: &str) -> Self {
         let Some(idx) = self.content.find(needle) else {
             self.record_error(format!(

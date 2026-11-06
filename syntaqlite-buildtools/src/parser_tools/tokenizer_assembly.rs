@@ -5,7 +5,6 @@
 //! dialect-specific naming to produce the final `tokenize.c`.
 
 use super::sqlite_fragments::SqliteFragments;
-use crate::codegen_api::TokenizerExtractResult;
 use crate::dialect_codegen::c_dialect::DialectCIncludes;
 use crate::util::c_transformer::CTransformer;
 use crate::util::c_writer::CWriter;
@@ -27,7 +26,7 @@ pub(crate) fn assemble(
     dialect: &str,
     includes: &DialectCIncludes<'_>,
     literals: &super::literal_tokens::LiteralTokens,
-) -> Result<(String, TokenizerExtractResult), String> {
+) -> Result<String, String> {
     let combined = {
         let mut w = CWriter::new();
         w.sqlite_file_header();
@@ -68,11 +67,5 @@ pub(crate) fn assemble(
         .finish()
         .map_err(|e| format!("Failed to assemble tokenizer for dialect `{dialect}`: {e}"))?;
 
-    Ok((
-        literals.wrap(output, &get_token_name),
-        TokenizerExtractResult {
-            char_map: fragments.char_map.to_string(),
-            upper_to_lower: fragments.upper_to_lower.to_string(),
-        },
-    ))
+    Ok(literals.wrap(output, &get_token_name))
 }
