@@ -246,11 +246,13 @@ SYNTAQLITE_API void syntaqlite_parser_destroy(SyntaqliteParser* p) {
 // Layer-N callers (macro expansion) handle their own error messages
 // and clear `p->ctx.error` themselves; for them, this function sets
 // `p->had_error` but leaves the error flag intact.
-int synq_parser_shift_token(SyntaqliteParser* p,
-                            uint32_t token_type,
-                            const char* text,
-                            uint32_t len,
-                            uint32_t layer_offset) {
+// Inline so the per-token loop in syntaqlite_parser_next doesn't pay a call
+// per token; parser_macros.c uses the out-of-line wrapper below.
+static inline int shift_token_inline(SyntaqliteParser* p,
+                                     uint32_t token_type,
+                                     const char* text,
+                                     uint32_t len,
+                                     uint32_t layer_offset) {
   uint32_t layer_id = p->ctx.layer_id;
   uint32_t tidx = 0xFFFFFFFF;
 
@@ -330,8 +332,15 @@ int synq_parser_shift_token(SyntaqliteParser* p,
   return 0;
 }
 
-// Local shorthand for the cross-file helper.
-#define shift_token synq_parser_shift_token
+int synq_parser_shift_token(SyntaqliteParser* p,
+                            uint32_t token_type,
+                            const char* text,
+                            uint32_t len,
+                            uint32_t layer_offset) {
+  return shift_token_inline(p, token_type, text, len, layer_offset);
+}
+
+#define shift_token shift_token_inline
 
 // ---------------------------------------------------------------------------
 // Internal: synthesize SEMI + EOF to finish parsing.
