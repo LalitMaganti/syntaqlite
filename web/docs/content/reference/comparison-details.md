@@ -10,7 +10,9 @@ Per-statement breakdowns, reproduction instructions, and methodology for the
 Generated on `x86_64-linux` with syntaqlite `0.14.0` on 2026-11-06.
 
 > To reproduce these results: `tools/run-comparison --setup && tools/run-comparison --all`.
-> See the script for requirements and tool versions.
+> Every timed command is listed, one table per category, at the top of
+> `python/dev/comparison/collect.py`. Tool versions are pinned by the lock files
+> in `tests/comparison/` and by `tools/run-comparison --setup`.
 
 ---
 
@@ -131,27 +133,27 @@ Legend: **PASS** = correctly parses valid SQL, **FAIL** = rejects valid SQL, **F
 
 ### bench.sql (1×)
 
-| Command | Mean Wall Time [ms] | Change | Factor |
-|:---|---:|---:|:---|
-| `syntaqlite` | 4.1 ± 2.0 |  |  |
-| `lemon-rs` | 2.2 ± 1.2 | -47.1% | (1.9x faster) |
-| `sql-parser-cst` | 104.2 ± 2.6 | +2459.0% | (25.6x slower) |
-| `sqlglot[c]` | 84.0 ± 1.2 | +1964.2% | (20.6x slower) |
-| `sqlparser-rs` | 3.0 ± 1.8 | -25.2% |  |
-| `node-sql-parser` | 89.9 ± 2.4 | +2108.5% | (22.1x slower) |
-| `sqlfluff` | 505.8 ± 13.1 | +12324.7% | (124.2x slower) |
+| Command | Mean [ms] | Min [ms] | Max [ms] | Relative |
+|:---|---:|---:|---:|---:|
+| `syntaqlite` | 1.7 ± 3.1 | 1.0 | 31.4 | 1.09 ± 2.14 |
+| `lemon-rs` | 1.5 ± 1.0 | 0.8 | 5.0 | 1.00 |
+| `sql-parser-cst` | 105.0 ± 2.8 | 100.2 | 111.8 | 67.97 ± 43.21 |
+| `sqlglot[c]` | 83.3 ± 1.5 | 81.6 | 87.3 | 53.93 ± 34.27 |
+| `sqlparser-rs` | 3.0 ± 1.7 | 1.3 | 7.5 | 1.95 ± 1.65 |
+| `node-sql-parser` | 90.2 ± 1.9 | 86.7 | 94.0 | 58.41 ± 37.12 |
+| `sqlfluff` | 505.9 ± 6.2 | 496.1 | 516.2 | 327.45 ± 208.02 |
 
 ### bench_30x.sql (30×)
 
-| Command | Mean Wall Time [ms] | Change | Factor |
-|:---|---:|---:|:---|
-| `syntaqlite` | 4.1 ± 2.1 |  |  |
-| `lemon-rs` | 5.9 ± 2.5 | +46.3% | (1.5x slower) |
-| `sql-parser-cst` | 251.6 ± 19.2 | +6099.8% | (62.0x slower) |
-| `sqlglot[c]` | 231.5 ± 9.1 | +5606.1% | (57.1x slower) |
-| `sqlparser-rs` | 16.6 ± 0.3 | +309.3% | (4.1x slower) |
-| `node-sql-parser` | 240.0 ± 6.7 | +5815.7% | (59.2x slower) |
-| `sqlfluff` | 8069.8 ± 49.8 | +198785.9% | (1988.9x slower) |
+| Command | Mean [ms] | Min [ms] | Max [ms] | Relative |
+|:---|---:|---:|---:|---:|
+| `syntaqlite` | 3.4 ± 4.9 | 2.1 | 42.2 | 1.00 |
+| `lemon-rs` | 5.0 ± 1.9 | 3.4 | 14.9 | 1.46 ± 2.20 |
+| `sql-parser-cst` | 254.4 ± 14.5 | 238.5 | 275.3 | 74.95 ± 109.14 |
+| `sqlglot[c]` | 232.9 ± 8.6 | 226.7 | 254.5 | 68.61 ± 99.86 |
+| `sqlparser-rs` | 16.7 ± 0.4 | 15.7 | 17.7 | 4.91 ± 7.14 |
+| `node-sql-parser` | 245.3 ± 14.6 | 234.0 | 280.6 | 72.24 ± 105.20 |
+| `sqlfluff` | 8075.4 ± 29.9 | 8036.7 | 8125.4 | 2378.71 ± 3461.03 |
 
 ---
 
@@ -286,34 +288,34 @@ syntactic validity. "CORRUPT" means the bytecode differs or `EXPLAIN` fails.
 
 ### bench.sql (1×)
 
-| Command | Mean Wall Time [ms] | Change | Factor |
-|:---|---:|---:|:---|
-| `syntaqlite` | 2.7 ± 4.1 |  |  |
-| `prettier-cst` | 174.2 ± 8.0 | +6440.8% | (65.4x slower) |
-| `sql-formatter` | 98.8 ± 2.6 | +3610.6% | (37.1x slower) |
-| `sqlglot[c]` | 88.2 ± 2.1 | +3209.3% | (33.1x slower) |
-| `sleek` | 16.5 ± 7.1 | +521.0% | (6.2x slower) |
-| `sqruff` | 72.7 ± 2.5 | +2629.0% | (27.3x slower) |
+| Command | Mean [ms] | Min [ms] | Max [ms] | Relative |
+|:---|---:|---:|---:|---:|
+| `syntaqlite` | 2.1 ± 3.1 | 1.2 | 31.3 | 1.00 |
+| `prettier-cst` | 168.8 ± 4.9 | 163.5 | 178.9 | 82.19 ± 124.81 |
+| `sql-formatter` | 98.7 ± 3.0 | 94.8 | 104.0 | 48.07 ± 73.00 |
+| `sqlglot[c]` | 89.6 ± 1.6 | 86.7 | 94.0 | 43.64 ± 66.26 |
+| `sleek` | 2.9 ± 1.7 | 1.1 | 7.1 | 1.43 ± 2.33 |
+| `sqruff` | 56.1 ± 0.9 | 54.5 | 58.6 | 27.31 ± 41.46 |
 
 ### bench_30x.sql (30×)
 
-| Command | Mean Wall Time [ms] | Change | Factor |
-|:---|---:|---:|:---|
-| `syntaqlite` | 8.0 ± 1.9 |  |  |
-| `prettier-cst` | 485.8 ± 18.3 | +5965.4% | (60.7x slower) |
-| `sql-formatter` | 305.7 ± 9.4 | +3716.4% | (38.2x slower) |
-| `sqlglot[c]` | 340.5 ± 8.7 | +4150.9% | (42.5x slower) |
-| `sleek` | 24.6 ± 7.0 | +207.3% | (3.1x slower) |
-| `sqruff` | 2404.1 ± 23.0 | +29913.6% | (300.1x slower) |
+| Command | Mean [ms] | Min [ms] | Max [ms] | Relative |
+|:---|---:|---:|---:|---:|
+| `syntaqlite` | 7.4 ± 3.5 | 6.2 | 36.7 | 1.00 |
+| `prettier-cst` | 485.8 ± 24.7 | 462.8 | 529.4 | 65.41 ± 31.15 |
+| `sql-formatter` | 307.2 ± 6.8 | 297.3 | 315.2 | 41.37 ± 19.61 |
+| `sqlglot[c]` | 339.2 ± 9.5 | 333.3 | 365.5 | 45.68 ± 21.67 |
+| `sleek` | 17.8 ± 0.5 | 16.9 | 21.0 | 2.39 ± 1.13 |
+| `sqruff` | 2301.5 ± 13.5 | 2280.7 | 2324.2 | 309.91 ± 146.76 |
 
 
 ### Slow tools (single timed run)
 
 | Tool          |   Time |
 | ------------- | -----: |
-| sqlfmt (1x)   |  160ms |
+| sqlfmt (1x)   |  164ms |
 | sqlfmt (30x)  | failed |
-| sqlfluff (1x) | 1914ms |
+| sqlfluff (1x) | 1720ms |
 
 ---
 
@@ -351,12 +353,12 @@ Static analysis runs offline and reports **both** errors in one pass:
 
 ```
 error: table 'monthly_stats' has 2 values for 3 columns
-  --> /tmp/tmp14kfwjx1.sql:30:3
+  --> /tmp/tmpxh24_5pv.sql:30:3
    |
 30 |   monthly_stats(month, revenue, order_count) AS (
    |   ^~~~~~~~~~~~~
 warning: unknown function 'ROUDN'
-  --> /tmp/tmp14kfwjx1.sql:42:3
+  --> /tmp/tmpxh24_5pv.sql:42:3
    |
 42 |   ROUDN(ms.revenue / ms.order_count, 2) AS avg_order
    |   ^~~~~
@@ -372,12 +374,20 @@ Runtime execution stops at the first error:
 Error: in prepare, table monthly_stats has 2 values for 3 columns
 ```
 
+### sqlite-runner-lsp
+
+The LSP wraps sqlite3 at runtime and reports the same single error:
+
+```
+29:1 error Parse error: table monthly_stats has 2 values for 3 columns
+```
+
 ### sql-lint
 
 Structural checks only:
 
 ```
-/tmp/tmp6hjs71wv.sql:1 sql-lint was unable to lint the following query "WITH  monthly_stats(month, revenue, order_count)...
+/tmp/tmp13bhrl7f.sql:1 sql-lint was unable to lint the following query "WITH  monthly_stats(month, revenue, order_count)...
 ```
 
 
@@ -385,40 +395,41 @@ Structural checks only:
 
 Schema: `users`, `orders`, `products`, `order_items`. Ground truth: sqlite3.
 
-| Test                      | Expect | syntaqlite | sqlite3 | sql-lint |
-| ------------------------- | :----: | :--------: | :-----: | :------: |
-| keyword typo (SELEC)      | error  |   FOUND    |  FOUND  |  FOUND   |
-| missing close paren       | error  |   FOUND    |  FOUND  |  FOUND   |
-| double comma              | error  |   FOUND    |  FOUND  |   MISS   |
-| unterminated string       | error  |   FOUND    |  FOUND  |   MISS   |
-| trailing comma in VALUES  | error  |   FOUND    |  FOUND  |  FOUND   |
-| unknown table             | error  |   FOUND    |  FOUND  |   MISS   |
-| unknown table in JOIN     | error  |   FOUND    |  FOUND  |   MISS   |
-| unknown column            | error  |   FOUND    |  FOUND  |   MISS   |
-| unknown qualified column  | error  |   FOUND    |  FOUND  |   MISS   |
-| unknown column in SELECT  | error  |   FOUND    |  FOUND  |   MISS   |
-| SUBSTR: too few args      | error  |   FOUND    |  FOUND  |   MISS   |
-| REPLACE: too few args     | error  |   FOUND    |  FOUND  |   MISS   |
-| LENGTH: too many args     | error  |   FOUND    |  FOUND  |   MISS   |
-| COALESCE: zero args       | error  |    MISS    |  FOUND  |   MISS   |
-| CTE: 3 declared, 2 actual | error  |   FOUND    |  FOUND  |  FOUND   |
-| valid: simple SELECT      | valid  |     OK     |   OK    |    OK    |
-| valid: JOIN + aggregate   | valid  |     OK     |   OK    |    OK    |
-| valid: SUBSTR with 3 args | valid  |     OK     |   OK    |    OK    |
-| valid: COALESCE variadic  | valid  |     OK     |   OK    |    OK    |
-| valid: CTE columns match  | valid  |     OK     |   OK    |    FP    |
-| valid: built-in functions | valid  |     OK     |   OK    |    OK    |
-| valid: INSERT             | valid  |     OK     |   OK    |    OK    |
-| valid: UPDATE             | valid  |     OK     |   OK    |    OK    |
-| valid: DELETE with WHERE  | valid  |     OK     |   OK    |    OK    |
+| Test                      | Expect | syntaqlite | sqlite3 | sqlite-runner-lsp | sql-lint |
+| ------------------------- | :----: | :--------: | :-----: | :---------------: | :------: |
+| keyword typo (SELEC)      | error  |   FOUND    |  FOUND  |       FOUND       |  FOUND   |
+| missing close paren       | error  |   FOUND    |  FOUND  |       FOUND       |  FOUND   |
+| double comma              | error  |   FOUND    |  FOUND  |       FOUND       |   MISS   |
+| unterminated string       | error  |   FOUND    |  FOUND  |       FOUND       |   MISS   |
+| trailing comma in VALUES  | error  |   FOUND    |  FOUND  |       FOUND       |  FOUND   |
+| unknown table             | error  |   FOUND    |  FOUND  |       FOUND       |   MISS   |
+| unknown table in JOIN     | error  |   FOUND    |  FOUND  |       FOUND       |   MISS   |
+| unknown column            | error  |   FOUND    |  FOUND  |       FOUND       |   MISS   |
+| unknown qualified column  | error  |   FOUND    |  FOUND  |       FOUND       |   MISS   |
+| unknown column in SELECT  | error  |   FOUND    |  FOUND  |       FOUND       |   MISS   |
+| SUBSTR: too few args      | error  |   FOUND    |  FOUND  |       FOUND       |   MISS   |
+| REPLACE: too few args     | error  |   FOUND    |  FOUND  |       FOUND       |   MISS   |
+| LENGTH: too many args     | error  |   FOUND    |  FOUND  |       FOUND       |   MISS   |
+| COALESCE: zero args       | error  |    MISS    |  FOUND  |       FOUND       |   MISS   |
+| CTE: 3 declared, 2 actual | error  |   FOUND    |  FOUND  |       FOUND       |  FOUND   |
+| valid: simple SELECT      | valid  |     OK     |   OK    |        OK         |    OK    |
+| valid: JOIN + aggregate   | valid  |     OK     |   OK    |        OK         |    OK    |
+| valid: SUBSTR with 3 args | valid  |     OK     |   OK    |        OK         |    OK    |
+| valid: COALESCE variadic  | valid  |     OK     |   OK    |        OK         |    OK    |
+| valid: CTE columns match  | valid  |     OK     |   OK    |        OK         |    FP    |
+| valid: built-in functions | valid  |     OK     |   OK    |        OK         |    OK    |
+| valid: INSERT             | valid  |     OK     |   OK    |        OK         |    OK    |
+| valid: UPDATE             | valid  |     OK     |   OK    |        OK         |    OK    |
+| valid: DELETE with WHERE  | valid  |     OK     |   OK    |        OK         |    OK    |
 
 ### Scoreboard
 
-| Tool       | Approach          | Correct                    | Missed | FP |
-| ---------- | ----------------- | -------------------------- | -----: | -: |
-| sqlite3    | runtime execution | 24/24 ████████████████████ |      - |  - |
-| syntaqlite | static semantic   | 23/24 ███████████████████  |      1 |  - |
-| sql-lint   | structural checks | 12/24 ██████████           |     11 |  1 |
+| Tool              | Approach          | Correct                    | Missed | FP |
+| ----------------- | ----------------- | -------------------------- | -----: | -: |
+| sqlite3           | runtime execution | 24/24 ████████████████████ |      - |  - |
+| sqlite-runner-lsp | runtime via LSP   | 24/24 ████████████████████ |      - |  - |
+| syntaqlite        | static semantic   | 23/24 ███████████████████  |      1 |  - |
+| sql-lint          | structural checks | 12/24 ██████████           |     11 |  1 |
 
 ## Speed details
 
@@ -427,19 +438,21 @@ Schema: `users`, `orders`, `products`, `order_items`. Ground truth: sqlite3.
 
 ### bench.sql (1×)
 
-| Command | Mean Wall Time [ms] | Change | Factor |
-|:---|---:|---:|:---|
-| `syntaqlite` | 3.4 ± 4.6 |  |  |
-| `sqlite3` | 6.2 ± 3.5 | +82.9% | (1.8x slower) |
-| `sql-lint` | 86.5 ± 3.1 | +2444.2% | (25.4x slower) |
+| Command | Mean [ms] | Min [ms] | Max [ms] | Relative |
+|:---|---:|---:|---:|---:|
+| `syntaqlite` | 4.3 ± 3.5 | 1.8 | 31.9 | 1.69 ± 1.56 |
+| `sqlite3` | 2.6 ± 1.1 | 1.9 | 8.1 | 1.00 |
+| `sqlite-runner-lsp` | 254.5 ± 12.9 | 239.4 | 275.6 | 98.93 ± 42.84 |
+| `sql-lint` | 83.7 ± 1.5 | 81.7 | 87.8 | 32.55 ± 14.01 |
 
 ### bench_30x.sql (30×)
 
-| Command | Mean Wall Time [ms] | Change | Factor |
-|:---|---:|---:|:---|
-| `syntaqlite` | 9.9 ± 1.6 |  |  |
-| `sqlite3` | 11.0 ± 1.5 | +11.8% |  |
-| `sql-lint` | 135.0 ± 3.6 | +1267.8% | (13.7x slower) |
+| Command | Mean [ms] | Min [ms] | Max [ms] | Relative |
+|:---|---:|---:|---:|---:|
+| `syntaqlite` | 9.7 ± 1.1 | 8.7 | 16.9 | 1.04 ± 0.16 |
+| `sqlite3` | 9.3 ± 1.0 | 8.4 | 14.9 | 1.00 |
+| `sqlite-runner-lsp` | 249.3 ± 9.8 | 239.5 | 273.9 | 26.82 ± 3.02 |
+| `sql-lint` | 136.7 ± 8.3 | 130.3 | 165.8 | 14.72 ± 1.79 |
 
 ---
 
@@ -450,18 +463,18 @@ Schema: `users`, `orders`, `products`, `order_items`. Ground truth: sqlite3.
 Each server is started, sent a test file, and probed for completion, hover,
 diagnostics, and formatting via the LSP protocol.
 
-| Feature                |    syntaqlite   |        sqls ¹        | sql-language-server |
-| ---------------------- | :-------------: | :------------------: | :-----------------: |
-| Completion             | Yes (133 items) | Advertised (0 items) |   Yes (11 items)    |
-| Hover                  |       Yes       |          No          |         No          |
-| Go to definition       |       Yes       |         Yes          |         No          |
-| Find references        |       Yes       |          No          |         No          |
-| Diagnostics: syntax    |       Yes       |          No          |         Yes         |
-| Diagnostics: semantic  |       Yes       |          No          |         Yes         |
-| Formatting             |       Yes       |         Yes          |         No          |
-| Rename                 |       Yes       |         Yes          |         Yes         |
-| Signature help         |       Yes       |         Yes          |         No          |
-| Requires DB connection |       No        |         Yes          |         No          |
+| Feature                |    syntaqlite   |     sqls ¹    | sql-language-server |
+| ---------------------- | :-------------: | :-----------: | :-----------------: |
+| Completion             | Yes (133 items) | Yes (6 items) |   Yes (11 items)    |
+| Hover                  |       Yes       |      Yes      |         No          |
+| Go to definition       |       Yes       |      Yes      |         No          |
+| Find references        |       Yes       |      No       |         No          |
+| Diagnostics: syntax    |       Yes       |      No       |         Yes         |
+| Diagnostics: semantic  |       Yes       |      No       |         Yes         |
+| Formatting             |       Yes       |      Yes      |         No          |
+| Rename                 |       Yes       |      Yes      |         Yes         |
+| Signature help         |       Yes       |      Yes      |         No          |
+| Requires DB connection |       No        |      Yes      |         No          |
 
 ¹ sqls requires a live database connection. Completion and hover results come
 from the connected database schema, not static analysis. Without a database,
@@ -473,6 +486,7 @@ these features return no results.
 | ------------------- | ------------------------ |
 | syntaqlite          | 133 ████████████████████ |
 | sql-language-server | 11 █                     |
+| sqls ¹              | 6 █                      |
 
 ## Diagnostic detail
 
@@ -502,7 +516,8 @@ What each server reports for `SELEC * FROM users;` (syntax error):
 
 Time to start server, send document, receive diagnostics, and exit:
 
-| Command | Mean Wall Time [ms] | Change | Factor |
-|:---|---:|---:|:---|
-| `syntaqlite` | 25.8 ± 3.6 |  |  |
-| `sql-language-server` | 231.0 ± 13.5 | +796.1% | (9.0x slower) |
+| Command | Mean [ms] | Min [ms] | Max [ms] | Relative |
+|:---|---:|---:|---:|---:|
+| `syntaqlite` | 24.3 ± 3.3 | 21.7 | 47.0 | 1.00 |
+| `sql-language-server` | 222.8 ± 2.9 | 216.6 | 227.1 | 9.18 ± 1.25 |
+| `sqls` | publishes no diagnostics | | | |

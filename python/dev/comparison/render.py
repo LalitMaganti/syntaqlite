@@ -8,6 +8,8 @@ data from cached JSON results.
 import os
 import re
 
+from python.dev.comparison import bench
+
 FORMATTER_NAMES = ["syntaqlite", "prettier-cst", "sql-formatter", "sqlglot[c]", "sleek", "sqruff"]
 
 TMPL_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -336,8 +338,8 @@ def _build_lsp(ph, r):
         ph["LSP_COMPLETION_DEPTH"] = ""
 
     # Speed
-    bench_md = r.get("speed", {}).get("hyperfine_md", "")
-    ph["LSP_SPEED"] = bench_md
+    speed = r.get("speed", {})
+    ph["LSP_SPEED"] = bench.markdown_table(speed.get("results", []), speed.get("untimed"))
 
     # Diagnostic detail
     if r.get("diagnostic_detail"):
@@ -356,8 +358,8 @@ def _build_lsp(ph, r):
 def _build_speed(ph, speed, prefix):
     bench_1x = speed.get("bench_1x", {})
     bench_30x = speed.get("bench_30x", {})
-    ph[f"{prefix}_SPEED_1X"] = bench_1x.get("hyperfine_md", "").strip()
-    ph[f"{prefix}_SPEED_30X"] = bench_30x.get("hyperfine_md", "").strip()
+    ph[f"{prefix}_SPEED_1X"] = bench.markdown_table(bench_1x.get("results", []))
+    ph[f"{prefix}_SPEED_30X"] = bench.markdown_table(bench_30x.get("results", []))
     ph[f"{prefix}_SPEED_1X_DESC"] = bench_1x.get("description", "")
     ph[f"{prefix}_SPEED_30X_DESC"] = bench_30x.get("description", "")
 

@@ -24,7 +24,6 @@ syntax, including `UPSERT`, `RETURNING`, `STRICT` tables, window frames with
 validated against `sqlite3` itself (the ground truth), then run through every
 parser. A tool scores "correct" only if it agrees with sqlite3.
 
-
 ## Accuracy
 
 {{PARSER_ACCURACY_TABLE}}
@@ -52,7 +51,6 @@ formatted SQL and compare the bytecode sqlite3 produces. Identical bytecode
 means sqlite3 will execute the exact same operations, so the formatter preserved
 semantics, not just validity. Tools that crash or refuse to format score
 "refused". Tools whose output produces different bytecode score "corrupt".
-
 
 ## Accuracy
 

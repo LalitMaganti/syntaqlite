@@ -27,6 +27,8 @@ sys.path.insert(0, REPO)
 
 # ── Setup ──────────────────────────────────────────────────────────
 
+SQLITE_RUNNER_LSP_COMMIT = "c833c5a725f26605344357c0c956e97e78918298"  # v0.0.5
+
 def do_setup():
     print("==> Installing comparison dependencies...\n")
 
@@ -80,7 +82,17 @@ def do_setup():
         print("WARN: 'go' not found, skipping sqls install")
     print()
 
-    # 8. Build syntaqlite
+    # 8. SQLite Runner LSP (not published to npm), pinned to a commit
+    print("--- SQLite Runner LSP ---")
+    runner_dir = os.path.join(COMP_DIR, "_sqlite_runner_lsp")
+    if not os.path.isdir(runner_dir):
+        _sh(f"git clone https://github.com/phil294/SQLite-Runner-LSP.git '{runner_dir}'")
+    _sh(f"git -C '{runner_dir}' fetch -q origin {SQLITE_RUNNER_LSP_COMMIT}")
+    _sh(f"git -C '{runner_dir}' checkout -q {SQLITE_RUNNER_LSP_COMMIT}")
+    _sh("npm ci", cwd=os.path.join(runner_dir, "server"))
+    print()
+
+    # 9. Build syntaqlite
     print("--- building syntaqlite CLI ---")
     _sh(f"{REPO}/tools/cargo build --release -p syntaqlite-cli")
     print()
