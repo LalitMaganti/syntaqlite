@@ -331,6 +331,10 @@ fn main() {{
     if target_os == "emscripten" {{
         build.flag("-fPIC");
     }}
+    // C asserts and Lemon's parser tracing follow Rust's debug assertions.
+    if env::var("CARGO_CFG_DEBUG_ASSERTIONS").is_err() {{
+        build.define("NDEBUG", None);
+    }}
 
     // ── Version pinning ─────────────────────────────────────────────────
     //

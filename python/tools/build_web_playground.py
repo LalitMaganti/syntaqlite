@@ -217,6 +217,8 @@ def main() -> int:
         "-I", os.path.join(ROOT_DIR, "syntaqlite-syntax"),
         "-I", os.path.join(ROOT_DIR, "syntaqlite-syntax", "include"),
         "-DSYNTAQLITE_OMIT_SQLITE_API",
+        # Matches the release cargo build: no C asserts or parser tracing.
+        "-DNDEBUG",
         "-sWASM_BIGINT",
         "-sSIDE_MODULE=1",
         "--no-entry",
@@ -294,7 +296,7 @@ def main() -> int:
     out_perfetto_debug = os.path.join(ROOT_DIR, "web/playground", "public", "syntaqlite-perfetto.debug.wasm")
     rc = subprocess.call(
         [
-            "emcc", "-O3", "-fPIC",
+            "emcc", "-O3", "-fPIC", "-DNDEBUG",
             "-g", "-gseparate-dwarf=" + out_perfetto_debug,
             os.path.join(perfetto_csrc_dir, "syntaqlite_perfetto.c"),
             "-I", perfetto_csrc_dir,

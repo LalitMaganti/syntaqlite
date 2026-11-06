@@ -112,33 +112,40 @@ impl CTransformer {
 
     /// Insert content after the last include directive outside any
     /// preprocessor conditional, so the insertion is compiled whatever macros
-    /// (e.g. `NDEBUG`) are defined. Falls back to the last include anywhere,
-    /// for files whose includes all sit inside an include guard.
+    /// (e.g. `NDEBUG`) are defined.
     pub(crate) fn insert_after_includes(mut self, content: &str) -> Self {
         let mut depth = 0usize;
         let mut offset = 0;
-        // (end offset, ends in newline) of the last include line, overall and
-        // outside any conditional.
-        let mut last_any = None;
-        let mut last_unconditional = None;
+        // (end offset, ends in newline) of the last unconditional include.
+        let mut last_include = None;
         for line in self.content.split_inclusive('\n') {
-            let directive = line.trim_start();
-            if directive.starts_with("#if") {
-                depth += 1;
-            } else if directive.starts_with("#endif") {
-                depth = depth.saturating_sub(1);
-            } else if directive.starts_with("#include") {
-                let end = Some((offset + line.len(), line.ends_with('\n')));
-                last_any = end;
-                if depth == 0 {
-                    last_unconditional = end;
+            match preprocessor_directive(line) {
+                // `#if`, `#ifdef` and `#ifndef`.
+                Some(d) if d.starts_with("if") => depth += 1,
+                Some(d) if d.starts_with("endif") => {
+                    if depth == 0 {
+                        self.record_error(
+                            "insert_after_includes: `#endif` without a matching `#if`".to_string(),
+                        );
+                        return self;
+                    }
+                    depth -= 1;
                 }
+                Some(d) if d.starts_with("include") && depth == 0 => {
+                    last_include = Some((offset + line.len(), line.ends_with('\n')));
+                }
+                _ => {}
             }
             offset += line.len();
         }
-        let Some((insert_pos, terminated)) = last_unconditional.or(last_any) else {
+        if depth != 0 {
+            self.record_error("insert_after_includes: unterminated `#if`".to_string());
+            return self;
+        }
+        let Some((insert_pos, terminated)) = last_include else {
             self.record_error(
-                "insert_after_includes: no `#include` directive found in content".to_string(),
+                "insert_after_includes: no `#include` outside a preprocessor conditional"
+                    .to_string(),
             );
             return self;
         };
@@ -301,6 +308,13 @@ impl CTransformer {
     }
 }
 
+/// The directive name and arguments of a preprocessor line, with the `#` and
+/// any whitespace around it removed, e.g. `include <assert.h>` for
+/// `#  include <assert.h>`.
+fn preprocessor_directive(line: &str) -> Option<&str> {
+    Some(line.trim_start().strip_prefix('#')?.trim_start())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -370,15 +384,56 @@ mod tests {
         assert!(err.contains("#include"));
     }
 
-    #[test]
-    fn insert_after_includes_skips_conditional_includes() {
-        let src = "#include <assert.h>\n#ifndef NDEBUG\n#include <stdio.h>\n#endif\nint x;\n";
-        let out = CTransformer::new(src)
+    fn insert_after(src: &str) -> Result<String, String> {
+        CTransformer::new(src)
             .insert_after_includes("#include \"extra.h\"")
             .finish()
-            .expect("should succeed");
+    }
+
+    #[test]
+    fn insert_after_includes_skips_conditional_includes() {
+        let out = insert_after(
+            "#include <assert.h>\n#ifndef NDEBUG\n#include <stdio.h>\n#endif\nint x;\n",
+        )
+        .expect("should succeed");
         let extra = out.find("extra.h").unwrap();
+        assert!(out.find("<assert.h>").unwrap() < extra);
         assert!(extra < out.find("#ifndef NDEBUG").unwrap());
+    }
+
+    #[test]
+    fn insert_after_includes_handles_nested_and_spaced_directives() {
+        let out = insert_after(concat!(
+            "#include <a.h>\n",
+            "# if A\n",
+            "#  ifdef B\n",
+            "#   include <b.h>\n",
+            "#  else\n",
+            "#   include <c.h>\n",
+            "#  endif\n",
+            "# elif C\n",
+            "#include <d.h>\n",
+            "# endif\n",
+            "#  include <e.h>\n",
+            "int x;\n",
+        ))
+        .expect("should succeed");
+        let extra = out.find("extra.h").unwrap();
+        assert!(out.find("<e.h>").unwrap() < extra);
+        assert!(extra < out.find("int x;").unwrap());
+    }
+
+    #[test]
+    fn insert_after_includes_fails_without_unconditional_include() {
+        let err = insert_after("#ifndef GUARD\n#define GUARD\n#include <a.h>\n#endif\n")
+            .expect_err("should fail");
+        assert!(err.contains("outside a preprocessor conditional"));
+    }
+
+    #[test]
+    fn insert_after_includes_fails_on_unbalanced_conditionals() {
+        assert!(insert_after("#include <a.h>\n#endif\n").is_err());
+        assert!(insert_after("#include <a.h>\n#if A\n").is_err());
     }
 
     #[test]
