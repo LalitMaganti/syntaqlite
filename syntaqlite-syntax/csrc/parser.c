@@ -9,6 +9,7 @@
 // live in parser_extents.c.  AST dump lives in parser_dump.c.
 // Cross-file helpers are declared in csrc/parser_internal.h.
 
+#include <assert.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -246,12 +247,17 @@ SYNTAQLITE_API void syntaqlite_parser_destroy(SyntaqliteParser* p) {
 // Layer-N callers (macro expansion) handle their own error messages
 // and clear `p->ctx.error` themselves; for them, this function sets
 // `p->had_error` but leaves the error flag intact.
-int synq_parser_shift_token(SyntaqliteParser* p,
-                            uint32_t token_type,
-                            const char* text,
-                            uint32_t len,
-                            uint32_t layer_offset) {
-  uint32_t layer_id = p->ctx.layer_id;
+// Inline so the per-token loop in syntaqlite_parser_next doesn't pay a call
+// per token; every other caller uses the out-of-line wrapper below.
+// `layer_id` must equal `p->ctx.layer_id`; the main loop passes the constant 0
+// so the layer-N branches compile away there.
+static inline int shift_token_inline(SyntaqliteParser* p,
+                                     uint32_t token_type,
+                                     const char* text,
+                                     uint32_t len,
+                                     uint32_t layer_offset,
+                                     uint32_t layer_id) {
+  assert(layer_id == p->ctx.layer_id);
   uint32_t tidx = 0xFFFFFFFF;
 
   if (p->collect_tokens && text) {
@@ -330,8 +336,14 @@ int synq_parser_shift_token(SyntaqliteParser* p,
   return 0;
 }
 
-// Local shorthand for the cross-file helper.
-#define shift_token synq_parser_shift_token
+int synq_parser_shift_token(SyntaqliteParser* p,
+                            uint32_t token_type,
+                            const char* text,
+                            uint32_t len,
+                            uint32_t layer_offset) {
+  return shift_token_inline(p, token_type, text, len, layer_offset,
+                            p->ctx.layer_id);
+}
 
 // ---------------------------------------------------------------------------
 // Internal: synthesize SEMI + EOF to finish parsing.
@@ -353,7 +365,7 @@ static int finish_input(SyntaqliteParser* p) {
 
   // Synthesize SEMI if the last token wasn't one.
   if (p->last_token_type != SYNTAQLITE_TK_SEMI) {
-    int rc = shift_token(p, SYNTAQLITE_TK_SEMI, NULL, 0, 0);
+    int rc = synq_parser_shift_token(p, SYNTAQLITE_TK_SEMI, NULL, 0, 0);
     if (rc == 1) {
       p->finished = 1;
       return set_result_status(p, stmt_boundary(p));
@@ -535,19 +547,26 @@ void synq_parser_record_comment(SyntaqliteParser* p,
 // Tokenize the next non-whitespace token, recording any comments along the
 // way.  Returns the token length (0 at end-of-input).  `*out_offset` and
 // `*out_type` are set to the position and type of the returned token.
-static int64_t next_token(SyntaqliteParser* p,
-                          const unsigned char* z,
-                          uint32_t pos,
-                          uint32_t* out_offset,
-                          uint32_t* out_type) {
+// Forced inline for the per-token lookahead, where GCC would otherwise keep it
+// out of line; the other callers use the out-of-line `next_token` below.
+static SYNQ_ALWAYS_INLINE int64_t next_token_inline(SyntaqliteParser* p,
+                                                    const unsigned char* z,
+                                                    uint32_t pos,
+                                                    uint32_t* out_offset,
+                                                    uint32_t* out_type) {
   while (pos < p->source_len && z[pos] != '\0') {
+    // Skip whitespace here instead of calling the tokenizer just to get
+    // TK_SPACE back. A run ends on a byte that cannot start another, so go
+    // straight on to tokenizing it.
+    pos = synq_skip_whitespace(z, pos, p->source_len);
+    if (pos >= p->source_len || z[pos] == '\0')
+      break;
     uint32_t type = 0;
 #ifdef SYNTAQLITE_OMIT_MACROS
-    int64_t len =
-        SynqSqliteGetTokenVersionWrapped(&p->dialect, 0, z + pos, &type);
+    int64_t len = synq_get_token_wrapped(&p->dialect, 0, z + pos, &type);
 #else
-    int64_t len = SynqSqliteGetTokenVersionWrapped(
-        &p->dialect, p->macro.macro_fallback, z + pos, &type);
+    int64_t len = synq_get_token_wrapped(&p->dialect, p->macro.macro_fallback,
+                                         z + pos, &type);
 #endif
     if (len <= 0)
       return 0;
@@ -562,6 +581,14 @@ static int64_t next_token(SyntaqliteParser* p,
   *out_offset = pos;
   *out_type = 0;
   return 0;
+}
+
+static SYNQ_NOINLINE int64_t next_token(SyntaqliteParser* p,
+                                        const unsigned char* z,
+                                        uint32_t pos,
+                                        uint32_t* out_offset,
+                                        uint32_t* out_type) {
+  return next_token_inline(p, z, pos, out_offset, out_type);
 }
 
 // ---------------------------------------------------------------------------
@@ -669,19 +696,26 @@ SYNTAQLITE_API int32_t syntaqlite_parser_next(SyntaqliteParser* p) {
     p->offset = cur_offset + (uint32_t)cur_len;
 
     // Context-sensitive keyword reclassification: WINDOW/OVER/FILTER may
-    // need to be demoted to TK_ID depending on surrounding tokens.
-    if (cur_type == SYNTAQLITE_TK_WINDOW) {
-      cur_type = synq_analyze_window(p, z + p->offset);
-    } else if (cur_type == SYNTAQLITE_TK_OVER) {
-      cur_type = synq_analyze_over(p, z + p->offset, p->last_token_type);
-    } else if (cur_type == SYNTAQLITE_TK_FILTER) {
-      cur_type = synq_analyze_filter(p, z + p->offset, p->last_token_type);
+    // need to be demoted to TK_ID depending on surrounding tokens.  The
+    // three are contiguous, so one range check skips every other token.
+    SYNQ_STATIC_ASSERT(
+        SYNTAQLITE_TK_OVER == SYNTAQLITE_TK_WINDOW + 1 &&
+            SYNTAQLITE_TK_FILTER == SYNTAQLITE_TK_WINDOW + 2,
+        "WINDOW, OVER and FILTER token codes must be contiguous");
+    if (cur_type - SYNTAQLITE_TK_WINDOW <= 2u) {
+      if (cur_type == SYNTAQLITE_TK_WINDOW) {
+        cur_type = synq_analyze_window(p, z + p->offset);
+      } else if (cur_type == SYNTAQLITE_TK_OVER) {
+        cur_type = synq_analyze_over(p, z + p->offset, p->last_token_type);
+      } else {
+        cur_type = synq_analyze_filter(p, z + p->offset, p->last_token_type);
+      }
     }
 
     // Tokenize the lookahead — always one token ahead.
     uint32_t la_offset = 0;
     uint32_t la_type = 0;
-    int64_t la_len = next_token(p, z, p->offset, &la_offset, &la_type);
+    int64_t la_len = next_token_inline(p, z, p->offset, &la_offset, &la_type);
 
 #ifndef SYNTAQLITE_OMIT_MACROS
     // Macro detection: ID followed by TK_BANG ('!').  The token wrapper
@@ -709,8 +743,9 @@ SYNTAQLITE_API int32_t syntaqlite_parser_next(SyntaqliteParser* p) {
     // semicolon instead; lemon_reinit discards the pending reduction.
     int at_stmt_start = p->last_token_type == 0;
     uint32_t main_layer_offset = cur_offset - p->stmt_start_offset;
-    int main_rc = shift_token(p, cur_type, p->source + cur_offset,
-                              (uint32_t)cur_len, main_layer_offset);
+    // Macro expansions restore layer 0 before control returns here.
+    int main_rc = shift_token_inline(p, cur_type, p->source + cur_offset,
+                                     (uint32_t)cur_len, main_layer_offset, 0);
     if (main_rc == 0 && cur_type == SYNTAQLITE_TK_SEMI &&
         (at_stmt_start || p->had_error))
       main_rc = 1;
@@ -1221,7 +1256,7 @@ SYNTAQLITE_API int32_t syntaqlite_parser_feed_token(SyntaqliteParser* p,
   }
 
   uint32_t layer_offset = text ? (uint32_t)(text - p->stmt_source) : 0;
-  int rc = shift_token(p, token_type, text, len, layer_offset);
+  int rc = synq_parser_shift_token(p, token_type, text, len, layer_offset);
   if (rc < 0)
     return set_result_status(p, SYNTAQLITE_PARSE_ERROR);
 
