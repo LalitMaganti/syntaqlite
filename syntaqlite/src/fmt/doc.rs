@@ -379,13 +379,17 @@ impl<'a> DocArena<'a> {
                 }
 
                 Doc::Group { child } => {
-                    if self.fits_with(
-                        *child,
-                        indent,
-                        line_width_i32 - usize_to_i32(pos),
-                        indent_width,
-                        fits_stack,
-                    ) {
+                    // A group inside a flat group fits: the enclosing group's
+                    // check already measured it, and rejected hard breaks.
+                    if matches!(mode, Mode::Flat)
+                        || self.fits_with(
+                            *child,
+                            indent,
+                            line_width_i32 - usize_to_i32(pos),
+                            indent_width,
+                            fits_stack,
+                        )
+                    {
                         stack.push((indent, Mode::Flat, *child));
                     } else {
                         stack.push((indent, Mode::Break, *child));
