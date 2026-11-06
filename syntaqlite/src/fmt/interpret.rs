@@ -1,7 +1,9 @@
 // Copyright 2025 The syntaqlite Authors. All rights reserved.
 // Licensed under the Apache License, Version 2.0.
 
-use syntaqlite_syntax::any::{AnyNodeId, AnyParsedStatement, AnyTokenizer, FieldValue, NodeFields};
+use syntaqlite_syntax::any::{
+    AnyNodeId, AnyNodeTag, AnyParsedStatement, AnyTokenizer, FieldValue, NodeFields,
+};
 use syntaqlite_syntax::source::{StmtLen, StmtOffset, StmtText};
 
 use super::comment::{CommentCtx, DrainResult};
@@ -37,9 +39,10 @@ pub(super) struct InterpretScratch {
     group_nest: Vec<GroupNestFrame>,
     calls: Vec<CallFrame>,
     for_each: Vec<ForEachState>,
-    /// The current node's reflected fields. A few hundred bytes wide, so it
-    /// is refilled in place as the walk descends rather than copied per node.
-    fields: NodeFields,
+    /// Reflected fields of each node on the call stack, indexed by depth. A
+    /// child is reflected into the slot below its parent, so the parent's
+    /// fields survive peeking at or descending into a child.
+    fields: Vec<NodeFields>,
 }
 
 impl InterpretScratch {
@@ -48,7 +51,7 @@ impl InterpretScratch {
             group_nest: Vec::new(),
             calls: Vec::new(),
             for_each: Vec::new(),
-            fields: NodeFields::default(),
+            fields: Vec::new(),
         }
     }
 }
@@ -58,6 +61,7 @@ impl InterpretScratch {
 struct CallFrame {
     ip: usize,
     node_id: AnyNodeId,
+    tag: AnyNodeTag,
     running: DocId,
     pending: DocId,
     gn_save: usize,
@@ -112,8 +116,11 @@ pub(super) fn interpret_core<'a>(
         }
 
         let source = ctx.text();
-        let fields = &mut scratch.fields;
-        let Some(tag) = ctx.reader.extract_fields_into(root_id, fields) else {
+        let field_stack = &mut scratch.fields;
+        if field_stack.is_empty() {
+            field_stack.push(NodeFields::default());
+        }
+        let Some(tag) = ctx.reader.extract_fields_into(root_id, &mut field_stack[0]) else {
             return NIL_DOC;
         };
         let Some(mut ops) = ctx.dialect.fmt_dispatch(tag) else {
@@ -124,6 +131,8 @@ pub(super) fn interpret_core<'a>(
         scratch.for_each.clear();
 
         let mut cur_node_id: AnyNodeId = root_id;
+        let mut cur_tag = tag;
+        let mut depth: usize = 0;
         let mut running: DocId = NIL_DOC;
         let mut pending: DocId = NIL_DOC;
         let mut gn_save = scratch.group_nest.len();
@@ -131,20 +140,23 @@ pub(super) fn interpret_core<'a>(
         let mut ip: usize = 0;
         let has_comments = ctx.comment_ctx.is_some();
 
-        // `fields` holds whichever node the walk is on, so reflecting a child
-        // overwrites the parent's. Descending never returns here; not
-        // descending has to put the parent's back.
-        macro_rules! restore_parent_fields {
-            () => {{
-                ctx.reader.extract_fields_into(cur_node_id, fields);
+        // Reflect a child into the slot below the current node.
+        macro_rules! extract_child_fields {
+            ($child_id:expr) => {{
+                if field_stack.len() <= depth + 1 {
+                    field_stack.push(NodeFields::default());
+                }
+                ctx.reader
+                    .extract_fields_into($child_id, &mut field_stack[depth + 1])
             }};
         }
 
         macro_rules! push_call_frame {
-            ($child_id:expr, $child_ops:expr, $return_action_val:expr) => {{
+            ($child_id:expr, $child_tag:expr, $child_ops:expr, $return_action_val:expr) => {{
                 let frame = CallFrame {
                     ip: ip + 1,
                     node_id: cur_node_id,
+                    tag: cur_tag,
                     running,
                     pending,
                     gn_save,
@@ -154,6 +166,8 @@ pub(super) fn interpret_core<'a>(
                 scratch.calls.push(frame);
 
                 cur_node_id = $child_id;
+                cur_tag = $child_tag;
+                depth += 1;
                 ops = $child_ops;
                 running = NIL_DOC;
                 pending = NIL_DOC;
@@ -179,11 +193,10 @@ pub(super) fn interpret_core<'a>(
                     .pop()
                     .expect("call_stack must contain a parent frame");
                 cur_node_id = frame.node_id;
+                cur_tag = frame.tag;
+                depth -= 1;
                 ip = frame.ip;
-                let Some(restored_tag) = ctx.reader.extract_fields_into(cur_node_id, fields) else {
-                    panic!("restored node must resolve to fields");
-                };
-                let Some(restored_ops) = ctx.dialect.fmt_dispatch(restored_tag) else {
+                let Some(restored_ops) = ctx.dialect.fmt_dispatch(cur_tag) else {
                     panic!("restored node must resolve to formatter ops");
                 };
                 ops = restored_ops;
@@ -222,7 +235,7 @@ pub(super) fn interpret_core<'a>(
                     running = arena.cat(running, kw);
                 }
                 FmtOp::Span(idx) => {
-                    let FieldValue::Span(span) = fields[idx as usize] else {
+                    let FieldValue::Span(span) = field_stack[depth][idx as usize] else {
                         panic!("Span: field {idx} is not a Span");
                     };
 
@@ -278,7 +291,7 @@ pub(super) fn interpret_core<'a>(
                     }
                 }
                 FmtOp::Child(idx) => {
-                    let FieldValue::NodeId(child_id) = fields[idx as usize] else {
+                    let FieldValue::NodeId(child_id) = field_stack[depth][idx as usize] else {
                         panic!("Child: field {idx} is not a NodeId");
                     };
 
@@ -306,12 +319,11 @@ pub(super) fn interpret_core<'a>(
                             return_action = ReturnAction::Discard;
                         }
 
-                        if let Some(ctag) = ctx.reader.extract_fields_into(child_id, fields)
+                        if let Some(ctag) = extract_child_fields!(child_id)
                             && let Some(child_ops) = ctx.dialect.fmt_dispatch(ctag)
                         {
-                            push_call_frame!(child_id, child_ops, return_action);
+                            push_call_frame!(child_id, ctag, child_ops, return_action);
                         }
-                        restore_parent_fields!();
                     }
                 }
                 FmtOp::Line | FmtOp::SoftLine | FmtOp::HardLine => {
@@ -373,7 +385,7 @@ pub(super) fn interpret_core<'a>(
                     }
                 }
                 FmtOp::IfSet(idx, skip) => {
-                    let FieldValue::NodeId(id) = fields[idx as usize] else {
+                    let FieldValue::NodeId(id) = field_stack[depth][idx as usize] else {
                         panic!("IfSet: field {idx} is not a NodeId");
                     };
                     if id.is_null() {
@@ -385,7 +397,7 @@ pub(super) fn interpret_core<'a>(
                 }
                 FmtOp::EndIf => {}
                 FmtOp::ForEachStart(idx) => {
-                    let FieldValue::NodeId(list_id) = fields[idx as usize] else {
+                    let FieldValue::NodeId(list_id) = field_stack[depth][idx as usize] else {
                         panic!("ForEachStart: field {idx} is not a NodeId");
                     };
                     if list_id.is_null() {
@@ -452,12 +464,11 @@ pub(super) fn interpret_core<'a>(
                         }
                     }
 
-                    if let Some(ctag) = ctx.reader.extract_fields_into(child_id, fields)
+                    if let Some(ctag) = extract_child_fields!(child_id)
                         && let Some(child_ops) = ctx.dialect.fmt_dispatch(ctag)
                     {
-                        push_call_frame!(child_id, child_ops, return_action);
+                        push_call_frame!(child_id, ctag, child_ops, return_action);
                     }
-                    restore_parent_fields!();
                 }
                 FmtOp::ForEachSep(sid) => {
                     let state = scratch
@@ -492,7 +503,7 @@ pub(super) fn interpret_core<'a>(
                     scratch.for_each.pop();
                 }
                 FmtOp::IfBool(idx, skip) => {
-                    let FieldValue::Bool(val) = fields[idx as usize] else {
+                    let FieldValue::Bool(val) = field_stack[depth][idx as usize] else {
                         panic!("IfBool: field {idx} is not a Bool");
                     };
                     if !val {
@@ -500,7 +511,7 @@ pub(super) fn interpret_core<'a>(
                     }
                 }
                 FmtOp::IfFlag(idx, mask, skip) => {
-                    let FieldValue::Flags(f) = fields[idx as usize] else {
+                    let FieldValue::Flags(f) = field_stack[depth][idx as usize] else {
                         panic!("IfFlag: field {idx} is not Flags");
                     };
                     if f & mask == 0 {
@@ -508,7 +519,7 @@ pub(super) fn interpret_core<'a>(
                     }
                 }
                 FmtOp::IfEnum(idx, ordinal, skip) => {
-                    let FieldValue::Enum(val) = fields[idx as usize] else {
+                    let FieldValue::Enum(val) = field_stack[depth][idx as usize] else {
                         panic!("IfEnum: field {idx} is not an Enum");
                     };
                     if val != u32::from(ordinal) {
@@ -516,7 +527,7 @@ pub(super) fn interpret_core<'a>(
                     }
                 }
                 FmtOp::IfSpan(idx, skip) => {
-                    let FieldValue::Span(span) = fields[idx as usize] else {
+                    let FieldValue::Span(span) = field_stack[depth][idx as usize] else {
                         panic!("IfSpan: field {idx} is not a Span");
                     };
                     // Absent means zero-length *and* unquoted, matching
@@ -527,7 +538,7 @@ pub(super) fn interpret_core<'a>(
                     }
                 }
                 FmtOp::EnumDisplay(idx, base) => {
-                    let FieldValue::Enum(ordinal) = fields[idx as usize] else {
+                    let FieldValue::Enum(ordinal) = field_stack[depth][idx as usize] else {
                         panic!("EnumDisplay: field {idx} is not an Enum");
                     };
                     let string_id = ctx
@@ -561,13 +572,15 @@ pub(super) fn interpret_core<'a>(
                     let op_field_idx = (packed_c >> 8) as usize;
                     let is_right = (packed_c & 0xFF) != 0;
 
-                    let FieldValue::Enum(parent_op_ordinal) = fields[op_field_idx] else {
+                    let FieldValue::Enum(parent_op_ordinal) = field_stack[depth][op_field_idx]
+                    else {
                         panic!("ChildPrec: op field {op_field_idx} is not an Enum");
                     };
                     let (parent_prec, parent_group_and_flags) =
                         ctx.dialect.fmt_prec_lookup(prec_base, parent_op_ordinal);
 
-                    let FieldValue::NodeId(child_id) = fields[child_idx as usize] else {
+                    let FieldValue::NodeId(child_id) = field_stack[depth][child_idx as usize]
+                    else {
                         panic!("ChildPrec: child field {child_idx} is not a NodeId");
                     };
 
@@ -595,7 +608,7 @@ pub(super) fn interpret_core<'a>(
                             return_action = ReturnAction::Discard;
                         }
 
-                        if let Some(ctag) = ctx.reader.extract_fields_into(child_id, fields)
+                        if let Some(ctag) = extract_child_fields!(child_id)
                             && let Some(child_ops) = ctx.dialect.fmt_dispatch(ctag)
                         {
                             if return_action != ReturnAction::Discard && parent_prec > 0 {
@@ -605,16 +618,16 @@ pub(super) fn interpret_core<'a>(
                                     parent_group_and_flags,
                                     is_right,
                                     ctag,
-                                    fields,
+                                    &field_stack[depth + 1],
                                 );
                             }
-                            push_call_frame!(child_id, child_ops, return_action);
+                            push_call_frame!(child_id, ctag, child_ops, return_action);
                         }
-                        restore_parent_fields!();
                     }
                 }
                 FmtOp::ChildParenList(child_idx) => {
-                    let FieldValue::NodeId(child_id) = fields[child_idx as usize] else {
+                    let FieldValue::NodeId(child_id) = field_stack[depth][child_idx as usize]
+                    else {
                         panic!("ChildParenList: field {child_idx} is not a NodeId");
                     };
 
@@ -642,15 +655,14 @@ pub(super) fn interpret_core<'a>(
                             return_action = ReturnAction::Discard;
                         }
 
-                        if let Some(ctag) = ctx.reader.extract_fields_into(child_id, fields)
+                        if let Some(ctag) = extract_child_fields!(child_id)
                             && let Some(child_ops) = ctx.dialect.fmt_dispatch(ctag)
                         {
                             if return_action != ReturnAction::Discard && ctx.dialect.is_list(ctag) {
                                 return_action = ReturnAction::WrapInParens;
                             }
-                            push_call_frame!(child_id, child_ops, return_action);
+                            push_call_frame!(child_id, ctag, child_ops, return_action);
                         }
-                        restore_parent_fields!();
                     }
                 }
                 FmtOp::ChildPrecFixed(child_idx, packed_b, is_right_flag) => {
@@ -658,7 +670,8 @@ pub(super) fn interpret_core<'a>(
                     let parent_group_and_flags = (packed_b & 0xFF) as u8;
                     let is_right = is_right_flag != 0;
 
-                    let FieldValue::NodeId(child_id) = fields[child_idx as usize] else {
+                    let FieldValue::NodeId(child_id) = field_stack[depth][child_idx as usize]
+                    else {
                         panic!("ChildPrecFixed: field {child_idx} is not a NodeId");
                     };
 
@@ -686,7 +699,7 @@ pub(super) fn interpret_core<'a>(
                             return_action = ReturnAction::Discard;
                         }
 
-                        if let Some(ctag) = ctx.reader.extract_fields_into(child_id, fields)
+                        if let Some(ctag) = extract_child_fields!(child_id)
                             && let Some(child_ops) = ctx.dialect.fmt_dispatch(ctag)
                         {
                             if return_action != ReturnAction::Discard && parent_prec > 0 {
@@ -696,12 +709,11 @@ pub(super) fn interpret_core<'a>(
                                     parent_group_and_flags,
                                     is_right,
                                     ctag,
-                                    fields,
+                                    &field_stack[depth + 1],
                                 );
                             }
-                            push_call_frame!(child_id, child_ops, return_action);
+                            push_call_frame!(child_id, ctag, child_ops, return_action);
                         }
-                        restore_parent_fields!();
                     }
                 }
             }
@@ -731,7 +743,7 @@ fn child_prec_action(
     parent_prec: u8,
     parent_group_and_flags: u8,
     is_right: bool,
-    child_tag: syntaqlite_syntax::any::AnyNodeTag,
+    child_tag: AnyNodeTag,
     child_fields: &NodeFields,
 ) -> ReturnAction {
     // Check if child carries operator precedence info.
