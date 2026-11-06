@@ -170,15 +170,14 @@ impl Formatter {
                 side: c.side(),
             }));
         self.token_entries.clear();
-        // `stmt_range` drills expansion-layer tokens up to their authored
-        // call site, so every entry is in the coordinates the formatter emits.
-        self.token_entries.extend(erased.tokens().map(|t| {
-            let range = t.stmt_range();
-            TokenEntry {
+        // `token_stmt_ranges` drills expansion-layer tokens up to their
+        // authored call site, so every entry is in the coordinates the
+        // formatter emits.
+        self.token_entries
+            .extend(erased.token_stmt_ranges().map(|range| TokenEntry {
                 offset: range.start,
                 length: range.len(),
-            }
-        }));
+            }));
         // Only top-level fallback rewrites are addressable here: an expanded
         // macro's tokens live in the expansion buffer, not at the call site.
         self.rewrites.extend(

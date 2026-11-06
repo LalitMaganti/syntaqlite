@@ -1231,6 +1231,7 @@ pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::span_text(&self, syntaqli
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::span_text_abs(&self, syntaqlite_syntax::any::TextSpan) -> (&'a str, syntaqlite_syntax::source::DocRange)
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::statement_base(&self) -> syntaqlite_syntax::source::StatementBase
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::text(&self) -> &'a syntaqlite_syntax::source::StmtText
+pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::token_stmt_ranges(&self) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::source::StmtRange> + use<'_>
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::tokens(&self) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::any::AnyParserToken<'a>> + use<'_, 'a>
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::traceback(&self, syntaqlite_syntax::any::AnyNodeId, u8) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::any::TracebackFrame<'a>> + use<'a>
 pub fn syntaqlite_syntax::any::AnyTokenType::from(syntaqlite_syntax::TokenType) -> syntaqlite_syntax::any::AnyTokenType
