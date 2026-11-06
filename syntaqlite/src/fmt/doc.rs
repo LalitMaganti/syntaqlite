@@ -380,13 +380,15 @@ impl<'a> DocArena<'a> {
 
                 Doc::Group { child } => {
                     // A group inside a flat group fits: the enclosing group's
-                    // check already measured it, and rejected hard breaks.
+                    // check measured this content with the renderer's own
+                    // spacing, and fails on any hard break.
                     if matches!(mode, Mode::Flat)
                         || self.fits_with(
                             *child,
                             indent,
                             line_width_i32 - usize_to_i32(pos),
                             indent_width,
+                            out.as_bytes().last().copied(),
                             fits_stack,
                         )
                     {
@@ -415,6 +417,7 @@ impl<'a> DocArena<'a> {
         indent: i32,
         remaining: i32,
         indent_width: i32,
+        last_byte: Option<u8>,
         scratch: &mut Vec<(i32, DocId)>,
     ) -> bool {
         if remaining < 0 {
@@ -424,10 +427,9 @@ impl<'a> DocArena<'a> {
         let mut remaining = remaining;
         scratch.clear();
         scratch.push((indent, doc_id));
-        // Tracks the trailing byte of the most recent atomic emission so
-        // we can mirror the renderer's auto-spacer when budgeting width
-        // (renderer inserts 1 byte between two adjacent word-class atoms).
-        let mut last_byte: Option<u8> = None;
+        // The trailing byte of the most recent emission, starting with what
+        // is already rendered, so the renderer's auto-spaces are budgeted too.
+        let mut last_byte = last_byte;
 
         while let Some((indent, doc_id)) = scratch.pop() {
             if remaining < 0 {
@@ -441,8 +443,7 @@ impl<'a> DocArena<'a> {
                 Doc::Text(s) | Doc::Keyword(s) => {
                     let bytes = s.as_bytes();
                     if let (Some(&first), Some(prev)) = (bytes.first(), last_byte)
-                        && is_word_byte(prev)
-                        && is_word_byte(first)
+                        && needs_auto_space(prev, first)
                     {
                         remaining -= 1;
                     }
@@ -612,16 +613,22 @@ fn maybe_emit_auto_space(next_first: Option<u8>, out: &mut String) -> bool {
     let Some(&last) = out.as_bytes().last() else {
         return false;
     };
-    let needs_space = if is_word_byte(first) {
-        is_word_byte(last)
-    } else {
-        would_lex_as_one_token(last, first)
-    };
-    if !needs_space {
+    if !needs_auto_space(last, first) {
         return false;
     }
     out.push(' ');
     true
+}
+
+/// Whether the renderer inserts a space between an atom ending in `last` and
+/// the next one starting with `first`. Shared with `fits_with`, so measuring
+/// a group budgets exactly the spaces rendering it will add.
+fn needs_auto_space(last: u8, first: u8) -> bool {
+    if is_word_byte(first) {
+        is_word_byte(last)
+    } else {
+        would_lex_as_one_token(last, first)
+    }
 }
 
 #[inline]
@@ -771,6 +778,44 @@ mod tests {
 
     fn cfg_width(line_width: usize) -> FormatConfig {
         FormatConfig::default().with_line_width(line_width)
+    }
+
+    fn max_line_width(s: &str) -> usize {
+        s.lines().map(str::len).max().unwrap_or(0)
+    }
+
+    #[test]
+    fn fits_counts_auto_space_before_a_group() {
+        // `abcde` then `f(g h`: the space the renderer adds before `f` makes
+        // the group one column too wide, so `g h` must break.
+        let mut a = DocArena::new();
+        let (g, line, h) = (a.text("g"), a.line(), a.text("h"));
+        let inner = a.cats(&[g, line, h]);
+        let inner = a.group(inner);
+        let (f, lp) = (a.text("f"), a.text("("));
+        let outer = a.cats(&[f, lp, inner]);
+        let outer = a.group(outer);
+        let prefix = a.text("abcde");
+        let root = a.cat(prefix, outer);
+        let out = a.render(root, &cfg_width(10));
+        assert_eq!(out, "abcde f(g\nh");
+        assert!(max_line_width(&out) <= 10);
+    }
+
+    #[test]
+    fn fits_counts_auto_space_between_operators() {
+        // `- -` is rendered with a space so it doesn't lex as a comment.
+        let mut a = DocArena::new();
+        let (x, line, y) = (a.text("x"), a.line(), a.text("y"));
+        let inner = a.cats(&[x, line, y]);
+        let inner = a.group(inner);
+        let (m1, m2) = (a.text("-"), a.text("-"));
+        let outer = a.cats(&[m1, m2, inner]);
+        let outer = a.group(outer);
+        let prefix = a.text("abc");
+        let root = a.cat(prefix, outer);
+        let out = a.render(root, &cfg_width(8));
+        assert!(max_line_width(&out) <= 8, "{out:?}");
     }
 
     #[test]
