@@ -138,11 +138,12 @@ Click the screenshot to open this example.
 
 ## Why syntaqlite?
 
-- **It's fast.** On an Intel Ice Lake server, syntaqlite parses 29,000
-  statements, 3.5 MB of SQL, in about 40 ms and formats them in about 170 ms,
-  counting process startup. A single statement takes a few milliseconds from
-  start to exit. That makes it cheap to run on every keystroke in an editor,
-  on every file in a pre-commit hook, and over large generated SQL in CI.
+- **It's fast.** In the
+  [benchmarks](https://docs.syntaqlite.com/latest/reference/comparison/),
+  syntaqlite parses a file of 870 statements in 2.5 ms and formats it in
+  4.9 ms, including process startup. That makes it cheap to run on every
+  keystroke in an editor, on every file in a pre-commit hook, and over large
+  generated SQL in CI.
 - **It parses what SQLite parses.** Most SQL tools treat SQLite as a dialect
   of generic SQL, which can miss syntax only SQLite has, such as `UPSERT`,
   `RETURNING`, `STRICT` tables and window frames with `EXCLUDE`. syntaqlite
