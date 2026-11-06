@@ -57,6 +57,8 @@ pub(crate) struct CheckOptions {
     pub insert_values: Option<String>,
     pub subquery_columns: Option<String>,
     pub row_value: Option<String>,
+    pub duplicate_column: Option<String>,
+    pub alter_unknown_column: Option<String>,
     /// Shorthand: sets all schema checks.
     pub schema: Option<String>,
     /// Shorthand: sets all checks.

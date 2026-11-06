@@ -155,6 +155,16 @@ pub(crate) struct RowValueEvent {
     pub(crate) compared_with: Option<usize>,
 }
 
+/// A column that `CREATE TABLE` lists twice, that `ALTER TABLE` adds or
+/// renames onto an existing name, or that `ALTER TABLE` renames or drops but
+/// the table doesn't have.
+#[derive(Copy, Clone)]
+pub(crate) struct ColumnChangeEvent<'a> {
+    pub(crate) table: &'a str,
+    pub(crate) column: &'a str,
+    pub(crate) range: DocRange,
+}
+
 /// A compound SELECT whose arms have different numbers of columns.
 #[derive(Copy, Clone)]
 pub(crate) struct CompoundColumnsEvent<'a> {
@@ -232,6 +242,7 @@ pub(crate) trait SemanticVisitor {
     const WANTS_INSERT_VALUES: bool = false;
     const WANTS_SUBQUERY_COLUMNS: bool = false;
     const WANTS_ROW_VALUE: bool = false;
+    const WANTS_COLUMN_CHANGE: bool = false;
     const WANTS_CTE_BINDING: bool = false;
     const WANTS_SCOPED_SOURCE: bool = false;
     /// Return true to receive [`enter_query`](Self::enter_query) /
@@ -328,6 +339,20 @@ pub(crate) trait SemanticVisitor {
     }
 
     fn on_row_value(&mut self, _stmt: &mut AnyParsedStatement<'_>, _ev: RowValueEvent) {}
+
+    fn on_duplicate_column(
+        &mut self,
+        _stmt: &mut AnyParsedStatement<'_>,
+        _ev: ColumnChangeEvent<'_>,
+    ) {
+    }
+
+    fn on_alter_unknown_column(
+        &mut self,
+        _stmt: &mut AnyParsedStatement<'_>,
+        _ev: ColumnChangeEvent<'_>,
+    ) {
+    }
 
     /// Called once per CTE binding, BEFORE its body is walked. The body
     /// will observe the binding's own name as a resolved catalog source

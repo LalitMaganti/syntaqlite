@@ -275,6 +275,21 @@ pub enum DiagnosticMessage {
         /// single value.
         compared_with: Option<usize>,
     },
+    /// A table lists a column twice, or `ALTER TABLE` adds or renames a
+    /// column onto a name the table already has.
+    DuplicateColumn {
+        /// The table name.
+        table: String,
+        /// The duplicated column name.
+        column: String,
+    },
+    /// `ALTER TABLE` renames or drops a column the table doesn't have.
+    AlterUnknownColumn {
+        /// The table name.
+        table: String,
+        /// The missing column name.
+        column: String,
+    },
     /// A VALUES row has a different number of terms than the first row.
     ValuesTerms {
         /// Terms in the first row.
@@ -390,6 +405,12 @@ impl std::fmt::Display for DiagnosticMessage {
                 value_noun(*width),
                 value_noun(*other)
             ),
+            Self::DuplicateColumn { table, column } => {
+                write!(f, "duplicate column '{column}' in table '{table}'")
+            }
+            Self::AlterUnknownColumn { table, column } => {
+                write!(f, "table '{table}' has no column '{column}'")
+            }
             Self::ValuesTerms { first, row } => write!(
                 f,
                 "VALUES row has {row} terms, but the first row has {first}"
@@ -534,6 +555,20 @@ fn kind_with<S: serde::Serializer>(
 }
 
 #[cfg(feature = "serde")]
+fn kind_table_column<S: serde::Serializer>(
+    serializer: S,
+    kind: &str,
+    table: &str,
+    column: &str,
+) -> Result<S::Ok, S::Error> {
+    use serde::ser::SerializeMap;
+    kind_with(serializer, kind, 2, |m| {
+        m.serialize_entry("table", table)?;
+        m.serialize_entry("column", column)
+    })
+}
+
+#[cfg(feature = "serde")]
 fn kind_and_name<S: serde::Serializer>(
     serializer: S,
     kind: &str,
@@ -545,6 +580,7 @@ fn kind_and_name<S: serde::Serializer>(
 
 #[cfg(feature = "serde")]
 impl serde::Serialize for DiagnosticMessage {
+    #[expect(clippy::too_many_lines, reason = "one arm per diagnostic")]
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         use serde::ser::SerializeMap;
         match self {
@@ -637,6 +673,12 @@ impl serde::Serialize for DiagnosticMessage {
                     m.serialize_entry("width", width)?;
                     compared_with.map_or(Ok(()), |w| m.serialize_entry("compared_with", &w))
                 })
+            }
+            Self::DuplicateColumn { table, column } => {
+                kind_table_column(serializer, "duplicate_column", table, column)
+            }
+            Self::AlterUnknownColumn { table, column } => {
+                kind_table_column(serializer, "alter_unknown_column", table, column)
             }
             Self::ValuesTerms { first, row } => kind_with(serializer, "values_terms", 2, |m| {
                 m.serialize_entry("first", first)?;

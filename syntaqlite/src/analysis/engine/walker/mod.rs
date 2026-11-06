@@ -143,8 +143,8 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
         fields: &NodeFields,
     ) {
         match role {
-            SemanticRole::DefineTable { name, .. } => {
-                self.walk_define_table(visitor, node_id, fields, name);
+            SemanticRole::DefineTable { name, select, .. } => {
+                self.walk_define_table(visitor, node_id, fields, name, select);
             }
             SemanticRole::DefineView { select, .. } => {
                 self.walk_define_view(visitor, node_id, fields, select);

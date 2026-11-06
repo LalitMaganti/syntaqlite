@@ -5,6 +5,7 @@
 //! clauses and INSERT, UPDATE and DELETE.
 
 use std::borrow::Cow;
+use std::collections::HashSet;
 
 use syntaqlite_syntax::any::{AnyNodeId, FieldValue, NodeFields};
 use syntaqlite_syntax::source::DocRange;
@@ -17,8 +18,9 @@ use crate::analysis::{BuiltinChange, QualifiedRefContext};
 use crate::dialect::{FIELD_ABSENT, SemanticRole};
 
 use super::visitor::{
-    BuiltinModifyEvent, CteBindingEvent, CteColumnCountMismatchEvent, DropWrongKindEvent,
-    IndexOnViewEvent, InsertValuesEvent, SemanticVisitor, SourceRefEvent, UncheckedRef, WalkCtx,
+    BuiltinModifyEvent, ColumnChangeEvent, CteBindingEvent, CteColumnCountMismatchEvent,
+    DropWrongKindEvent, IndexOnViewEvent, InsertValuesEvent, SemanticVisitor, SourceRefEvent,
+    UncheckedRef, WalkCtx,
 };
 use super::{DefiningTable, SemanticWalker};
 
@@ -95,6 +97,7 @@ impl<'b> SemanticWalker<'_, 'b> {
         node_id: AnyNodeId,
         fields: &NodeFields,
         name_idx: u8,
+        select_idx: u8,
     ) {
         if V::WANTS_RELATION_DEFINITION || V::WANTS_COLUMN_DEFINITION {
             self.emit_ddl_definitions(visitor, node_id);
@@ -103,6 +106,20 @@ impl<'b> SemanticWalker<'_, 'b> {
             .stmt
             .span_field_ident_text(fields, name_idx)
             .expect("CREATE TABLE names its table");
+        // `AS SELECT` renames duplicate result columns instead of failing.
+        if V::WANTS_COLUMN_CHANGE && fields.node_id_at(select_idx).is_none() {
+            let mut seen = HashSet::new();
+            for (column, range) in StmtReader::new(self.stmt, self.roles).column_spans(node_id) {
+                if !seen.insert(column.clone()) {
+                    let ev = ColumnChangeEvent {
+                        table: &name,
+                        column: &column,
+                        range,
+                    };
+                    visitor.on_duplicate_column(self.stmt, ev);
+                }
+            }
+        }
         self.key_scratch.set(&name);
         let (columns, without_rowid) = self.catalog.table_source_info(&self.key_scratch);
         self.defining_table = Some(DefiningTable {
@@ -315,7 +332,30 @@ impl<'b> SemanticWalker<'_, 'b> {
         target_idx: u8,
     ) {
         let (name, range) = self.walk_schema_target(visitor, node_id, fields, target_idx);
-        self.check_builtin(visitor, &name, range, BuiltinChange::Alter);
+        if self.check_builtin(visitor, &name, range, BuiltinChange::Alter)
+            || !V::WANTS_COLUMN_CHANGE
+        {
+            return;
+        }
+        let Some(rejected) = self.catalog.rejected_column_change() else {
+            return;
+        };
+        let Some(id) = fields.node_id_at(rejected.field) else {
+            return;
+        };
+        let range = StmtReader::new(self.stmt, self.roles)
+            .column_def_name_span(id)
+            .map_or_else(|| self.stmt.name_ident_text(Some(id)).1, |(_, r)| r);
+        let ev = ColumnChangeEvent {
+            table: &name,
+            column: &rejected.column,
+            range,
+        };
+        if rejected.duplicate {
+            visitor.on_duplicate_column(self.stmt, ev);
+        } else {
+            visitor.on_alter_unknown_column(self.stmt, ev);
+        }
     }
 
     /// Report a DDL change to one of the dialect's built-in tables. Returns

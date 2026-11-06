@@ -100,6 +100,8 @@ static const char* code_str(uint32_t code) {
     case SYNTAQLITE_DIAG_INSERT_VALUES:             return "INSERT_VALUES";
     case SYNTAQLITE_DIAG_SUBQUERY_COLUMNS:          return "SUBQUERY_COLUMNS";
     case SYNTAQLITE_DIAG_ROW_VALUE:          return "ROW_VALUE";
+    case SYNTAQLITE_DIAG_DUPLICATE_COLUMN:   return "DUPLICATE_COLUMN";
+    case SYNTAQLITE_DIAG_ALTER_UNKNOWN_COLUMN: return "ALTER_UNKNOWN_COLUMN";
     default:                                         return "?";
   }
 }

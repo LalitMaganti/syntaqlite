@@ -305,6 +305,12 @@ pub(crate) fn build_check_config(
         if let Some(ref v) = opts.row_value {
             checks = checks.with_row_value(CheckLevel::parse(v)?);
         }
+        if let Some(ref v) = opts.duplicate_column {
+            checks = checks.with_duplicate_column(CheckLevel::parse(v)?);
+        }
+        if let Some(ref v) = opts.alter_unknown_column {
+            checks = checks.with_alter_unknown_column(CheckLevel::parse(v)?);
+        }
     }
 
     // CLI flags win (last-spec-wins per category).

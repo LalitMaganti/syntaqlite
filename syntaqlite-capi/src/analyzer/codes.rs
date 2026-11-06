@@ -41,6 +41,8 @@ pub(crate) const DIAG_CODE_VALUES_TERMS: u32 = 14;
 pub(crate) const DIAG_CODE_INSERT_VALUES: u32 = 15;
 pub(crate) const DIAG_CODE_SUBQUERY_COLUMNS: u32 = 16;
 pub(crate) const DIAG_CODE_ROW_VALUE: u32 = 17;
+pub(crate) const DIAG_CODE_DUPLICATE_COLUMN: u32 = 18;
+pub(crate) const DIAG_CODE_ALTER_UNKNOWN_COLUMN: u32 = 19;
 
 pub(super) fn diagnostic_code_to_c(msg: &DiagnosticMessage) -> u32 {
     match msg {
@@ -62,6 +64,8 @@ pub(super) fn diagnostic_code_to_c(msg: &DiagnosticMessage) -> u32 {
         DiagnosticMessage::InsertValues { .. } => DIAG_CODE_INSERT_VALUES,
         DiagnosticMessage::SubqueryColumns { .. } => DIAG_CODE_SUBQUERY_COLUMNS,
         DiagnosticMessage::RowValue { .. } => DIAG_CODE_ROW_VALUE,
+        DiagnosticMessage::DuplicateColumn { .. } => DIAG_CODE_DUPLICATE_COLUMN,
+        DiagnosticMessage::AlterUnknownColumn { .. } => DIAG_CODE_ALTER_UNKNOWN_COLUMN,
     }
 }
 
