@@ -120,12 +120,36 @@ fn generate_keyword_arrays(
         s
     };
 
-    let since_strs: Vec<String> = since.iter().map(ToString::to_string).collect();
+    // Few distinct versions gate keywords, so store a one-byte index into a
+    // table of them; index 0 is the ungated baseline.
+    let mut versions = vec![0i32];
+    for &v in &since {
+        if !versions.contains(&v) {
+            versions.push(v);
+        }
+    }
+    let since_strs: Vec<String> = since
+        .iter()
+        .map(|v| {
+            versions
+                .iter()
+                .position(|x| x == v)
+                .unwrap_or(0)
+                .to_string()
+        })
+        .collect();
+    let version_strs: Vec<String> = versions.iter().map(ToString::to_string).collect();
     let cflag_strs: Vec<String> = cflag.iter().map(ToString::to_string).collect();
     let pol_strs: Vec<String> = polarity.iter().map(ToString::to_string).collect();
 
     let mut out = String::new();
-    out.push_str(&fmt_array(&since_strs, "int32_t", "aKWSince"));
+    let _ = writeln!(
+        out,
+        "static const int32_t {prefix}_aKWSinceVersion[{}] = {{{}}};",
+        versions.len(),
+        version_strs.join(", ")
+    );
+    out.push_str(&fmt_array(&since_strs, "uint8_t", "aKWSince"));
     out.push_str(&fmt_array(&cflag_strs, "int8_t", "aKWCFlag"));
     out.push_str(&fmt_array(&pol_strs, "uint8_t", "aKWCFlagPolarity"));
     out
@@ -276,7 +300,8 @@ fn keyword_lookup_code(hash: &KeywordPerfectHash) -> String {
     if( (z[j]&~0x20)!=zKW[j] ) return n;
   }}
   /* Version check: skip keywords newer than target version. */
-  if( __SYNQ_DIALECT___aKWSince[i] != 0 && SYNQ_VER_LT(env, __SYNQ_DIALECT___aKWSince[i]) ){{
+  if( __SYNQ_DIALECT___aKWSince[i] != 0
+      && SYNQ_VER_LT(env, __SYNQ_DIALECT___aKWSinceVersion[__SYNQ_DIALECT___aKWSince[i]]) ){{
     return n;
   }}
   /* CFlag check with polarity. */
