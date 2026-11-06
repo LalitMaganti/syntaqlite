@@ -504,4 +504,45 @@ mod tests {
         let second_count = tokenizer.tokenize("SELECT 2;").count();
         assert!(second_count > 0);
     }
+
+    fn token_type(tokenizer: &Tokenizer, text: &str) -> crate::any::AnyTokenType {
+        let tokens: Vec<_> = tokenizer.tokenize(text).collect();
+        assert_eq!(tokens.len(), 1, "{text:?} should be one token");
+        tokens[0].token_type().into()
+    }
+
+    #[test]
+    fn keywords_are_recognized_in_any_case() {
+        let tokenizer = Tokenizer::new();
+        let id = token_type(&tokenizer, "not_a_keyword");
+        let mut mismatched = Vec::new();
+        for kw in crate::any::AnyDialect::from(crate::sqlite::dialect::dialect()).keywords() {
+            let upper = kw.keyword().to_string();
+            if upper.is_empty() {
+                continue;
+            }
+            let lower = upper.to_ascii_lowercase();
+            let mixed: String = upper
+                .chars()
+                .enumerate()
+                .map(|(i, c)| {
+                    if i % 2 == 0 {
+                        c.to_ascii_lowercase()
+                    } else {
+                        c
+                    }
+                })
+                .collect();
+            let expected = token_type(&tokenizer, &upper);
+            assert_eq!(token_type(&tokenizer, &lower), expected, "{lower}");
+            assert_eq!(token_type(&tokenizer, &mixed), expected, "{mixed}");
+            assert_eq!(token_type(&tokenizer, &format!("{upper}X")), id, "{upper}X");
+            assert_eq!(token_type(&tokenizer, &format!("X{upper}")), id, "X{upper}");
+            // WITHIN is newer than the default target version.
+            if expected != kw.token_type() && upper != "WITHIN" {
+                mismatched.push(upper);
+            }
+        }
+        assert!(mismatched.is_empty(), "not recognized: {mismatched:?}");
+    }
 }
