@@ -54,8 +54,8 @@ static int64_t synq_macro_skip(SyntaqliteParser* p,
   uint32_t pos = *out_pos;
   while (pos < buf_len) {
     uint32_t ttype = 0;
-    int64_t tlen = synq_get_token_wrapped(
-        &p->dialect, p->macro.macro_fallback, z + pos, &ttype);
+    int64_t tlen = synq_get_token_wrapped(&p->dialect, p->macro.macro_fallback,
+                                          z + pos, &ttype);
     if (tlen <= 0)
       break;
     if (!synq_token_is_skip(ttype)) {
@@ -93,16 +93,16 @@ uint32_t synq_parser_scan_macro_args(SyntaqliteParser* p,
 
   // Expect LP.
   uint32_t ttype = 0;
-  int64_t tlen = synq_get_token_wrapped(
-      &p->dialect, p->macro.macro_fallback, z + pos, &ttype);
+  int64_t tlen = synq_get_token_wrapped(&p->dialect, p->macro.macro_fallback,
+                                        z + pos, &ttype);
   if (tlen <= 0 || ttype != SYNTAQLITE_TK_LP)
     return 0;
   pos += (uint32_t)tlen;
 
   // Check for empty args: macro!()
   ttype = 0;
-  tlen = synq_get_token_wrapped(&p->dialect, p->macro.macro_fallback,
-                                          z + pos, &ttype);
+  tlen = synq_get_token_wrapped(&p->dialect, p->macro.macro_fallback, z + pos,
+                                &ttype);
   if (tlen > 0 && ttype == SYNTAQLITE_TK_RP) {
     *out_end_offset = pos + (uint32_t)tlen;
     return 0;
@@ -115,8 +115,8 @@ uint32_t synq_parser_scan_macro_args(SyntaqliteParser* p,
 
   while (pos < source_len && depth > 0) {
     ttype = 0;
-    tlen = synq_get_token_wrapped(
-        &p->dialect, p->macro.macro_fallback, z + pos, &ttype);
+    tlen = synq_get_token_wrapped(&p->dialect, p->macro.macro_fallback, z + pos,
+                                  &ttype);
     if (tlen <= 0)
       return 0;
 
@@ -842,8 +842,7 @@ SYNTAQLITE_API int syntaqlite_macro_expansion_expand_and_set_result(
   uint32_t pos = 0;
   while (pos < body_len) {
     uint32_t ttype = 0;
-    int64_t tlen =
-        synq_get_token_wrapped(&p->dialect, 0, z + pos, &ttype);
+    int64_t tlen = synq_get_token_wrapped(&p->dialect, 0, z + pos, &ttype);
     if (tlen <= 0)
       break;
 

@@ -43,26 +43,25 @@ SYNTAQLITE_DIALECT_API void synq_extent_fold_below_into_top(SynqParseCtx* pCtx);
 // With extents and macros both off, the hooks only track `lemon_depth`, so
 // do that inline instead of calling into the runtime on every shift and
 // reduce.
-#define synq_on_shift(yypParser, yyMajor, yyMinor_ptr)                    \
-  do {                                                                    \
-    SynqParseCtx* synq_ctx_ = (yypParser)->pCtx;                          \
-    if (synq_ctx_->collect_node_extents | synq_ctx_->macro_root_layer) {  \
-      synq_extent_on_shift(synq_ctx_, (unsigned int)(yyMajor),            \
-                           (yyMinor_ptr));                                \
-    } else {                                                              \
-      synq_ctx_->lemon_depth++;                                           \
-    }                                                                     \
+#define synq_on_shift(yypParser, yyMajor, yyMinor_ptr)                         \
+  do {                                                                         \
+    SynqParseCtx* synq_ctx_ = (yypParser)->pCtx;                               \
+    if (synq_ctx_->collect_node_extents | synq_ctx_->macro_root_layer) {       \
+      synq_extent_on_shift(synq_ctx_, (unsigned int)(yyMajor), (yyMinor_ptr)); \
+    } else {                                                                   \
+      synq_ctx_->lemon_depth++;                                                \
+    }                                                                          \
   } while (0)
 
-#define synq_on_reduce(yypParser, yyruleno)                               \
-  do {                                                                    \
-    SynqParseCtx* synq_ctx_ = (yypParser)->pCtx;                          \
-    unsigned int synq_nrhs_ = (unsigned int)(-yyRuleInfoNRhs[yyruleno]);  \
-    if (synq_ctx_->collect_node_extents | synq_ctx_->macro_root_layer) {  \
-      synq_extent_on_reduce(synq_ctx_, synq_nrhs_);                       \
-    } else {                                                              \
-      synq_ctx_->lemon_depth = synq_ctx_->lemon_depth + 1 - synq_nrhs_;   \
-    }                                                                     \
+#define synq_on_reduce(yypParser, yyruleno)                              \
+  do {                                                                   \
+    SynqParseCtx* synq_ctx_ = (yypParser)->pCtx;                         \
+    unsigned int synq_nrhs_ = (unsigned int)(-yyRuleInfoNRhs[yyruleno]); \
+    if (synq_ctx_->collect_node_extents | synq_ctx_->macro_root_layer) { \
+      synq_extent_on_reduce(synq_ctx_, synq_nrhs_);                      \
+    } else {                                                             \
+      synq_ctx_->lemon_depth = synq_ctx_->lemon_depth + 1 - synq_nrhs_;  \
+    }                                                                    \
   } while (0)
 
 #ifdef __cplusplus
