@@ -32,7 +32,7 @@ use super::{
 /// assert!(fragments[0].sql_text().starts_with("SELECT"));
 /// assert_eq!(fragments[0].holes().len(), 1);
 /// ```
-pub fn extract_typescript(source: &str) -> Vec<EmbeddedFragment<'static>> {
+pub fn extract_typescript(source: &str) -> Vec<EmbeddedFragment<'_>> {
     let bytes = source.as_bytes();
     let len = bytes.len();
     let mut fragments = Vec::new();

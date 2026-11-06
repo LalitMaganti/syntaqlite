@@ -240,9 +240,9 @@ pub fn syntaqlite::embedded::Hole::host_range(&self) -> syntaqlite_syntax::sourc
 pub fn syntaqlite::embedded::Hole::sql_offset(&self) -> syntaqlite_syntax::source::DocOffset
 pub fn syntaqlite::embedded::detect(impl core::convert::Into<syntaqlite::any::AnyDialect>, &str, core::option::Option<&str>) -> core::option::Option<syntaqlite::embedded::HostLanguage>
 pub fn syntaqlite::embedded::extract(impl core::convert::Into<syntaqlite::any::AnyDialect>, syntaqlite::embedded::HostLanguage, &str) -> alloc::vec::Vec<syntaqlite::embedded::EmbeddedFragment<'_>>
-pub fn syntaqlite::embedded::extract_python(&str) -> alloc::vec::Vec<syntaqlite::embedded::EmbeddedFragment<'static>>
+pub fn syntaqlite::embedded::extract_python(&str) -> alloc::vec::Vec<syntaqlite::embedded::EmbeddedFragment<'_>>
 pub fn syntaqlite::embedded::extract_shell(impl core::convert::Into<syntaqlite::any::AnyDialect>, &str) -> alloc::vec::Vec<syntaqlite::embedded::EmbeddedFragment<'_>>
-pub fn syntaqlite::embedded::extract_typescript(&str) -> alloc::vec::Vec<syntaqlite::embedded::EmbeddedFragment<'static>>
+pub fn syntaqlite::embedded::extract_typescript(&str) -> alloc::vec::Vec<syntaqlite::embedded::EmbeddedFragment<'_>>
 pub fn syntaqlite::embedded::fragments(impl core::convert::Into<syntaqlite::any::AnyDialect>, &str, core::option::Option<syntaqlite::embedded::HostLanguage>) -> alloc::vec::Vec<syntaqlite::embedded::EmbeddedFragment<'_>>
 pub fn syntaqlite::embedded::is_shell_script(impl core::convert::Into<syntaqlite::any::AnyDialect>, &str) -> bool
 pub fn syntaqlite::embedded::mask(&str, &[syntaqlite::embedded::EmbeddedFragment<'_>]) -> alloc::string::String
