@@ -555,6 +555,20 @@ fn kind_with<S: serde::Serializer>(
 }
 
 #[cfg(feature = "serde")]
+fn kind_table_column<S: serde::Serializer>(
+    serializer: S,
+    kind: &str,
+    table: &str,
+    column: &str,
+) -> Result<S::Ok, S::Error> {
+    use serde::ser::SerializeMap;
+    kind_with(serializer, kind, 2, |m| {
+        m.serialize_entry("table", table)?;
+        m.serialize_entry("column", column)
+    })
+}
+
+#[cfg(feature = "serde")]
 fn kind_and_name<S: serde::Serializer>(
     serializer: S,
     kind: &str,
@@ -566,6 +580,7 @@ fn kind_and_name<S: serde::Serializer>(
 
 #[cfg(feature = "serde")]
 impl serde::Serialize for DiagnosticMessage {
+    #[expect(clippy::too_many_lines, reason = "one arm per diagnostic")]
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         use serde::ser::SerializeMap;
         match self {
@@ -660,16 +675,10 @@ impl serde::Serialize for DiagnosticMessage {
                 })
             }
             Self::DuplicateColumn { table, column } => {
-                kind_with(serializer, "duplicate_column", 2, |m| {
-                    m.serialize_entry("table", table)?;
-                    m.serialize_entry("column", column)
-                })
+                kind_table_column(serializer, "duplicate_column", table, column)
             }
             Self::AlterUnknownColumn { table, column } => {
-                kind_with(serializer, "alter_unknown_column", 2, |m| {
-                    m.serialize_entry("table", table)?;
-                    m.serialize_entry("column", column)
-                })
+                kind_table_column(serializer, "alter_unknown_column", table, column)
             }
             Self::ValuesTerms { first, row } => kind_with(serializer, "values_terms", 2, |m| {
                 m.serialize_entry("first", first)?;
