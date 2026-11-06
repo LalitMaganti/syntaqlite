@@ -37,6 +37,13 @@ SYNTAQLITE_DIALECT_API void synq_extent_on_reduce(SynqParseCtx* pCtx,
 // `synq_extent_record` to re-record the widened extent on the node.
 SYNTAQLITE_DIALECT_API void synq_extent_fold_below_into_top(SynqParseCtx* pCtx);
 
+// Applied to Lemon's `yy_shift` by the post-lemon patch step.
+#if defined(__GNUC__) || defined(__clang__)
+#define SYNQ_ALWAYS_INLINE __attribute__((always_inline)) inline
+#else
+#define SYNQ_ALWAYS_INLINE inline
+#endif
+
 // Lemon stores `yyRuleInfoNRhs[r]` as the negative of the rule's RHS
 // symbol count, so the reduce macro negates it to recover `nrhs`.
 //

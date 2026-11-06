@@ -129,6 +129,12 @@ fn patch_generated_parser_files(
         // years; the hardened `CTransformer` will fail loudly if
         // either ever goes missing so we notice immediately on an
         // upstream Lemon update.
+        // Lemon's shift runs once per token but is no longer inlined into
+        // the parse loop now that it calls the extent hook.
+        .replace_all(
+            "static void yy_shift(",
+            "SYNQ_ALWAYS_INLINE static void yy_shift(",
+        )
         .replace_in_function(
             "yy_shift",
             "yytos->minor.yy0 = yyMinor;",

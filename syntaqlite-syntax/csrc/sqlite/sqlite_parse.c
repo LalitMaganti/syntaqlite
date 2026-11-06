@@ -6393,7 +6393,7 @@ static void yyTraceShift(yyParser* yypParser,
 /*
 ** Perform a shift action.
 */
-static void yy_shift(
+SYNQ_ALWAYS_INLINE static void yy_shift(
     yyParser* yypParser,             /* The parser to be shifted */
     YYACTIONTYPE yyNewState,         /* The new state to shift in */
     YYCODETYPE yyMajor,              /* The major token to shift in */
@@ -10346,7 +10346,7 @@ static void yy_syntax_error(
   SynqSqliteParseARG_FETCH SynqSqliteParseCTX_FETCH
 #define TOKEN yyminor
       /************ Begin %syntax_error code
-       ****************************************/
+         ****************************************/
 
       (void) yymajor;
   (void)TOKEN;
