@@ -371,18 +371,14 @@ impl Formatter {
             let node_name = self.dialect.syntax_dialect().node_name(tag);
             let _ = writeln!(result, "=== {node_name} (tag={}) ===", u32::from(tag));
 
-            let Some((ops_bytes, ops_len)) = self.dialect.fmt_dispatch(tag) else {
+            let Some(ops) = self.dialect.fmt_dispatch(tag) else {
                 result.push_str("  <no fmt bytecode>\n");
                 continue;
             };
 
             let mut depth: usize = 0;
-            for ip in 0..ops_len {
-                let base = ip * 6;
-                let opcode = ops_bytes[base];
-                let a = ops_bytes[base + 1];
-                let b = u16::from_le_bytes([ops_bytes[base + 2], ops_bytes[base + 3]]);
-                let c = u16::from_le_bytes([ops_bytes[base + 4], ops_bytes[base + 5]]);
+            for (ip, &op) in ops.iter().enumerate() {
+                let (opcode, a, b, c) = crate::dialect::split_fmt_op(op);
 
                 // Dedent closers before printing.
                 match opcode {

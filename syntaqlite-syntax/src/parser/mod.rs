@@ -1109,7 +1109,7 @@ impl<'a> AnyParsedStatement<'a> {
     /// Reflect one node's fields into `out`, replacing whatever it held.
     ///
     /// [`NodeFields`](crate::ast::NodeFields) is a few hundred bytes wide, so
-    /// a caller walking a tree refills one buffer instead of taking a copy
+    /// a caller walking a tree refills its buffers instead of taking a copy
     /// per node.
     pub fn extract_fields_into(
         &self,

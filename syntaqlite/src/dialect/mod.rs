@@ -348,11 +348,12 @@ impl AnyDialect {
         self.template().fmt_str_count > 0
     }
 
-    /// Read the packed `fmt_dispatch` entry for a node tag.
+    /// The formatter bytecode for a node tag, one 6-byte op per element (see
+    /// [`split_fmt_op`]).
     pub(crate) fn fmt_dispatch(
         &self,
         tag: syntaqlite_syntax::any::AnyNodeTag,
-    ) -> Option<(&[u8], usize)> {
+    ) -> Option<&[[u8; 6]]> {
         let raw = self.template();
         let tag_idx = u32::from(tag) as usize;
         if raw.fmt_dispatch.is_null() || tag_idx >= raw.fmt_dispatch_count as usize {
@@ -376,16 +377,20 @@ impl AnyDialect {
             byte_offset + byte_len,
             raw.fmt_ops_count,
         );
-        let slice: &[u8] = if byte_len == 0 || raw.fmt_ops.is_null() {
+        if byte_len == 0 || raw.fmt_ops.is_null() {
             assert!(byte_len == 0, "fmt_ops is null with non-zero byte_len");
-            &[]
-        } else {
-            // SAFETY: `fmt_ops` is non-null and `byte_offset + byte_len <= fmt_ops_count`;
-            // by `AnyDialect`'s safety invariant `fmt_ops` is valid for
-            // `fmt_ops_count` bytes for the lifetime of `self`.
-            unsafe { std::slice::from_raw_parts(raw.fmt_ops.add(byte_offset), byte_len) }
-        };
-        Some((slice, length as usize))
+            return Some(&[]);
+        }
+        // SAFETY: `fmt_ops` is non-null and `byte_offset + byte_len <= fmt_ops_count`;
+        // by `AnyDialect`'s safety invariant `fmt_ops` is valid for
+        // `fmt_ops_count` bytes for the lifetime of `self`. `[u8; 6]` has
+        // alignment 1, and `byte_len` is `length` ops of 6 bytes.
+        Some(unsafe {
+            std::slice::from_raw_parts(
+                raw.fmt_ops.add(byte_offset).cast::<[u8; 6]>(),
+                usize::from(length),
+            )
+        })
     }
 
     /// Look up a string from the fmt string table by index (CSR encoding).
@@ -660,6 +665,18 @@ impl std::ops::DerefMut for AnyDialect {
     fn deref_mut(&mut self) -> &mut SyntaxDialect {
         &mut self.inner
     }
+}
+
+/// Split one formatter op into its opcode, `a` operand, and little-endian
+/// `b` and `c` operands.
+pub(crate) fn split_fmt_op(op: [u8; 6]) -> (u8, u8, u16, u16) {
+    let [opcode, a, b0, b1, c0, c1] = op;
+    (
+        opcode,
+        a,
+        u16::from_le_bytes([b0, b1]),
+        u16::from_le_bytes([c0, c1]),
+    )
 }
 
 #[cfg(test)]
