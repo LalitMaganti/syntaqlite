@@ -79,6 +79,17 @@ proc.stdout.on("data", (chunk) => {
 
 proc.stderr.on("data", () => {}); // suppress
 
+// A server that fails to start or exits early will never publish diagnostics,
+// so stop now instead of waiting for the timeout.
+function serverGone() {
+  if (diagnostics === null) {
+    console.log("(server exited before publishing diagnostics)");
+    process.exit(2);
+  }
+}
+proc.on("error", serverGone);
+proc.on("exit", serverGone);
+
 function handleMessage(msg) {
   if (msg.id === 1 && !initialized) {
     // initialize response — send initialized + didOpen

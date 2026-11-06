@@ -29,8 +29,27 @@ RESULTS_DIR = os.path.join(DIR, "results")
 
 LSP_VALIDATE = os.path.join(DIR, "validator", "_lsp_validate.js")
 SQLITE_RUNNER_LSP = os.path.join(DIR, "_sqlite_runner_lsp", "server", "server.js")
-SQLS = os.path.join(os.path.expanduser("~"), ".local", "share", "mise", "installs", "go", "1.26.1", "bin", "sqls")
+
+
+def _find_sqls():
+    """sqls on PATH, else where `go install` puts it."""
+    found = shutil.which("sqls")
+    if found:
+        return found
+    gopath = os.environ.get("GOPATH") or os.path.join(os.path.expanduser("~"), "go")
+    path = os.path.join(gopath, "bin", "sqls")
+    return path if os.path.exists(path) else None
+
+
+SQLS = _find_sqls()
+HAVE_SQLITE_RUNNER_LSP = os.path.exists(SQLITE_RUNNER_LSP)
 LSP_TEST = os.path.join(DIR, "lsp", "_lsp_test.js")
+# Installed locally so package.json can pin the protocol version it works with.
+SQL_LANGUAGE_SERVER = os.path.join(DIR, "node_modules", ".bin", "sql-language-server")
+# Timed commands call the local binaries directly: `npx` adds ~150 ms and
+# `uv run` ~7 ms to every run, which is launcher time, not the tool's.
+NODE_BIN = os.path.join(DIR, "node_modules", ".bin")
+VENV_BIN = os.path.join(DIR, ".venv", "bin")
 
 SCHEMA_SQL_PATH = os.path.join(DIR, "schema.sql")
 
@@ -284,7 +303,7 @@ def _get_formatted_sql(tool_name, input_path):
         return (True, out) if ok else (False, None)
     elif tool_name == "prettier-cst":
         with open(input_path) as f:
-            ok, out, _ = _run("npx prettier --stdin-filepath t.sql", input_text=f.read(), cwd=DIR)
+            ok, out, _ = _run(f"'{NODE_BIN}/prettier' --stdin-filepath t.sql", input_text=f.read(), cwd=DIR)
         return (True, out) if ok else (False, None)
     elif tool_name == "sql-formatter":
         ok, out, _ = _run(f"sql-formatter -l sqlite '{input_path}'")
@@ -331,7 +350,7 @@ def _get_formatted_sql(tool_name, input_path):
 
 def _validate_syntaqlite(sql, schema_preamble):
     t = _tmpfile(schema_preamble + sql + "\n")
-    ok, out, err = _run(f"'{SYNQ}' validate '{t}'")
+    ok, out, err = _run(f"'{SYNQ}' analyze '{t}'")
     os.unlink(t)
     combined = out + err
     return "warning:" in combined or "error:" in combined
@@ -342,7 +361,7 @@ def _validate_sqlite3_runtime(sql):
 
 def _validate_sql_lint(sql):
     t = _tmpfile(sql + "\n")
-    ok, out, err = _run(f"npx sql-lint '{t}'")
+    ok, out, err = _run(f"'{NODE_BIN}/sql-lint' '{t}'")
     os.unlink(t)
     combined = out + err
     return "sql-lint" in combined.lower() or "unable to lint" in combined.lower()
@@ -360,6 +379,11 @@ VALIDATOR_TOOLS = [
     ("sqlite-runner-lsp", "runtime via LSP", _validate_sqlite_runner_lsp),
     ("sql-lint", "structural checks", _validate_sql_lint),
 ]
+
+# A tool that isn't installed would only time out, so leave it out.
+if not HAVE_SQLITE_RUNNER_LSP:
+    VALIDATOR_TOOLS = [t for t in VALIDATOR_TOOLS if t[0] != "sqlite-runner-lsp"]
+    VALIDATOR_TOOLS_META = [t for t in VALIDATOR_TOOLS_META if t[0] != "sqlite-runner-lsp"]
 
 
 # ─── Collect: Parser ──────────────────────────────────────────────
@@ -473,13 +497,13 @@ def collect_parser():
         cmd = (
             f"hyperfine --warmup {warmup} --min-runs {runs} --shell=none "
             f"--export-markdown '{parse_dir}/bench_{label.split()[0]}.md' "
-            f"-n syntaqlite '{SYNQ} parse {sqlfile}' "
+            f"-n syntaqlite '{SYNQ} parse -o summary {sqlfile}' "
             f"-n lemon-rs '{LEMON_RS} {sqlfile}' "
             f"-n sql-parser-cst 'node {parse_dir}/_parse_cst.js {sqlfile}' "
-            f"-n 'sqlglot[c]' '{UV} run --directory {DIR} python {parse_dir}/_parse_sqlglot.py {sqlfile}' "
+            f"-n 'sqlglot[c]' '{VENV_BIN}/python {parse_dir}/_parse_sqlglot.py {sqlfile}' "
             f"-n sqlparser-rs '{SQLPARSER_RS} {sqlfile}' "
             f"-n node-sql-parser 'node {parse_dir}/_parse_node.js {sqlfile}' "
-            f"-n sqlfluff '{UV} run --directory {DIR} sqlfluff parse {sqlfile} --dialect sqlite' "
+            f"-n sqlfluff '{VENV_BIN}/sqlfluff parse {sqlfile} --dialect sqlite --format none' "
         )
         subprocess.run(cmd, shell=True, cwd=DIR)
 
@@ -643,7 +667,7 @@ def collect_formatter():
         )
 
     with open(os.path.join(fmt_bench_dir, "_wrap_prettier.sh"), "w") as f:
-        f.write("#!/bin/bash\nnpx prettier --stdin-filepath test.sql < \"$1\"\n")
+        f.write(f"#!/bin/bash\n'{NODE_BIN}/prettier' --stdin-filepath test.sql < \"$1\"\n")
     os.chmod(os.path.join(fmt_bench_dir, "_wrap_prettier.sh"), 0o755)
 
     for label, sqlfile in [
@@ -658,7 +682,7 @@ def collect_formatter():
             f"-n syntaqlite '{SYNQ} fmt {sqlfile}' "
             f"-n prettier-cst '{fmt_bench_dir}/_wrap_prettier.sh {sqlfile}' "
             f"-n sql-formatter 'sql-formatter -l sqlite {sqlfile}' "
-            f"-n 'sqlglot[c]' '{UV} run --directory {DIR} python {fmt_bench_dir}/_fmt_sqlglot.py {sqlfile}' "
+            f"-n 'sqlglot[c]' '{VENV_BIN}/python {fmt_bench_dir}/_fmt_sqlglot.py {sqlfile}' "
             f"-n sleek '{fmt_bench_dir}/_wrap_sleek.sh {sqlfile}' "
             f"-n sqruff '{fmt_bench_dir}/_wrap_sqruff.sh {sqlfile}' "
         )
@@ -668,14 +692,16 @@ def collect_formatter():
     _log("  Slow tool timing...")
     slow_tools = []
     for name, fmt_cmd in [
-        ("sqlfmt (1x)", f"cd '{DIR}' && cp '{small_path}' /tmp/_sqlfmt.sql && {UV} run sqlfmt /tmp/_sqlfmt.sql > /dev/null 2>&1; rm -f /tmp/_sqlfmt.sql"),
-        ("sqlfmt (30x)", f"cd '{DIR}' && cp '{large_path}' /tmp/_sqlfmt.sql && {UV} run sqlfmt /tmp/_sqlfmt.sql > /dev/null 2>&1; rm -f /tmp/_sqlfmt.sql"),
-        ("sqlfluff (1x)", f"cd '{DIR}' && cp '{small_path}' /tmp/_sqlfluff.sql && {UV} run sqlfluff format /tmp/_sqlfluff.sql --dialect sqlite -q > /dev/null 2>&1; rm -f /tmp/_sqlfluff.sql"),
+        ("sqlfmt (1x)", f"cd '{DIR}' && cp '{small_path}' /tmp/_sqlfmt.sql && '{VENV_BIN}/sqlfmt' /tmp/_sqlfmt.sql > /dev/null 2>&1; rc=$?; rm -f /tmp/_sqlfmt.sql; exit $rc"),
+        ("sqlfmt (30x)", f"cd '{DIR}' && cp '{large_path}' /tmp/_sqlfmt.sql && '{VENV_BIN}/sqlfmt' /tmp/_sqlfmt.sql > /dev/null 2>&1; rc=$?; rm -f /tmp/_sqlfmt.sql; exit $rc"),
+        ("sqlfluff (1x)", f"cd '{DIR}' && cp '{small_path}' /tmp/_sqlfluff.sql && '{VENV_BIN}/sqlfluff' format /tmp/_sqlfluff.sql --dialect sqlite > /dev/null 2>&1; rc=$?; rm -f /tmp/_sqlfluff.sql; exit $rc"),
     ]:
         start = time.monotonic()
-        subprocess.run(fmt_cmd, shell=True, capture_output=True, timeout=120)
+        p = subprocess.run(fmt_cmd, shell=True, capture_output=True, timeout=120)
         elapsed = time.monotonic() - start
-        slow_tools.append({"name": name, "time_ms": round(elapsed * 1000)})
+        # A failed run only measures how fast the tool gave up.
+        time_ms = round(elapsed * 1000) if p.returncode == 0 else None
+        slow_tools.append({"name": name, "time_ms": time_ms})
 
     return {
         "meta": _get_meta(),
@@ -733,7 +759,7 @@ def collect_validator():
 
     # syntaqlite
     t = _tmpfile(schema_preamble + demo_query)
-    _, out, err = _run(f"'{SYNQ}' validate '{t}'")
+    _, out, err = _run(f"'{SYNQ}' analyze '{t}'")
     os.unlink(t)
     synq_output = (out + err).strip()
     synq_errors = len([l for l in synq_output.split('\n') if l.strip().startswith(('error:', 'warning:'))])
@@ -743,7 +769,7 @@ def collect_validator():
         "finds_all": synq_errors >= 2,
         "did_you_mean": "did you mean" in synq_output.lower(),
         "approach": "static semantic",
-        "description": "Static analysis — offline, no database needed. Finds **both** errors in one pass:",
+        "description": "Static analysis runs offline and reports **both** errors in one pass:",
     }
 
     # sqlite3
@@ -754,27 +780,28 @@ def collect_validator():
         "finds_all": False,
         "did_you_mean": False,
         "approach": "runtime execution",
-        "description": "Runtime execution — stops at first error:",
+        "description": "Runtime execution stops at the first error:",
     }
 
     # sqlite-runner-lsp
-    t = _tmpfile(schema_preamble + demo_query)
-    _, out, err = _run(f"node '{LSP_VALIDATE}' node '{SQLITE_RUNNER_LSP}' --stdio -- '{t}'")
-    os.unlink(t)
-    combined = (out + err).strip()
-    has_diag = combined and "no diagnostics" not in combined
-    demo_diagnostics["sqlite-runner-lsp"] = {
-        "output": combined if has_diag else "(no diagnostics)",
-        "errors_found": 1 if has_diag else 0,
-        "finds_all": False,
-        "did_you_mean": False,
-        "approach": "runtime via LSP",
-        "description": "Runtime via LSP — wraps sqlite3, same single error:",
-    }
+    if HAVE_SQLITE_RUNNER_LSP:
+        t = _tmpfile(schema_preamble + demo_query)
+        _, out, err = _run(f"node '{LSP_VALIDATE}' node '{SQLITE_RUNNER_LSP}' --stdio -- '{t}'")
+        os.unlink(t)
+        combined = (out + err).strip()
+        has_diag = combined and "no diagnostics" not in combined
+        demo_diagnostics["sqlite-runner-lsp"] = {
+            "output": combined if has_diag else "(no diagnostics)",
+            "errors_found": 1 if has_diag else 0,
+            "finds_all": False,
+            "did_you_mean": False,
+            "approach": "runtime via LSP",
+            "description": "The LSP wraps sqlite3 at runtime and reports the same single error:",
+        }
 
     # sql-lint
     t = _tmpfile(demo_query)
-    _, out, err = _run(f"npx sql-lint '{t}'")
+    _, out, err = _run(f"'{NODE_BIN}/sql-lint' '{t}'")
     os.unlink(t)
     combined = (out + err).strip()
     has_lint = combined and ("sql-lint" in combined.lower() or "error" in combined.lower())
@@ -895,7 +922,7 @@ def collect_validator():
     small_lines = len(bench_sql.splitlines())
 
     with open(os.path.join(val_dir, "_wrap_sql_lint.sh"), "w") as f:
-        f.write("#!/bin/bash\nnpx sql-lint \"$1\" > /dev/null 2>&1\n")
+        f.write(f"#!/bin/bash\n'{NODE_BIN}/sql-lint' \"$1\" > /dev/null 2>&1\n")
     os.chmod(os.path.join(val_dir, "_wrap_sql_lint.sh"), 0o755)
 
     with open(os.path.join(val_dir, "_wrap_sqlite3.sh"), "w") as f:
@@ -915,10 +942,11 @@ def collect_validator():
         cmd = (
             f"hyperfine --warmup {warmup} --min-runs {runs} --shell=none "
             f"--export-markdown '{val_dir}/bench_{label.split()[0]}.md' "
-            f"-n syntaqlite '{SYNQ} validate {sqlfile}' "
+            f"-n syntaqlite '{SYNQ} analyze {sqlfile}' "
             f"-n sqlite3 '{val_dir}/_wrap_sqlite3.sh {sqlfile}' "
-            f"-n sqlite-runner-lsp '{val_dir}/_wrap_sqlite_runner_lsp.sh {sqlfile}' "
-            f"-n sql-lint '{val_dir}/_wrap_sql_lint.sh {sqlfile}' "
+            + (f"-n sqlite-runner-lsp '{val_dir}/_wrap_sqlite_runner_lsp.sh {sqlfile}' "
+               if HAVE_SQLITE_RUNNER_LSP else "")
+            + f"-n sql-lint '{val_dir}/_wrap_sql_lint.sh {sqlfile}' "
         )
         subprocess.run(cmd, shell=True, cwd=DIR)
 
@@ -979,8 +1007,11 @@ def collect_lsp():
     lsp_servers = [
         ("syntaqlite", [SYNQ, "--config", synq_config, "lsp"], []),
         ("sqls", [SQLS, "-c", sqls_config], ["--db", test_db]),
-        ("sql-language-server", ["npx", "sql-language-server", "up", "--method", "stdio"], []),
+        ("sql-language-server", [SQL_LANGUAGE_SERVER, "up", "--method", "stdio"], []),
     ]
+    if SQLS is None:
+        _log("  Skipping sqls: not installed (run tools/run-comparison --setup)")
+        lsp_servers = [s for s in lsp_servers if s[0] != "sqls"]
 
     # Capability & Feature Testing
     _log("  Feature testing...")
@@ -1012,7 +1043,7 @@ def collect_lsp():
     tool_names = [n for n, _, _ in lsp_servers]
 
     def cap(name, field):
-        caps = all_results.get(name, {}).get("valid", {}).get("capabilities", {})
+        caps = all_results.get(name, {}).get("valid", {}).get("capabilities") or {}
         return caps.get(field, False)
 
     # Build feature matrix (plain text, no ANSI)
@@ -1152,8 +1183,15 @@ def collect_lsp():
             f.write(f"#!/bin/bash\nnode '{LSP_VALIDATE}' {cmd_str} -- \"$1\" > /dev/null 2>&1\n")
         os.chmod(script, 0o755)
 
+    # Each run times until the first diagnostics, so a server that never
+    # publishes them would only measure the driver's timeout.
     bench_cmds = []
     for name, cmd, _ in lsp_servers:
+        cmd_str = ' '.join(cmd) + (f" -c '{sqls_config}'" if name == "sqls" else "")
+        _, out, _ = _run(f"node '{LSP_VALIDATE}' {cmd_str} -- '{bench_sql_path}'", timeout=15)
+        if "(no diagnostics" in out or "(server exited" in out:
+            _log(f"  Skipping {name} speed: it published no diagnostics")
+            continue
         script = os.path.join(lsp_dir, f"_wrap_{name.replace('-', '_')}.sh")
         bench_cmds.append(f"-n '{name}' '{script} {bench_sql_path}'")
 

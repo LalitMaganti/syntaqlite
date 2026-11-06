@@ -21,8 +21,8 @@ REPO = os.path.normpath(os.path.join(SCRIPT_DIR, ".."))
 COMP_DIR = os.path.join(REPO, "tests", "comparison")
 DOCS_DIR = os.path.join(REPO, "web", "docs", "content", "reference")
 
-# Add python/ to path so we can import comparison modules
-sys.path.insert(0, os.path.join(REPO, "python"))
+# Add the repo root to path so we can import python.dev.comparison
+sys.path.insert(0, REPO)
 
 
 # ── Setup ──────────────────────────────────────────────────────────
@@ -40,7 +40,7 @@ def do_setup():
 
     # 2. npm global tools
     print("--- npm install global tools ---")
-    _sh("npm install -g sql-formatter sql-language-server")
+    _sh("npm install -g sql-formatter")
     print()
 
     # 3. Python deps via uv

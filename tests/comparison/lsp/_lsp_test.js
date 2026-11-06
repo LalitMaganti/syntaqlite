@@ -86,6 +86,12 @@ proc.stdout.on("data", (chunk) => {
 
 proc.stderr.on("data", () => {});
 
+// A server that fails to start or exits early can't answer, so report what we
+// have instead of waiting for the timeout.
+let finished = false;
+proc.on("error", () => { if (!finished) finish(); });
+proc.on("exit", () => { if (!finished) finish(); });
+
 function handleMessage(msg) {
   // Response to a request
   if (msg.id !== undefined && pendingRequests.has(msg.id)) {
@@ -254,6 +260,7 @@ async function runTests() {
 }
 
 function finish() {
+  finished = true;
   console.log(JSON.stringify(results, null, 2));
   proc.kill();
   process.exit(0);

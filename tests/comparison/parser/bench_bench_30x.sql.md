@@ -1,9 +1,9 @@
-| Command | Mean [ms] | Min [ms] | Max [ms] | Relative |
-|:---|---:|---:|---:|---:|
-| `syntaqlite` | 2.6 ± 0.3 | 2.4 | 9.0 | 1.00 |
-| `lemon-rs` | 4.2 ± 0.3 | 4.0 | 8.7 | 1.62 ± 0.23 |
-| `sql-parser-cst` | 143.4 ± 2.4 | 140.4 | 148.6 | 54.87 ± 7.04 |
-| `sqlglot[c]` | 198.0 ± 17.3 | 179.6 | 236.5 | 75.80 ± 11.69 |
-| `sqlparser-rs` | 11.7 ± 2.0 | 10.5 | 41.9 | 4.48 ± 0.96 |
-| `node-sql-parser` | 150.0 ± 2.4 | 146.6 | 156.5 | 57.41 ± 7.36 |
-| `sqlfluff` | 6408.9 ± 55.5 | 6343.9 | 6482.8 | 2452.81 ± 312.56 |
+| Command | Mean Wall Time [ms] | Change | Factor |
+|:---|---:|---:|:---|
+| `syntaqlite` | 4.1 ± 2.1 |  |  |
+| `lemon-rs` | 5.9 ± 2.5 | +46.3% | (1.5x slower) |
+| `sql-parser-cst` | 251.6 ± 19.2 | +6099.8% | (62.0x slower) |
+| `sqlglot[c]` | 231.5 ± 9.1 | +5606.1% | (57.1x slower) |
+| `sqlparser-rs` | 16.6 ± 0.3 | +309.3% | (4.1x slower) |
+| `node-sql-parser` | 240.0 ± 6.7 | +5815.7% | (59.2x slower) |
+| `sqlfluff` | 8069.8 ± 49.8 | +198785.9% | (1988.9x slower) |

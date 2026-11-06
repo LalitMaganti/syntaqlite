@@ -96,7 +96,7 @@ dependencies = [
 
 [[package]]
 name = "parser-bench"
-version = "0.1.0"
+version = "0.14.0"
 dependencies = [
  "fallible-iterator",
  "sqlite3-parser",

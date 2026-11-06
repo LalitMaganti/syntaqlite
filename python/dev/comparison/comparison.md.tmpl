@@ -1,11 +1,11 @@
 +++
-title = "Competitive Comparison"
-weight = 10
+title = "Comparison to other tools"
+weight = 9
 +++
 # How does syntaqlite compare?
 
 There are many SQL tools out there. This page tests them head-to-head on
-**SQLite-specific SQL** — the kind of syntax that trips up generic SQL parsers —
+**SQLite-specific SQL**, the kind of syntax that trips up generic SQL parsers,
 and shows raw, reproducible results.
 
 > {{META_LINE}}
@@ -17,20 +17,13 @@ and shows raw, reproducible results.
 
 # Parsing
 
-**What we test:** 40 statements covering advanced SQLite syntax — `UPSERT`,
-`RETURNING`, `STRICT` tables, window frames with `EXCLUDE`, numeric underscores,
+**What we test:** The corpus contains 40 statements covering advanced SQLite
+syntax, including `UPSERT`, `RETURNING`, `STRICT` tables, window frames with
+`EXCLUDE`, numeric underscores,
 `IS NOT DISTINCT FROM`, recursive CTEs, and more. Each statement is first
 validated against `sqlite3` itself (the ground truth), then run through every
 parser. A tool scores "correct" only if it agrees with sqlite3.
 
-**Why syntaqlite scores well:** It embeds SQLite's own Lemon-generated parser.
-If sqlite3 accepts a statement, syntaqlite accepts it too — by construction,
-not by reimplementation. lemon-rs (a Rust port of the same grammar) scores
-similarly for the same reason.
-
-Tools built on hand-written or generic SQL grammars tend to lag behind SQLite's
-full syntax, particularly on features added after 3.35 (RETURNING, MATERIALIZED,
-IS DISTINCT FROM, numeric underscores).
 
 ## Accuracy
 
@@ -56,15 +49,10 @@ file repeated 30× (throughput-dominated).
 **What we test:** Round-trip semantic preservation. Each of the same 40
 statements is formatted, then we run `EXPLAIN` on both the original and
 formatted SQL and compare the bytecode sqlite3 produces. Identical bytecode
-means sqlite3 will execute the exact same operations — the formatter preserved
+means sqlite3 will execute the exact same operations, so the formatter preserved
 semantics, not just validity. Tools that crash or refuse to format score
 "refused". Tools whose output produces different bytecode score "corrupt".
 
-**Why bytecode, not just acceptance?** A formatter could subtly alter your SQL
-(reorder expressions, change operator grouping) in a way sqlite3 still accepts
-but that produces different results. Bytecode comparison catches these silent
-semantic changes. For statements where `EXPLAIN` isn't applicable (e.g.
-`PRAGMA`, `ATTACH`), we fall back to acceptance-only.
 
 ## Accuracy
 
@@ -82,17 +70,13 @@ semantic changes. For statements where `EXPLAIN` isn't applicable (e.g.
 
 ---
 
-# Validation
+# Analysis
 
-**What we test:** Can the tool catch real SQL errors — unknown tables, bad
-column references, wrong function arity, CTE column mismatches — without
-running the query? We define 24 test cases (15 with intentional errors, 9
-valid) against a known schema, and check each tool's verdict against sqlite3.
-
-**Why syntaqlite is different:** Most SQL "linters" do structural/style checks
-(trailing commas, missing parens). syntaqlite does static *semantic* analysis —
-it resolves table/column references, checks function signatures, and validates
-CTE column counts, all without a database connection.
+**What we test:** We check whether each tool can identify unknown tables, bad
+column references, incorrect function arity, and CTE column mismatches without
+running the query. The corpus contains 24 cases against a known schema, with 15
+intentional errors and 9 valid queries. Each tool's verdict is checked against
+sqlite3.
 
 ## Accuracy
 
@@ -102,8 +86,8 @@ Schema: `users`, `orders`, `products`, `order_items`. Ground truth: sqlite3.
 
 ## Diagnostic quality
 
-A real query with 2 subtle errors — CTE declares 3 columns but SELECT produces
-2, and a typo `ROUDN` instead of `ROUND`:
+The test query contains two errors: its CTE declares three columns while its
+`SELECT` produces two, and `ROUND` is misspelled as `ROUDN`:
 
 {{VALIDATOR_DIAGNOSTIC_QUALITY_TABLE}}
 
@@ -136,7 +120,7 @@ did-you-mean suggestion:
 
 **What we test:** We start each language server, open a test document, and probe
 for completions, hover, diagnostics, and formatting. Results are from actual LSP
-protocol responses — no self-reported feature lists.
+protocol responses, not self-reported feature lists.
 
 **Key difference:** `sqls` requires a live database connection for its features.
 syntaqlite and sql-language-server work offline.

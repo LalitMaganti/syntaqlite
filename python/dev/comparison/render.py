@@ -204,7 +204,10 @@ def _build_formatter(ph, r):
 
     # Slow tools
     if r.get("slow_tools"):
-        slow_rows = [[st["name"], f"{st['time_ms']}ms"] for st in r["slow_tools"]]
+        slow_rows = [
+            [st["name"], "failed" if st["time_ms"] is None else f"{st['time_ms']}ms"]
+            for st in r["slow_tools"]
+        ]
         ph["FORMATTER_SLOW_TOOLS"] = (
             "\n### Slow tools (single timed run)\n\n"
             + _table(["Tool", "Time"], slow_rows, ['l', 'r'])
@@ -235,7 +238,9 @@ def _build_validator(ph, r):
     # Diagnostic quality table
     dq_rows = []
     for name in ["syntaqlite", "sqlite3", "sqlite-runner-lsp", "sql-lint"]:
-        d = demo.get(name, {})
+        if name not in demo:
+            continue
+        d = demo[name]
         found = d.get("errors_found", 0)
         finds_all = "Yes" if d.get("finds_all") else "No"
         dym = "Yes" if d.get("did_you_mean") else "No"
@@ -261,7 +266,9 @@ def _build_validator(ph, r):
     # Per-tool output showcase
     tool_output_lines = []
     for name in ["syntaqlite", "sqlite3", "sqlite-runner-lsp", "sql-lint"]:
-        d = demo.get(name, {})
+        if name not in demo:
+            continue
+        d = demo[name]
         tool_output_lines.append(f"### {name}\n")
         if d.get("description"):
             tool_output_lines.append(f"{d['description']}\n")
