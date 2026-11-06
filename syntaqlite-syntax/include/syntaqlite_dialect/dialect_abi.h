@@ -28,6 +28,7 @@
 //       - Synq<Dialect>Parse
 //       - Synq<Dialect>ParseTrace
 //       - Synq<Dialect>ParseExpectedTokens
+//       - Synq<Dialect>ParseStackDepth
 //       - Synq<Dialect>ParseCompletionContext
 //       - Synq<Dialect>ParseFallback
 //       - Synq<Dialect>GetToken

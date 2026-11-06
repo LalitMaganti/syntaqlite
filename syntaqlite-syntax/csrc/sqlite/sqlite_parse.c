@@ -6393,7 +6393,7 @@ static void yyTraceShift(yyParser* yypParser,
 /*
 ** Perform a shift action.
 */
-static void yy_shift(
+SYNQ_ALWAYS_INLINE static void yy_shift(
     yyParser* yypParser,             /* The parser to be shifted */
     YYACTIONTYPE yyNewState,         /* The new state to shift in */
     YYCODETYPE yyMajor,              /* The major token to shift in */
@@ -7344,7 +7344,6 @@ static YYACTIONTYPE yy_reduce(
   SynqSqliteParseARG_FETCH(void) yyLookahead;
   (void)yyLookaheadToken;
   yymsp = yypParser->yytos;
-  synq_on_reduce(yypParser, yyruleno);
 
   switch (yyruleno) {
     /* Beginning here are the reduction cases.  A typical example
@@ -10483,6 +10482,7 @@ void SynqSqliteParse(
           }
         }
       }
+      synq_on_reduce(yypParser, yyruleno);
       yyact = yy_reduce(yypParser, yyruleno, yymajor,
                         yyminor SynqSqliteParseCTX_PARAM);
     } else if (yyact <= YY_MAX_SHIFTREDUCE) {
@@ -10741,6 +10741,12 @@ uint32_t SynqSqliteParseExpectedTokens(void* parser,
   }
 
   return n;
+}
+
+/* syntaqlite extension: number of symbols on the parser stack. */
+uint32_t SynqSqliteParseStackDepth(void* parser) {
+  yyParser* p = (yyParser*)parser;
+  return (uint32_t)(p->yytos - p->yystack);
 }
 
 /* syntaqlite extension: non-terminal IDs for completion context. */

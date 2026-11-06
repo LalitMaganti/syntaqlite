@@ -688,6 +688,8 @@ pub(crate) mod ffi {
         #[doc(hidden)]
         pub parser_expected_tokens: *const std::ffi::c_void,
         #[doc(hidden)]
+        pub parser_stack_depth: *const std::ffi::c_void,
+        #[doc(hidden)]
         pub parser_completion_context: *const std::ffi::c_void,
 
         // Lemon %fallback lookup

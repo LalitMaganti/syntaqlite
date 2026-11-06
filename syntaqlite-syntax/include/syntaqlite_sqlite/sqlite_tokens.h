@@ -197,6 +197,9 @@ uint32_t SynqSqliteParseExpectedTokens(void* parser,
                                        uint32_t* out_tokens,
                                        uint32_t out_cap);
 
+/* syntaqlite extension: number of symbols on the parser stack. */
+uint32_t SynqSqliteParseStackDepth(void* parser);
+
 /* syntaqlite extension: completion context from parser stack. */
 uint32_t SynqSqliteParseCompletionContext(void* parser);
 #endif /* SYNTAQLITE_SQLITE_TOKENS_H */
