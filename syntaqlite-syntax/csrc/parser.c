@@ -9,6 +9,7 @@
 // live in parser_extents.c.  AST dump lives in parser_dump.c.
 // Cross-file helpers are declared in csrc/parser_internal.h.
 
+#include <assert.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -256,6 +257,7 @@ static inline int shift_token_inline(SyntaqliteParser* p,
                                      uint32_t len,
                                      uint32_t layer_offset,
                                      uint32_t layer_id) {
+  assert(layer_id == p->ctx.layer_id);
   uint32_t tidx = 0xFFFFFFFF;
 
   if (p->collect_tokens && text) {
@@ -681,6 +683,10 @@ SYNTAQLITE_API int32_t syntaqlite_parser_next(SyntaqliteParser* p) {
     // Context-sensitive keyword reclassification: WINDOW/OVER/FILTER may
     // need to be demoted to TK_ID depending on surrounding tokens.  The
     // three are contiguous, so one range check skips every other token.
+    SYNQ_STATIC_ASSERT(
+        SYNTAQLITE_TK_OVER == SYNTAQLITE_TK_WINDOW + 1 &&
+            SYNTAQLITE_TK_FILTER == SYNTAQLITE_TK_WINDOW + 2,
+        "WINDOW, OVER and FILTER token codes must be contiguous");
     if (cur_type - SYNTAQLITE_TK_WINDOW <= 2u) {
       if (cur_type == SYNTAQLITE_TK_WINDOW) {
         cur_type = synq_analyze_window(p, z + p->offset);

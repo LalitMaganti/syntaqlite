@@ -13,6 +13,8 @@
 #include <stdint.h>
 #include <string.h>
 
+#include "syntaqlite/compiler.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -48,25 +50,14 @@ extern "C" {
     (v)->count = 0;             \
   } while (0)
 
-// gcc rejects `inline` with `noinline`, and clang warns when something marked
-// `unused` is used, so each gets its own spelling.
-#if defined(__clang__)
-#define SYNQ_VEC_COLD_FN static inline __attribute__((noinline, cold))
-#elif defined(__GNUC__)
-#define SYNQ_VEC_COLD_FN static __attribute__((noinline, cold, unused))
-#elif defined(_MSC_VER)
-#define SYNQ_VEC_COLD_FN static __inline __declspec(noinline)
-#else
-#define SYNQ_VEC_COLD_FN static inline
-#endif
-
 // Out of line so a push's common path has no call in it, and stays small
 // enough to inline.
-SYNQ_VEC_COLD_FN void* syntaqlite_vec_grow_(void* data,
-                                            uint32_t* capacity,
-                                            uint32_t needed,
-                                            size_t elem_size,
-                                            void* (*xRealloc)(void*, size_t)) {
+SYNQ_HEADER_NOINLINE SYNQ_COLD void* syntaqlite_vec_grow_(
+    void* data,
+    uint32_t* capacity,
+    uint32_t needed,
+    size_t elem_size,
+    void* (*xRealloc)(void*, size_t)) {
   uint32_t cap = *capacity ? *capacity : 16;
   while (cap < needed)
     cap *= 2;

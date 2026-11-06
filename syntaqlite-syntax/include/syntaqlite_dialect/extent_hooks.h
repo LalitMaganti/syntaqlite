@@ -18,16 +18,16 @@
 extern "C" {
 #endif
 
-// Called from the top of Lemon's `yy_shift` for every terminal shift.
+// Called at the end of Lemon's `yy_shift` for every terminal shift.
 // Pushes a `(root_start, root_end)` range onto the shadow stack when
 // per-node extent tracking is enabled.
 SYNTAQLITE_DIALECT_API void synq_extent_on_shift(SynqParseCtx* pCtx,
                                                  unsigned int major,
                                                  const SynqParseToken* token);
 
-// Called from the top of Lemon's `yy_reduce` for every rule reduction,
-// before the user action switch.  Pops `nrhs` entries from the shadow
-// stack and pushes their merged range.
+// Called just before Lemon's single `yy_reduce` call for every rule
+// reduction, so before the rule's action runs.  Pops `nrhs` entries from the
+// shadow stack and pushes their merged range.
 SYNTAQLITE_DIALECT_API void synq_extent_on_reduce(SynqParseCtx* pCtx,
                                                   unsigned int nrhs);
 

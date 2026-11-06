@@ -42,4 +42,34 @@
 #define SYNQ_ALWAYS_INLINE inline
 #endif
 
+// Keeps a function out of line.
+#if defined(__GNUC__) || defined(__clang__)
+#define SYNQ_NOINLINE __attribute__((noinline))
+#elif defined(_MSC_VER)
+#define SYNQ_NOINLINE __declspec(noinline)
+#else
+#define SYNQ_NOINLINE
+#endif
+
+// Marks a rarely called function, so callers lay out the call off their hot
+// path.
+#if defined(__GNUC__) || defined(__clang__)
+#define SYNQ_COLD __attribute__((cold))
+#else
+#define SYNQ_COLD
+#endif
+
+// Storage class for a function defined in a header that must stay out of
+// line. gcc rejects `inline` together with `noinline`, and clang warns when a
+// function marked `unused` is used, so each compiler gets its own spelling.
+#if defined(__clang__)
+#define SYNQ_HEADER_NOINLINE static inline __attribute__((noinline))
+#elif defined(__GNUC__)
+#define SYNQ_HEADER_NOINLINE static __attribute__((noinline, unused))
+#elif defined(_MSC_VER)
+#define SYNQ_HEADER_NOINLINE static __inline __declspec(noinline)
+#else
+#define SYNQ_HEADER_NOINLINE static inline
+#endif
+
 #endif  // SYNTAQLITE_COMPILER_H
