@@ -9,7 +9,6 @@ use std::fmt::Write as _;
 use std::fs;
 
 use super::sqlite_fragments::SqliteFragments;
-use crate::codegen_api::TokenizerExtractResult;
 use crate::util::c_transformer::CTransformer;
 use crate::util::c_writer::CWriter;
 
@@ -163,28 +162,46 @@ struct KeywordPerfectHash {
 fn find_keyword_perfect_hash(
     keyword_indices: &[(usize, String)],
 ) -> Result<KeywordPerfectHash, String> {
+    let mut by_key: HashMap<u64, &str> = HashMap::new();
+    for (_, name) in keyword_indices {
+        if let Some(other) = by_key.insert(kw_key(name.as_bytes()), name) {
+            return Err(format!(
+                "keywords `{other}` and `{name}` share a lookup key (length and first and \
+                 last two bytes), so no hash can tell them apart; widen `kw_key`"
+            ));
+        }
+    }
     let keys: Vec<(usize, u64)> = keyword_indices
         .iter()
         .map(|(i, name)| (*i, kw_key(name.as_bytes())))
         .collect();
-    for bits in 10..=12u32 {
+    // Start with at least four slots per key, so a collision-free multiplier
+    // turns up within a few hundred thousand tries.
+    let min_bits = (keys.len() * 4).next_power_of_two().trailing_zeros().max(8);
+    for bits in min_bits..min_bits + 3 {
+        // `taken[h] == attempt` marks slot `h` as used in the current attempt,
+        // so the table is not cleared between attempts.
+        let mut taken = vec![0u32; 1 << bits];
         let mut x: u64 = 0x9E37_79B9;
-        for _ in 0..2_000_000 {
+        for attempt in 1..=2_000_000u32 {
             x = x
                 .wrapping_mul(6_364_136_223_846_793_005)
                 .wrapping_add(1_442_695_040_888_963_407);
             let mult = x | 1;
-            let mut slots = vec![0usize; 1 << bits];
-            let collision_free = keys.iter().all(|&(i, key)| {
-                let h = usize::try_from(key.wrapping_mul(mult) >> (64 - bits)).unwrap_or(0);
-                let free = slots[h] == 0;
-                slots[h] = i;
+            let slot =
+                |key: u64| usize::try_from(key.wrapping_mul(mult) >> (64 - bits)).unwrap_or(0);
+            let collision_free = keys.iter().all(|&(_, key)| {
+                let h = slot(key);
+                let free = taken[h] != attempt;
+                taken[h] = attempt;
                 free
             });
             if collision_free {
+                let mut slots = vec![0usize; 1 << bits];
                 let max_idx = keys.iter().map(|&(i, _)| i).max().unwrap_or(0);
                 let mut by_idx = vec![0u64; max_idx + 1];
                 for &(i, key) in &keys {
+                    slots[slot(key)] = i;
                     by_idx[i] = key;
                 }
                 return Ok(KeywordPerfectHash {
@@ -278,37 +295,11 @@ fn keyword_lookup_code(hash: &KeywordPerfectHash) -> String {
     out
 }
 
-/// Remove mkkeywordhash's `aKWHash`/`aKWNext` chained hash tables and their
-/// comments; the perfect hash replaces them.
-fn remove_chained_hash_tables(code: &str) -> Result<String, String> {
-    let start = code
-        .find("/* aKWHash[i] is the hash value")
-        .ok_or("aKWHash comment not found in mkkeyword output")?;
-    let next = code[start..]
-        .find("aKWNext[")
-        .and_then(|p| {
-            code[start + p..]
-                .find("static const unsigned char aKWNext[")
-                .map(|q| start + p + q)
-        })
-        .ok_or("aKWNext table not found in mkkeyword output")?;
-    let end = code[next..]
-        .find("};")
-        .map(|p| next + p + 2)
-        .ok_or("aKWNext table not terminated")?;
-    Ok(format!(
-        "{}{}",
-        &code[..start],
-        code[end..].trim_start_matches('\n')
-    ))
-}
-
 /// Generate keyword hash lookup as a single `.c` file.
 ///
 /// Uses pre-extracted cflag data from `fragments.keyword_cflags` instead of
 /// parsing `mkkeywordhash.c` at codegen time.
 pub(crate) fn generate(
-    extract_result: &TokenizerExtractResult,
     fragments: &SqliteFragments,
     dialect: &str,
     extra_keywords: &[String],
@@ -357,7 +348,12 @@ pub(crate) fn generate(
     let perfect_hash = find_keyword_perfect_hash(&keyword_indices)
         .map_err(|e| format!("Failed to hash keywords for dialect `{dialect}`: {e}"))?;
 
-    let processed_code = CTransformer::new(&remove_chained_hash_tables(&generated_code)?)
+    let processed_code = CTransformer::new(&generated_code)
+        // The perfect hash replaces mkkeywordhash's chained hash table.
+        .remove_array_definition("aKWHash")
+        .remove_array_definition("aKWNext")
+        .remove_block_comment_containing("Hash table decoded")
+        .remove_block_comment_containing("Check to see if z[0..n-1] is a keyword")
         .remove_function("sqlite3KeywordCode")
         .remove_function("sqlite3_keyword_name")
         .remove_function("sqlite3_keyword_count")
@@ -386,11 +382,6 @@ pub(crate) fn generate(
     w.include_local(includes.tokens_header);
     w.include_local("syntaqlite/dialect.h");
     w.include_local("syntaqlite_dialect/dialect_macros.h");
-    w.newline();
-
-    w.fragment(&extract_result.upper_to_lower);
-    w.newline();
-    w.fragment(&extract_result.char_map);
     w.newline();
 
     w.fragment(&processed_code);

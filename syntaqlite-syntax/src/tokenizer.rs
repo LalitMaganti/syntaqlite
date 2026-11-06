@@ -515,8 +515,13 @@ mod tests {
     fn keywords_are_recognized_in_any_case() {
         let tokenizer = Tokenizer::new();
         let id = token_type(&tokenizer, "not_a_keyword");
+        let dialect = crate::any::AnyDialect::from(crate::sqlite::dialect::dialect());
+        let all: std::collections::HashSet<String> = dialect
+            .keywords()
+            .map(|kw| kw.keyword().to_string())
+            .collect();
         let mut mismatched = Vec::new();
-        for kw in crate::any::AnyDialect::from(crate::sqlite::dialect::dialect()).keywords() {
+        for kw in dialect.keywords() {
             let upper = kw.keyword().to_string();
             if upper.is_empty() {
                 continue;
@@ -538,7 +543,18 @@ mod tests {
             assert_eq!(token_type(&tokenizer, &mixed), expected, "{mixed}");
             assert_eq!(token_type(&tokenizer, &format!("{upper}X")), id, "{upper}X");
             assert_eq!(token_type(&tokenizer, &format!("X{upper}")), id, "X{upper}");
-            // WITHIN is newer than the default target version.
+            // Same length, first two and last two bytes, so only the comparison
+            // of the middle bytes can reject it.
+            for i in 2..upper.len().saturating_sub(2) {
+                let mut near = upper.clone().into_bytes();
+                near[i] = if near[i] == b'Q' { b'Z' } else { b'Q' };
+                let near = String::from_utf8(near).expect("ASCII");
+                if !all.contains(&near) {
+                    assert_eq!(token_type(&tokenizer, &near), id, "{near}");
+                }
+            }
+            // WITHIN needs the ordered-set aggregates cflag, which is off by
+            // default.
             if expected != kw.token_type() && upper != "WITHIN" {
                 mismatched.push(upper);
             }
