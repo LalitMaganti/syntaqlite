@@ -48,17 +48,40 @@ extern "C" {
     (v)->count = 0;             \
   } while (0)
 
+// gcc rejects `inline` with `noinline`, and clang warns when something marked
+// `unused` is used, so each gets its own spelling.
+#if defined(__clang__)
+#define SYNQ_VEC_COLD_FN static inline __attribute__((noinline, cold))
+#elif defined(__GNUC__)
+#define SYNQ_VEC_COLD_FN static __attribute__((noinline, cold, unused))
+#elif defined(_MSC_VER)
+#define SYNQ_VEC_COLD_FN static __inline __declspec(noinline)
+#else
+#define SYNQ_VEC_COLD_FN static inline
+#endif
+
+// Out of line so a push's common path has no call in it, and stays small
+// enough to inline.
+SYNQ_VEC_COLD_FN void* syntaqlite_vec_grow_(void* data,
+                                            uint32_t* capacity,
+                                            uint32_t needed,
+                                            size_t elem_size,
+                                            void* (*xRealloc)(void*, size_t)) {
+  uint32_t cap = *capacity ? *capacity : 16;
+  while (cap < needed)
+    cap *= 2;
+  *capacity = cap;
+  return xRealloc(data, (size_t)cap * elem_size);
+}
+
 // Ensure capacity >= needed (capacity is always a power of two).
-#define syntaqlite_vec_ensure(v, needed, mem)             \
-  do {                                                    \
-    if ((needed) > (v)->capacity) {                       \
-      uint32_t _cap = (v)->capacity ? (v)->capacity : 16; \
-      while (_cap < (needed))                             \
-        _cap *= 2;                                        \
-      (v)->data = (__typeof__((v)->data))(mem).xRealloc(  \
-          (v)->data, (size_t)_cap * sizeof(*(v)->data));  \
-      (v)->capacity = _cap;                               \
-    }                                                     \
+#define syntaqlite_vec_ensure(v, needed, mem)                      \
+  do {                                                             \
+    if ((needed) > (v)->capacity) {                                \
+      (v)->data = (__typeof__((v)->data))syntaqlite_vec_grow_(     \
+          (v)->data, &(v)->capacity, (needed), sizeof(*(v)->data), \
+          (mem).xRealloc);                                         \
+    }                                                              \
   } while (0)
 
 // Append one element, grow if needed
