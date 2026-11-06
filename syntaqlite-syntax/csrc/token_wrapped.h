@@ -31,24 +31,26 @@ static inline int64_t synq_get_token_wrapped(const SyntaqliteDialect* g,
                                              uint32_t* tokenType) {
   int token_type_int = 0;
   int64_t len = SYNQ_GET_TOKEN(g, z, &token_type_int);
-  *tokenType = (uint32_t)token_type_int;
+  // Test the token type before the target version: nearly every token fails
+  // the type test, so the version is rarely read.
+  uint32_t type = (uint32_t)token_type_int;
 
 #ifndef SYNTAQLITE_OMIT_MACROS
-  if (*tokenType == SYNTAQLITE_TK_ILLEGAL && len == 1 && z[0] == '!' &&
+  if (type == SYNTAQLITE_TK_ILLEGAL && len == 1 && z[0] == '!' &&
       (g->tmpl->macro_style == SYNQ_MACRO_STYLE_RUST || macro_fallback)) {
     *tokenType = SYNTAQLITE_TK_BANG;
     return 1;
   }
 #endif
 
-  if (SYNQ_VER_LT(g, 3038000) && *tokenType == SYNTAQLITE_TK_PTR) {
+  if (type == SYNTAQLITE_TK_PTR && SYNQ_VER_LT(g, 3038000)) {
     /* -> and ->> operators added in 3.38.
     ** Return just the '-' as TK_MINUS; next call picks up '>' naturally. */
     *tokenType = SYNTAQLITE_TK_MINUS;
     return 1;
   }
 
-  if (SYNQ_VER_LT(g, 3046000) && *tokenType == SYNTAQLITE_TK_QNUMBER) {
+  if (type == SYNTAQLITE_TK_QNUMBER && SYNQ_VER_LT(g, 3046000)) {
     /* Digit separators added in 3.46.
     ** Truncate to the first underscore. */
     int64_t j;
@@ -63,6 +65,7 @@ static inline int64_t synq_get_token_wrapped(const SyntaqliteDialect* g,
     return j;
   }
 
+  *tokenType = type;
   return len;
 }
 
