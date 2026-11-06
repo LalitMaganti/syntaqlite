@@ -553,7 +553,16 @@ static int64_t next_token(SyntaqliteParser* p,
                           uint32_t pos,
                           uint32_t* out_offset,
                           uint32_t* out_type) {
+  // Space, \t, \n, \f and \r: whitespace in every dialect's tokenizer.
+  const uint64_t kSpaceMask = (1ull << ' ') | (1ull << '\t') | (1ull << '\n') |
+                              (1ull << '\f') | (1ull << '\r');
   while (pos < p->source_len && z[pos] != '\0') {
+    // Skip whitespace here instead of calling the tokenizer just to get
+    // TK_SPACE back.
+    if (z[pos] <= ' ' && ((kSpaceMask >> z[pos]) & 1)) {
+      pos++;
+      continue;
+    }
     uint32_t type = 0;
 #ifdef SYNTAQLITE_OMIT_MACROS
     int64_t len = synq_get_token_wrapped(&p->dialect, 0, z + pos, &type);
