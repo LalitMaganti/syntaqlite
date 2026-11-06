@@ -548,19 +548,20 @@ void synq_parser_record_comment(SyntaqliteParser* p,
 // Tokenize the next non-whitespace token, recording any comments along the
 // way.  Returns the token length (0 at end-of-input).  `*out_offset` and
 // `*out_type` are set to the position and type of the returned token.
-static int64_t next_token(SyntaqliteParser* p,
-                          const unsigned char* z,
-                          uint32_t pos,
-                          uint32_t* out_offset,
-                          uint32_t* out_type) {
+// Forced inline: it runs for every token, and GCC otherwise keeps it out of
+// line.
+static SYNQ_ALWAYS_INLINE int64_t next_token(SyntaqliteParser* p,
+                                             const unsigned char* z,
+                                             uint32_t pos,
+                                             uint32_t* out_offset,
+                                             uint32_t* out_type) {
   while (pos < p->source_len && z[pos] != '\0') {
     // Skip whitespace here instead of calling the tokenizer just to get
-    // TK_SPACE back.
-    uint32_t after_space = synq_skip_whitespace(z, pos, p->source_len);
-    if (after_space != pos) {
-      pos = after_space;
-      continue;
-    }
+    // TK_SPACE back. A run ends on a byte that cannot start another, so go
+    // straight on to tokenizing it.
+    pos = synq_skip_whitespace(z, pos, p->source_len);
+    if (pos >= p->source_len || z[pos] == '\0')
+      break;
     uint32_t type = 0;
 #ifdef SYNTAQLITE_OMIT_MACROS
     int64_t len = synq_get_token_wrapped(&p->dialect, 0, z + pos, &type);
