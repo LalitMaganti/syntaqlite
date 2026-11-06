@@ -37,7 +37,45 @@ use crate::dialect::AnyDialect;
 /// assert!(!is_shell_script(sqlite, "SELECT 1;\nSELECT 2;"));
 /// ```
 pub fn is_shell_script(dialect: impl Into<AnyDialect>, source: &str) -> bool {
-    scan(&dialect.into(), source).is_shell
+    may_have_shell_lines(source) && scan(&dialect.into(), source).is_shell
+}
+
+/// First byte of a dot-command line, such as `.read foo.sql`.
+const DOT_COMMAND: u8 = b'.';
+/// First byte of a `#` comment line.
+const HASH_COMMENT: u8 = b'#';
+
+/// Whether `b` can start a shell line.
+fn is_line_marker(b: u8) -> bool {
+    b == DOT_COMMAND || b == HASH_COMMENT
+}
+
+/// Whether any line starts with `.` or `#`, the only lines that can make a
+/// file a shell script. Lets ordinary SQL skip the line-by-line scan.
+///
+/// Reads the input once, in 64-byte blocks of branch-free comparisons that the
+/// compiler vectorizes.
+fn may_have_shell_lines(source: &str) -> bool {
+    let bytes = source.as_bytes();
+    if bytes.first().is_some_and(|&b| is_line_marker(b)) {
+        return true;
+    }
+    let mut i = 0;
+    // Each block also holds the byte after it, the possible marker following
+    // a newline in its last position.
+    while let Some(block) = bytes[i..].first_chunk::<65>() {
+        let mut hit = false;
+        for k in 0..64 {
+            hit |= (block[k] == b'\n') & is_line_marker(block[k + 1]);
+        }
+        if hit {
+            return true;
+        }
+        i += 64;
+    }
+    bytes[i..]
+        .windows(2)
+        .any(|w| w[0] == b'\n' && is_line_marker(w[1]))
 }
 
 /// Extract the SQL fragments of a sqlite3 shell script.
@@ -147,8 +185,8 @@ fn classify(raw: &str, pending: impl Fn() -> bool) -> Line {
         return Line::Terminator;
     }
     match raw.as_bytes().first() {
-        Some(b'.') if !pending() => Line::DotCommand,
-        Some(b'#') if !pending() => Line::HashComment,
+        Some(&DOT_COMMAND) if !pending() => Line::DotCommand,
+        Some(&HASH_COMMENT) if !pending() => Line::HashComment,
         _ => Line::Sql,
     }
 }
@@ -218,6 +256,33 @@ mod tests {
 
     fn extract(source: &str) -> Vec<EmbeddedFragment<'_>> {
         extract_shell(sqlite(), source)
+    }
+
+    #[test]
+    fn may_have_shell_lines_finds_markers_at_line_starts() {
+        assert!(may_have_shell_lines(".read a.sql"));
+        assert!(may_have_shell_lines("SELECT 1;\n# note"));
+        assert!(may_have_shell_lines("SELECT 1;\r\n.mode csv"));
+        // A newline ending one 64-byte block and a marker starting the next.
+        let mut boundary = "x".repeat(63);
+        boundary.push_str("\n.read b.sql");
+        assert!(may_have_shell_lines(&boundary));
+        assert!(!may_have_shell_lines("SELECT t.a FROM t;\nSELECT 1.5;"));
+        assert!(!may_have_shell_lines(""));
+    }
+
+    #[test]
+    fn may_have_shell_lines_handles_every_offset() {
+        for len in [2, 64, 65, 66, 129, 200] {
+            for pos in 0..len - 1 {
+                for pair in ["\n.", "\n#", ".\n", "\nx"] {
+                    let mut s = "x".repeat(len);
+                    s.replace_range(pos..pos + 2, pair);
+                    let expected = s.starts_with('.') || pair == "\n." || pair == "\n#";
+                    assert_eq!(may_have_shell_lines(&s), expected, "{len} {pos} {pair:?}");
+                }
+            }
+        }
     }
 
     #[test]
