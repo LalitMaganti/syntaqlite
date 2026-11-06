@@ -36,7 +36,13 @@ use crate::dialect::AnyDialect;
 /// assert!(!is_shell_script(sqlite, "SELECT 1;\nSELECT 2;"));
 /// ```
 pub fn is_shell_script(dialect: impl Into<AnyDialect>, source: &str) -> bool {
-    scan(&dialect.into(), source).is_shell
+    may_have_shell_lines(source) && scan(&dialect.into(), source).is_shell
+}
+
+/// Whether any line starts with `.` or `#`, the only lines that can make a
+/// file a shell script. Lets ordinary SQL skip the line-by-line scan.
+fn may_have_shell_lines(source: &str) -> bool {
+    source.starts_with(['.', '#']) || source.contains("\n.") || source.contains("\n#")
 }
 
 /// Extract the SQL fragments of a sqlite3 shell script.
