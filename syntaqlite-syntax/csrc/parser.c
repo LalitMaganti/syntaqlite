@@ -429,7 +429,7 @@ static uint32_t synq_next_token_offset(SyntaqliteParser* p,
                                        uint32_t buf_len) {
   while (pos < buf_len && buf[pos] != '\0') {
     uint32_t tt = 0;
-    int64_t tl = SynqSqliteGetTokenVersionWrapped(
+    int64_t tl = synq_get_token_wrapped(
         &p->dialect, 0, (const unsigned char*)buf + pos, &tt);
     if (tl <= 0)
       return buf_len;
@@ -544,9 +544,9 @@ static int64_t next_token(SyntaqliteParser* p,
     uint32_t type = 0;
 #ifdef SYNTAQLITE_OMIT_MACROS
     int64_t len =
-        SynqSqliteGetTokenVersionWrapped(&p->dialect, 0, z + pos, &type);
+        synq_get_token_wrapped(&p->dialect, 0, z + pos, &type);
 #else
-    int64_t len = SynqSqliteGetTokenVersionWrapped(
+    int64_t len = synq_get_token_wrapped(
         &p->dialect, p->macro.macro_fallback, z + pos, &type);
 #endif
     if (len <= 0)
@@ -723,7 +723,7 @@ SYNTAQLITE_API int32_t syntaqlite_parser_next(SyntaqliteParser* p) {
       while (scan < p->source_len && z[scan] != '\0') {
         uint32_t tt = 0;
         int64_t tl =
-            SynqSqliteGetTokenVersionWrapped(&p->dialect, 0, z + scan, &tt);
+            synq_get_token_wrapped(&p->dialect, 0, z + scan, &tt);
         if (tl <= 0)
           break;
         if (tt == SYNTAQLITE_TK_SPACE) {

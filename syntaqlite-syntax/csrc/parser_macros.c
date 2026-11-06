@@ -54,7 +54,7 @@ static int64_t synq_macro_skip(SyntaqliteParser* p,
   uint32_t pos = *out_pos;
   while (pos < buf_len) {
     uint32_t ttype = 0;
-    int64_t tlen = SynqSqliteGetTokenVersionWrapped(
+    int64_t tlen = synq_get_token_wrapped(
         &p->dialect, p->macro.macro_fallback, z + pos, &ttype);
     if (tlen <= 0)
       break;
@@ -93,7 +93,7 @@ uint32_t synq_parser_scan_macro_args(SyntaqliteParser* p,
 
   // Expect LP.
   uint32_t ttype = 0;
-  int64_t tlen = SynqSqliteGetTokenVersionWrapped(
+  int64_t tlen = synq_get_token_wrapped(
       &p->dialect, p->macro.macro_fallback, z + pos, &ttype);
   if (tlen <= 0 || ttype != SYNTAQLITE_TK_LP)
     return 0;
@@ -101,7 +101,7 @@ uint32_t synq_parser_scan_macro_args(SyntaqliteParser* p,
 
   // Check for empty args: macro!()
   ttype = 0;
-  tlen = SynqSqliteGetTokenVersionWrapped(&p->dialect, p->macro.macro_fallback,
+  tlen = synq_get_token_wrapped(&p->dialect, p->macro.macro_fallback,
                                           z + pos, &ttype);
   if (tlen > 0 && ttype == SYNTAQLITE_TK_RP) {
     *out_end_offset = pos + (uint32_t)tlen;
@@ -115,7 +115,7 @@ uint32_t synq_parser_scan_macro_args(SyntaqliteParser* p,
 
   while (pos < source_len && depth > 0) {
     ttype = 0;
-    tlen = SynqSqliteGetTokenVersionWrapped(
+    tlen = synq_get_token_wrapped(
         &p->dialect, p->macro.macro_fallback, z + pos, &ttype);
     if (tlen <= 0)
       return 0;
@@ -843,7 +843,7 @@ SYNTAQLITE_API int syntaqlite_macro_expansion_expand_and_set_result(
   while (pos < body_len) {
     uint32_t ttype = 0;
     int64_t tlen =
-        SynqSqliteGetTokenVersionWrapped(&p->dialect, 0, z + pos, &ttype);
+        synq_get_token_wrapped(&p->dialect, 0, z + pos, &ttype);
     if (tlen <= 0)
       break;
 

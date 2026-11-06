@@ -14,11 +14,56 @@
 
 #include <stdint.h>
 
+#include "csrc/dialect_dispatch.h"
+#include "csrc/tokens.h"
 #include "syntaqlite/dialect.h"
+#include "syntaqlite_dialect/dialect_macros.h"
 
 int64_t SynqSqliteGetTokenVersionWrapped(const SyntaqliteDialect* env,
                                          uint32_t macro_fallback,
                                          const unsigned char* z,
                                          uint32_t* tokenType);
+
+// Inline so the parser's per-token loop doesn't pay a call per token.
+static inline int64_t synq_get_token_wrapped(const SyntaqliteDialect* g,
+                                             uint32_t macro_fallback,
+                                             const unsigned char* z,
+                                             uint32_t* tokenType) {
+  int token_type_int = 0;
+  int64_t len = SYNQ_GET_TOKEN(g, z, &token_type_int);
+  *tokenType = (uint32_t)token_type_int;
+
+#ifndef SYNTAQLITE_OMIT_MACROS
+  if (*tokenType == SYNTAQLITE_TK_ILLEGAL && len == 1 && z[0] == '!' &&
+      (g->tmpl->macro_style == SYNQ_MACRO_STYLE_RUST || macro_fallback)) {
+    *tokenType = SYNTAQLITE_TK_BANG;
+    return 1;
+  }
+#endif
+
+  if (SYNQ_VER_LT(g, 3038000) && *tokenType == SYNTAQLITE_TK_PTR) {
+    /* -> and ->> operators added in 3.38.
+    ** Return just the '-' as TK_MINUS; next call picks up '>' naturally. */
+    *tokenType = SYNTAQLITE_TK_MINUS;
+    return 1;
+  }
+
+  if (SYNQ_VER_LT(g, 3046000) && *tokenType == SYNTAQLITE_TK_QNUMBER) {
+    /* Digit separators added in 3.46.
+    ** Truncate to the first underscore. */
+    int64_t j;
+    int saw_dot = 0;
+    for (j = 0; j < len; j++) {
+      if (z[j] == '_')
+        break;
+      if (z[j] == '.')
+        saw_dot = 1;
+    }
+    *tokenType = saw_dot ? SYNTAQLITE_TK_FLOAT : SYNTAQLITE_TK_INTEGER;
+    return j;
+  }
+
+  return len;
+}
 
 #endif  // SYNTAQLITE_INTERNAL_TOKEN_WRAPPED_H
