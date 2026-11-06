@@ -510,7 +510,7 @@ pub extern "C" fn wasm_clear_all_cflags(handle: u32) -> i32 {
 
 use syntaqlite::embedded::{EmbeddedAnalyzer, EmbeddedFragment};
 
-fn embedded_fragments(lang: u32, source: &str) -> Result<Vec<EmbeddedFragment>, String> {
+fn embedded_fragments(lang: u32, source: &str) -> Result<Vec<EmbeddedFragment<'_>>, String> {
     match lang {
         0 => Ok(syntaqlite::embedded::extract_python(source)),
         1 => Ok(syntaqlite::embedded::extract_typescript(source)),

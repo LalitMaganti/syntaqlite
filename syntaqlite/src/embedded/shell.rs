@@ -12,6 +12,7 @@
 //! Fragments are verbatim, hole-free slices of the source, so their offsets map
 //! back to the host file by a plain base offset (see [`EmbeddedFragment`]).
 
+use std::borrow::Cow;
 use syntaqlite_syntax::any::{AnyDialect as SyntaxDialect, AnyTokenizer, TokenCategory};
 
 use super::{EmbeddedFragment, doc_range_from_usize};
@@ -63,16 +64,16 @@ fn may_have_shell_lines(source: &str) -> bool {
 /// assert_eq!(fragments.len(), 2);
 /// assert!(fragments[0].sql_text().contains("SELECT 1;"));
 /// ```
-pub fn extract_shell(dialect: impl Into<AnyDialect>, source: &str) -> Vec<EmbeddedFragment> {
+pub fn extract_shell(dialect: impl Into<AnyDialect>, source: &str) -> Vec<EmbeddedFragment<'_>> {
     scan(&dialect.into(), source).fragments
 }
 
 /// Result of a single shell-script pass.
-struct ShellScan {
+struct ShellScan<'a> {
     /// Whether an unambiguous shell marker was seen (see [`is_shell_script`]).
     is_shell: bool,
     /// SQL runs found between the shell lines.
-    fragments: Vec<EmbeddedFragment>,
+    fragments: Vec<EmbeddedFragment<'a>>,
 }
 
 /// Classification of one source line.
@@ -97,7 +98,7 @@ enum Line {
 /// shell line or part of a multi-line SQL statement — so [`run_complete`] treats
 /// it as shell only when the SQL so far forms a complete (`;`-terminated)
 /// statement.
-fn scan(dialect: &AnyDialect, source: &str) -> ShellScan {
+fn scan<'a>(dialect: &AnyDialect, source: &'a str) -> ShellScan<'a> {
     let syntax = dialect.syntax_dialect();
     let tokenizer = AnyTokenizer::new(syntax.clone());
 
@@ -176,7 +177,11 @@ fn run_complete(dialect: &SyntaxDialect, tokenizer: &AnyTokenizer, sql: &str) ->
 }
 
 /// Emit a fragment for the SQL run `[start, end)` if it has non-whitespace content.
-fn flush(source: &str, fragments: &mut Vec<EmbeddedFragment>, run: Option<(usize, usize)>) {
+fn flush<'a>(
+    source: &'a str,
+    fragments: &mut Vec<EmbeddedFragment<'a>>,
+    run: Option<(usize, usize)>,
+) {
     let Some((start, end)) = run else { return };
     let text = &source[start..end];
     if text.trim().is_empty() {
@@ -184,7 +189,7 @@ fn flush(source: &str, fragments: &mut Vec<EmbeddedFragment>, run: Option<(usize
     }
     fragments.push(EmbeddedFragment {
         sql_range: doc_range_from_usize(start, end),
-        sql_text: text.to_string(),
+        sql_text: Cow::Borrowed(text),
         holes: Vec::new(),
     });
 }
@@ -217,7 +222,7 @@ mod tests {
         is_shell_script(sqlite(), source)
     }
 
-    fn extract(source: &str) -> Vec<EmbeddedFragment> {
+    fn extract(source: &str) -> Vec<EmbeddedFragment<'_>> {
         extract_shell(sqlite(), source)
     }
 

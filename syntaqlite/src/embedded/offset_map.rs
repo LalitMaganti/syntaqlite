@@ -32,7 +32,7 @@ pub(crate) struct OffsetMap {
 
 impl OffsetMap {
     /// Build an offset map from an `EmbeddedFragment`.
-    pub(crate) fn new(fragment: &EmbeddedFragment) -> Self {
+    pub(crate) fn new(fragment: &EmbeddedFragment<'_>) -> Self {
         let placeholder_len = DocLen::from_raw(
             u32::try_from(HOLE_PLACEHOLDER.len()).expect("placeholder len fits in u32"),
         );
@@ -103,7 +103,7 @@ mod tests {
     fn identity_map_no_holes() {
         let fragment = EmbeddedFragment {
             sql_range: doc_range(10, 30),
-            sql_text: "SELECT * FROM users".to_string(),
+            sql_text: "SELECT * FROM users".into(),
             holes: vec![],
         };
         let map = OffsetMap::new(&fragment);
@@ -120,7 +120,7 @@ mod tests {
         let sql_text = format!("SELECT * FROM {ph}");
         let fragment = EmbeddedFragment {
             sql_range: doc_range(10, 36),
-            sql_text,
+            sql_text: sql_text.into(),
             holes: vec![Hole {
                 host_range: doc_range(24, 36),
                 sql_offset: doc_offset(14),
@@ -154,7 +154,7 @@ mod tests {
         let sql_text = format!("VALUES ({ph}, {ph}, datetime('now'))");
         let fragment = EmbeddedFragment {
             sql_range: doc_range(2, 50),
-            sql_text,
+            sql_text: sql_text.into(),
             holes: vec![
                 Hole {
                     host_range: doc_range(10, 25), // {customer_id} = 15 bytes
