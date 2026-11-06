@@ -124,7 +124,7 @@ pub(super) fn interpret_core<'a>(
         scratch.for_each.clear();
 
         let mut cur_node_id: AnyNodeId = root_id;
-        let mut ops: &[u8] = &ops_bytes[..ops_len * 6];
+        let mut ops: &[[u8; 6]] = &ops_bytes.as_chunks::<6>().0[..ops_len];
         let mut ops_count: usize = ops_len;
         let mut running: DocId = NIL_DOC;
         let mut pending: DocId = NIL_DOC;
@@ -157,7 +157,7 @@ pub(super) fn interpret_core<'a>(
                 scratch.calls.push(frame);
 
                 cur_node_id = $child_id;
-                ops = &$child_ops_bytes[..$child_ops_len * 6];
+                ops = &$child_ops_bytes.as_chunks::<6>().0[..$child_ops_len];
                 ops_count = $child_ops_len;
                 running = NIL_DOC;
                 pending = NIL_DOC;
@@ -191,7 +191,7 @@ pub(super) fn interpret_core<'a>(
                 else {
                     panic!("restored node must resolve to formatter ops");
                 };
-                ops = &restored_ops[..restored_ops_len * 6];
+                ops = &restored_ops.as_chunks::<6>().0[..restored_ops_len];
                 ops_count = restored_ops_len;
                 running = frame.running;
                 pending = frame.pending;
@@ -864,16 +864,17 @@ fn drain_comments_before_child<'a>(
     reason = "measured: collapses the double dispatch on every opcode"
 )]
 #[inline(always)]
-fn op_at(ops: &[u8], ip: usize) -> FmtOp {
-    let base = ip * 6;
-    let opcode = ops[base];
-    let a = ops[base + 1];
-    let b = u16::from_le_bytes([ops[base + 2], ops[base + 3]]);
-    let c = u16::from_le_bytes([ops[base + 4], ops[base + 5]]);
-    FmtOp::decode(opcode, a, b, c)
+fn op_at(ops: &[[u8; 6]], ip: usize) -> FmtOp {
+    let [opcode, a, b0, b1, c0, c1] = ops[ip];
+    FmtOp::decode(
+        opcode,
+        a,
+        u16::from_le_bytes([b0, b1]),
+        u16::from_le_bytes([c0, c1]),
+    )
 }
 
-fn skip_to_foreach_end(ops: &[u8], ops_count: usize, from_ip: usize) -> usize {
+fn skip_to_foreach_end(ops: &[[u8; 6]], ops_count: usize, from_ip: usize) -> usize {
     let mut depth = 1u32;
     let mut ip = from_ip + 1;
     while ip < ops_count {
