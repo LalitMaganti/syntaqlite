@@ -146,11 +146,14 @@ pub(crate) struct SourceError<'a> {
 ///
 /// # Errors
 /// Returns `Err` if writing to `out` fails.
-pub(crate) fn render_source_error(out: &mut impl Write, err: &SourceError<'_>) -> io::Result<()> {
+pub(crate) fn render_source_error(
+    out: &mut impl Write,
+    err: &SourceError<'_>,
+    lines: &LineIndex,
+) -> io::Result<()> {
     let start = err.range.start.as_usize();
     let end = err.range.end.as_usize();
-    let (line, col) = offset_to_line_col(err.source, start);
-    let line_text = source_line_at(err.source, start);
+    let (line, col, line_text) = lines.locate(err.source, start);
     let gutter_width = line.to_string().len();
 
     writeln!(out, "{}: {}", err.severity, err.message)?;
@@ -180,34 +183,55 @@ pub(crate) fn render_source_error(out: &mut impl Write, err: &SourceError<'_>) -
     Ok(())
 }
 
-fn offset_to_line_col(source: &str, offset: usize) -> (usize, usize) {
-    let mut line = 1usize;
-    let mut col = 1usize;
-    for (i, ch) in source.char_indices() {
-        if i >= offset {
-            break;
-        }
-        if ch == '\n' {
-            line += 1;
-            col = 1;
-        } else {
-            col += 1;
-        }
-    }
-    (line, col)
+/// The byte offset where each line of a source starts, so a renderer can find
+/// a line in O(log n) instead of rescanning the source for every diagnostic.
+pub(crate) struct LineIndex {
+    starts: Vec<usize>,
 }
 
-fn source_line_at(source: &str, offset: usize) -> &str {
-    let start = source[..offset].rfind('\n').map_or(0, |i| i + 1);
-    let end = source[offset..]
-        .find('\n')
-        .map_or(source.len(), |i| offset + i);
-    &source[start..end]
+impl LineIndex {
+    pub(crate) fn new(source: &str) -> Self {
+        let mut starts = vec![0];
+        starts.extend(
+            source
+                .bytes()
+                .enumerate()
+                .filter(|&(_, b)| b == b'\n')
+                .map(|(i, _)| i + 1),
+        );
+        Self { starts }
+    }
+
+    /// The 1-based line and column of `offset`, counting columns in
+    /// characters, and the text of that line without its newline.
+    fn locate<'s>(&self, source: &'s str, offset: usize) -> (usize, usize, &'s str) {
+        let offset = offset.min(source.len());
+        let line = self.starts.partition_point(|&s| s <= offset);
+        let line_start = self.starts[line - 1];
+        let line_end = self.starts.get(line).map_or(source.len(), |&s| s - 1);
+        let col = source
+            .get(line_start..offset)
+            .map_or(offset - line_start, |s| s.chars().count())
+            + 1;
+        (line, col, &source[line_start..line_end])
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn line_index_locates_offsets() {
+        let src = "SELECT 1;\nSELECT 'é', x\n\nFROM t";
+        let lines = LineIndex::new(src);
+        assert_eq!(lines.locate(src, 0), (1, 1, "SELECT 1;"));
+        assert_eq!(lines.locate(src, 9), (1, 10, "SELECT 1;"));
+        let x = src.find('x').unwrap();
+        assert_eq!(lines.locate(src, x), (2, 13, "SELECT 'é', x"));
+        assert_eq!(lines.locate(src, x + 2), (3, 1, ""));
+        assert_eq!(lines.locate(src, src.len()), (4, 7, "FROM t"));
+    }
 
     /// Verify that parser-category flags all have discriminant < 22,
     /// and non-parser flags all have discriminant >= 22.

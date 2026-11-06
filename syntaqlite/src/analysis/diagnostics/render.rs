@@ -6,7 +6,7 @@
 use std::io::{self, Write};
 
 use super::{Diagnostic, Severity};
-use crate::util::render_source_error;
+use crate::util::{LineIndex, render_source_error};
 
 /// Renders diagnostics in rustc-style format to any [`Write`](std::io::Write) target.
 ///
@@ -52,12 +52,17 @@ use crate::util::render_source_error;
 pub struct DiagnosticRenderer<'a> {
     source: &'a str,
     file: &'a str,
+    lines: LineIndex,
 }
 
 impl<'a> DiagnosticRenderer<'a> {
     /// Create a renderer bound to a source string and display file label.
     pub fn new(source: &'a str, file: &'a str) -> Self {
-        Self { source, file }
+        Self {
+            source,
+            file,
+            lines: LineIndex::new(source),
+        }
     }
 
     /// Render a single diagnostic to `out`.
@@ -83,6 +88,7 @@ impl<'a> DiagnosticRenderer<'a> {
                 range: diag.range(),
                 help: help.as_deref(),
             },
+            &self.lines,
         )?;
 
         // Render macro expansion traceback (Perfetto-style).  Frame 0 is
@@ -108,6 +114,7 @@ impl<'a> DiagnosticRenderer<'a> {
                     range: frame_range,
                     help: None,
                 },
+                &LineIndex::new(&frame.buffer),
             )?;
         }
         Ok(())
