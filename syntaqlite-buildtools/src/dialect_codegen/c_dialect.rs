@@ -183,6 +183,9 @@ pub(crate) fn generate_dialect_c(
         "    .parser_expected_tokens = Synq{pascal}ParseExpectedTokens,"
     ));
     w.line(&format!(
+        "    .parser_stack_depth = Synq{pascal}ParseStackDepth,"
+    ));
+    w.line(&format!(
         "    .parser_completion_context = Synq{pascal}ParseCompletionContext,"
     ));
     w.line(&format!(
@@ -387,6 +390,9 @@ pub(crate) fn generate_parse_h(dialect: &str) -> String {
     ));
     w.line(&format!(
         "SYNTAQLITE_DIALECT_API uint32_t Synq{pascal}ParseExpectedTokens(void* parser, uint32_t* out_tokens, uint32_t out_cap);"
+    ));
+    w.line(&format!(
+        "SYNTAQLITE_DIALECT_API uint32_t Synq{pascal}ParseStackDepth(void* parser);"
     ));
     w.line(&format!(
         "SYNTAQLITE_DIALECT_API uint32_t Synq{pascal}ParseCompletionContext(void* parser);"

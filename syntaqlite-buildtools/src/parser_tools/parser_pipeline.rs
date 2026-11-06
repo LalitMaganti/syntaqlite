@@ -140,18 +140,22 @@ fn patch_generated_parser_files(
             "yytos->minor.yy0 = yyMinor;",
             "yytos->minor.yy0 = yyMinor;\n  synq_on_shift(yypParser, yyMajor, &yyMinor);",
         )
-        .replace_in_function(
-            "yy_reduce",
-            "yymsp = yypParser->yytos;",
-            "yymsp = yypParser->yytos;\n  synq_on_reduce(yypParser, yyruleno);",
+        // Run the reduce hook at Lemon's single yy_reduce call site rather
+        // than inside yy_reduce: there its flag check and the registers it
+        // needs cost every reduction.
+        .replace_all(
+            "yyact = yy_reduce(yypParser,yyruleno,",
+            "synq_on_reduce(yypParser, yyruleno);\n      yyact = yy_reduce(yypParser,yyruleno,",
         )
         .append(&expected_tokens_c_snippet(parser_name))
+        .append(&stack_depth_c_snippet(parser_name))
         .append(&nonterminal_defines_snippet(&nts))
         .append(&completion_context_c_snippet(parser_name))
         .finish()
         .map_err(|e| format!("Failed to patch {}: {e}", parse_c.display()))?;
     let h_patched = CTransformer::new(&h_content)
         .append(&expected_tokens_h_snippet(parser_name))
+        .append(&stack_depth_h_snippet(parser_name))
         .append(&completion_context_h_snippet(parser_name))
         .finish()
         .map_err(|e| format!("Failed to patch {}: {e}", parse_h.display()))?;
@@ -162,6 +166,26 @@ fn patch_generated_parser_files(
         .map_err(|e| format!("Failed to write {}: {e}", parse_h.display()))?;
 
     Ok(())
+}
+
+fn stack_depth_h_snippet(parser_name: &str) -> String {
+    format!(
+        "\n/* syntaqlite extension: number of symbols on the parser stack. */\n\
+uint32_t {parser_name}StackDepth(void* parser);\n"
+    )
+}
+
+// Lets the runtime ask for the depth when it needs it, instead of the shift
+// and reduce hooks counting it on every step.
+fn stack_depth_c_snippet(parser_name: &str) -> String {
+    format!(
+        "\n\
+/* syntaqlite extension: number of symbols on the parser stack. */\n\
+uint32_t {parser_name}StackDepth(void* parser) {{\n\
+  yyParser* p = (yyParser*)parser;\n\
+  return (uint32_t)(p->yytos - p->yystack);\n\
+}}\n"
+    )
 }
 
 fn expected_tokens_h_snippet(parser_name: &str) -> String {
@@ -442,6 +466,13 @@ mod tests {
         "  };\n",
         "  return 0;\n",
         "}\n",
+        "\n",
+        "void Parse(void *yyp, int yymajor, ParseTOKENTYPE yyminor){\n",
+        "  yyParser *yypParser = (yyParser*)yyp;\n",
+        "  unsigned int yyruleno = 0;\n",
+        "  YYACTIONTYPE yyact;\n",
+        "      yyact = yy_reduce(yypParser,yyruleno,yymajor,yyminor ParseCTX_PARAM);\n",
+        "}\n",
     );
 
     const FAKE_PARSE_H: &str = "/* parse.h */\n";
@@ -471,6 +502,8 @@ mod tests {
         assert!(parse_c_out.contains("uint32_t SynqFooParseCompletionContext("));
         assert!(parse_h_out.contains("uint32_t SynqFooParseExpectedTokens("));
         assert!(parse_h_out.contains("uint32_t SynqFooParseCompletionContext("));
+        assert!(parse_c_out.contains("uint32_t SynqFooParseStackDepth("));
+        assert!(parse_h_out.contains("uint32_t SynqFooParseStackDepth("));
     }
 
     #[test]
@@ -487,9 +520,10 @@ mod tests {
         //    parse.c can resolve the hook macros.
         // 2. `synq_on_shift(yypParser, yyMajor, &yyMinor)` is injected
         //    after the stable `yytos->minor.yy0 = yyMinor;` anchor.
-        // 3. `synq_on_reduce(yypParser, yyruleno)` is injected after
-        //    the stable `yymsp = yypParser->yytos;` anchor, before
-        //    `switch(yyruleno)`.
+        // 3. `synq_on_reduce(yypParser, yyruleno)` is injected before
+        //    Lemon's single `yy_reduce` call, so it runs before the rule's
+        //    action without costing `yy_reduce` itself.
+        // 4. `yy_shift` is marked always-inline.
         //
         // If Lemon ever reorders or renames the lines we key off,
         // the hardened `CTransformer` will fail loudly instead of
@@ -519,11 +553,16 @@ mod tests {
             "expected yy_shift hook call in generated parse.c\n\n{parse_c_out}"
         );
 
-        // yy_reduce hook call injected after the stable
-        // `yymsp = yypParser->yytos;` anchor, before `switch(yyruleno)`.
+        // yy_reduce hook call injected before the yy_reduce call.
         assert!(
-            parse_c_out.contains("synq_on_reduce(yypParser, yyruleno);"),
+            parse_c_out.contains(
+                "synq_on_reduce(yypParser, yyruleno);\n      yyact = yy_reduce(yypParser,yyruleno,"
+            ),
             "expected yy_reduce hook call in generated parse.c\n\n{parse_c_out}"
+        );
+        assert!(
+            parse_c_out.contains("SYNQ_ALWAYS_INLINE static void yy_shift("),
+            "expected always-inline yy_shift in generated parse.c\n\n{parse_c_out}"
         );
     }
 

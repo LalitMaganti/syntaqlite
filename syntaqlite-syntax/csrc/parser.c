@@ -248,12 +248,14 @@ SYNTAQLITE_API void syntaqlite_parser_destroy(SyntaqliteParser* p) {
 // `p->had_error` but leaves the error flag intact.
 // Inline so the per-token loop in syntaqlite_parser_next doesn't pay a call
 // per token; parser_macros.c uses the out-of-line wrapper below.
+// `layer_id` must equal `p->ctx.layer_id`; the main loop passes the constant 0
+// so the layer-N branches compile away there.
 static inline int shift_token_inline(SyntaqliteParser* p,
                                      uint32_t token_type,
                                      const char* text,
                                      uint32_t len,
-                                     uint32_t layer_offset) {
-  uint32_t layer_id = p->ctx.layer_id;
+                                     uint32_t layer_offset,
+                                     uint32_t layer_id) {
   uint32_t tidx = 0xFFFFFFFF;
 
   if (p->collect_tokens && text) {
@@ -337,10 +339,9 @@ int synq_parser_shift_token(SyntaqliteParser* p,
                             const char* text,
                             uint32_t len,
                             uint32_t layer_offset) {
-  return shift_token_inline(p, token_type, text, len, layer_offset);
+  return shift_token_inline(p, token_type, text, len, layer_offset,
+                            p->ctx.layer_id);
 }
-
-#define shift_token shift_token_inline
 
 // ---------------------------------------------------------------------------
 // Internal: synthesize SEMI + EOF to finish parsing.
@@ -362,7 +363,8 @@ static int finish_input(SyntaqliteParser* p) {
 
   // Synthesize SEMI if the last token wasn't one.
   if (p->last_token_type != SYNTAQLITE_TK_SEMI) {
-    int rc = shift_token(p, SYNTAQLITE_TK_SEMI, NULL, 0, 0);
+    int rc =
+        shift_token_inline(p, SYNTAQLITE_TK_SEMI, NULL, 0, 0, p->ctx.layer_id);
     if (rc == 1) {
       p->finished = 1;
       return set_result_status(p, stmt_boundary(p));
@@ -677,13 +679,16 @@ SYNTAQLITE_API int32_t syntaqlite_parser_next(SyntaqliteParser* p) {
     p->offset = cur_offset + (uint32_t)cur_len;
 
     // Context-sensitive keyword reclassification: WINDOW/OVER/FILTER may
-    // need to be demoted to TK_ID depending on surrounding tokens.
-    if (cur_type == SYNTAQLITE_TK_WINDOW) {
-      cur_type = synq_analyze_window(p, z + p->offset);
-    } else if (cur_type == SYNTAQLITE_TK_OVER) {
-      cur_type = synq_analyze_over(p, z + p->offset, p->last_token_type);
-    } else if (cur_type == SYNTAQLITE_TK_FILTER) {
-      cur_type = synq_analyze_filter(p, z + p->offset, p->last_token_type);
+    // need to be demoted to TK_ID depending on surrounding tokens.  The
+    // three are contiguous, so one range check skips every other token.
+    if (cur_type - SYNTAQLITE_TK_WINDOW <= 2u) {
+      if (cur_type == SYNTAQLITE_TK_WINDOW) {
+        cur_type = synq_analyze_window(p, z + p->offset);
+      } else if (cur_type == SYNTAQLITE_TK_OVER) {
+        cur_type = synq_analyze_over(p, z + p->offset, p->last_token_type);
+      } else {
+        cur_type = synq_analyze_filter(p, z + p->offset, p->last_token_type);
+      }
     }
 
     // Tokenize the lookahead — always one token ahead.
@@ -717,8 +722,9 @@ SYNTAQLITE_API int32_t syntaqlite_parser_next(SyntaqliteParser* p) {
     // semicolon instead; lemon_reinit discards the pending reduction.
     int at_stmt_start = p->last_token_type == 0;
     uint32_t main_layer_offset = cur_offset - p->stmt_start_offset;
-    int main_rc = shift_token(p, cur_type, p->source + cur_offset,
-                              (uint32_t)cur_len, main_layer_offset);
+    // Macro expansions restore layer 0 before control returns here.
+    int main_rc = shift_token_inline(p, cur_type, p->source + cur_offset,
+                                     (uint32_t)cur_len, main_layer_offset, 0);
     if (main_rc == 0 && cur_type == SYNTAQLITE_TK_SEMI &&
         (at_stmt_start || p->had_error))
       main_rc = 1;
@@ -1228,7 +1234,8 @@ SYNTAQLITE_API int32_t syntaqlite_parser_feed_token(SyntaqliteParser* p,
   }
 
   uint32_t layer_offset = text ? (uint32_t)(text - p->stmt_source) : 0;
-  int rc = shift_token(p, token_type, text, len, layer_offset);
+  int rc = shift_token_inline(p, token_type, text, len, layer_offset,
+                              p->ctx.layer_id);
   if (rc < 0)
     return set_result_status(p, SYNTAQLITE_PARSE_ERROR);
 

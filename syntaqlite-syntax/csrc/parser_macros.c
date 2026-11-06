@@ -617,7 +617,8 @@ static void begin_macro_expansion(SyntaqliteParser* p,
     p->ctx.macro_root_start = call_offset;
     p->ctx.macro_root_end = call_offset + call_length;
     if (p->ctx.macro_root_layer == 0) {
-      for (uint32_t i = 0; i < p->ctx.lemon_depth; i++)
+      uint32_t depth = p->dialect.tmpl->parser_stack_depth(p->lemon);
+      for (uint32_t i = 0; i < depth; i++)
         syntaqlite_vec_push(&p->ctx.straddle_stack, SYNQ_STRADDLE_NEUTRAL,
                             p->mem);
     }

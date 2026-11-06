@@ -149,6 +149,7 @@ typedef struct SyntaqliteDialectTemplate {
   uint32_t (*parser_expected_tokens)(void* parser,
                                      uint32_t* out_tokens,
                                      uint32_t out_cap);
+  uint32_t (*parser_stack_depth)(void* parser);
   uint32_t (*parser_completion_context)(void* parser);
 
   // Lemon %fallback lookup: returns the fallback token for `iToken`,

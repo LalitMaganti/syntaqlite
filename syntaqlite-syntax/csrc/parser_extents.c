@@ -34,9 +34,9 @@
 //
 // Independently, `straddle_stack` (a lightweight uint32_t vec) tracks
 // macro_root per Lemon stack symbol for O(1) straddle detection.  It
-// is lazily initialized on first macro use via `lemon_depth`; without
-// macros the only cost is one integer increment/decrement per
-// shift/reduce.
+// is lazily initialized on first macro use from the dialect's
+// `parser_stack_depth`; without macros or extents the hooks are skipped
+// entirely.
 
 // Merge `e` into `acc`: min/max over the authored byte range, min/max
 // over the token-index range with UINT32_MAX as the "no tokens"
@@ -130,8 +130,6 @@ void synq_extent_on_shift(SynqParseCtx* pCtx,
                           const SynqParseToken* token) {
   (void)major;
 
-  pCtx->lemon_depth++;
-
   // Straddle stack: only active after first macro (macro_root_layer > 0).
   if (pCtx->macro_root_layer) {
     uint32_t mr = (token->layer_id != 0) ? pCtx->macro_root_layer : 0;
@@ -178,9 +176,6 @@ void synq_extent_on_shift(SynqParseCtx* pCtx,
 }
 
 void synq_extent_on_reduce(SynqParseCtx* pCtx, unsigned int nrhs) {
-  // Reduce pops nrhs symbols and pushes 1: net change = 1 - nrhs.
-  pCtx->lemon_depth = pCtx->lemon_depth + 1 - nrhs;
-
   // Straddle detection on the lightweight stack.
   if (pCtx->macro_root_layer) {
     uint32_t slen = syntaqlite_vec_len(&pCtx->straddle_stack);

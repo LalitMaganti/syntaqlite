@@ -55,6 +55,7 @@
 #define SynqSqliteParseAlloc SYNQ_PREFIXED(SynqSqliteParseAlloc)
 #define SynqSqliteParseCompletionContext SYNQ_PREFIXED(SynqSqliteParseCompletionContext)
 #define SynqSqliteParseExpectedTokens SYNQ_PREFIXED(SynqSqliteParseExpectedTokens)
+#define SynqSqliteParseStackDepth SYNQ_PREFIXED(SynqSqliteParseStackDepth)
 #define SynqSqliteParseFallback SYNQ_PREFIXED(SynqSqliteParseFallback)
 #define SynqSqliteParseFinalize SYNQ_PREFIXED(SynqSqliteParseFinalize)
 #define SynqSqliteParseFree SYNQ_PREFIXED(SynqSqliteParseFree)

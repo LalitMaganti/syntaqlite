@@ -31,6 +31,7 @@ SYNTAQLITE_DIALECT_API uint32_t
 SynqSqliteParseExpectedTokens(void* parser,
                               uint32_t* out_tokens,
                               uint32_t out_cap);
+SYNTAQLITE_DIALECT_API uint32_t SynqSqliteParseStackDepth(void* parser);
 SYNTAQLITE_DIALECT_API uint32_t SynqSqliteParseCompletionContext(void* parser);
 SYNTAQLITE_DIALECT_API int SynqSqliteParseFallback(int iToken);
 #ifndef NDEBUG

@@ -191,7 +191,6 @@ typedef struct SynqParseCtx {
   uint32_t macro_root_end;
   uint32_t macro_root_layer;    // Outermost expansion layer idx (set on entry).
   uint32_t has_macro_straddle;  // Sticky flag set during reduce.
-  uint32_t lemon_depth;  // Lemon stack depth (always tracked, for lazy init).
   SYNQ_VEC(uint32_t) straddle_stack;  // Lazily initialized on first macro use.
   // Set when `GENERATED ALWAYS` was trimmed off a column's type name, so the
   // `AS` production can still emit the keywords.
@@ -268,7 +267,6 @@ static inline void synq_parse_ctx_init(SynqParseCtx* ctx,
   ctx->macro_root_end = 0;
   ctx->macro_root_layer = 0;
   ctx->has_macro_straddle = 0;
-  ctx->lemon_depth = 0;
   syntaqlite_vec_init(&ctx->straddle_stack);
   ctx->generated_always = 0;
 }
@@ -303,7 +301,6 @@ static inline void synq_parse_ctx_clear(SynqParseCtx* ctx) {
   ctx->macro_root_end = 0;
   ctx->macro_root_layer = 0;
   ctx->has_macro_straddle = 0;
-  ctx->lemon_depth = 0;
   syntaqlite_vec_clear(&ctx->straddle_stack);
 }
 
