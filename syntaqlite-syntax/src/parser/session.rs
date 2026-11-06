@@ -2773,6 +2773,12 @@ mod tests {
                 (0, ";", (19, 1)),
             ]
         );
+        // The lightweight accessor agrees with the tokens, on every layer.
+        assert!(
+            erased
+                .token_stmt_ranges()
+                .eq(erased.tokens().map(|t| t.stmt_range()))
+        );
     }
 
     // ─── node_token_range + comment layer_id ────────────────────────────────

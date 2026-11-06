@@ -170,8 +170,9 @@ impl Formatter {
                 side: c.side(),
             }));
         self.token_entries.clear();
-        // `stmt_range` drills expansion-layer tokens up to their authored
-        // call site, so every entry is in the coordinates the formatter emits.
+        // `token_stmt_ranges` drills expansion-layer tokens up to their
+        // authored call site, so every entry is in the coordinates the
+        // formatter emits.
         self.token_entries
             .extend(erased.token_stmt_ranges().map(|range| TokenEntry {
                 offset: range.start,
