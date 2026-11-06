@@ -69,4 +69,24 @@ static inline int64_t synq_get_token_wrapped(const SyntaqliteDialect* g,
   return len;
 }
 
+// Whitespace as SQLite's tokenizer sees it: a whitespace token starts on a
+// space, \t, \n, \f or \r (the CC_SPACE class) and continues while
+// sqlite3Isspace holds, which also includes \v. Every dialect's tokenizer is
+// built from those tables, so the parser can skip whitespace without calling
+// the tokenizer. Returns the end of the run starting at `pos`, or `pos` if no
+// run starts there.
+static inline uint32_t synq_skip_whitespace(const unsigned char* z,
+                                            uint32_t pos,
+                                            uint32_t end) {
+  const uint64_t kStart = (1ull << ' ') | (1ull << '\t') | (1ull << '\n') |
+                          (1ull << '\f') | (1ull << '\r');
+  const uint64_t kContinue = kStart | (1ull << '\v');
+  if (pos >= end || z[pos] > ' ' || !((kStart >> z[pos]) & 1))
+    return pos;
+  do {
+    pos++;
+  } while (pos < end && z[pos] <= ' ' && ((kContinue >> z[pos]) & 1));
+  return pos;
+}
+
 #endif  // SYNTAQLITE_INTERNAL_TOKEN_WRAPPED_H

@@ -651,6 +651,46 @@ mod tests {
     }
 
     #[test]
+    fn parser_whitespace_matches_tokenizer() {
+        // The parser skips whitespace without calling the tokenizer, so check
+        // they agree on every two-byte gap between `1` and `;`.
+        let tokenizer = crate::Tokenizer::new();
+        let parser = Parser::new();
+        for a in 1u8..0x80 {
+            for b in 1u8..0x80 {
+                let gap = String::from_utf8(vec![a, b]).expect("ASCII");
+                let sql = format!("SELECT 1{gap};");
+                let tokens: Vec<_> = tokenizer
+                    .tokenize(&sql)
+                    .map(|t| (t.token_type(), t.text().to_string()))
+                    .collect();
+                // Only gaps that leave the `1` and `;` tokens intact.
+                if tokens.get(2).map(|t| t.1.as_str()) != Some("1")
+                    || tokens.last().map(|t| t.1.as_str()) != Some(";")
+                {
+                    continue;
+                }
+                let gap_tokens = &tokens[3..tokens.len() - 1];
+                let mut session = parser.parse(&sql);
+                let mut parsed = true;
+                loop {
+                    match session.next() {
+                        ParseOutcome::Ok(_) => {}
+                        ParseOutcome::Err(_) => parsed = false,
+                        ParseOutcome::Done => break,
+                    }
+                }
+                if gap_tokens.iter().all(|t| t.0 == TokenType::Space) {
+                    assert!(parsed, "whitespace gap {gap:?} should parse");
+                }
+                if gap_tokens.iter().any(|t| t.0 == TokenType::Illegal) {
+                    assert!(!parsed, "illegal gap {gap:?} should not parse");
+                }
+            }
+        }
+    }
+
+    #[test]
     fn parser_collect_tokens_and_comments() {
         let parser = Parser::with_config(&ParserConfig::default().with_collect_tokens(true));
         let mut session = parser.parse("/* lead */ SELECT 1 -- tail\n;");

@@ -553,14 +553,12 @@ static int64_t next_token(SyntaqliteParser* p,
                           uint32_t pos,
                           uint32_t* out_offset,
                           uint32_t* out_type) {
-  // Space, \t, \n, \f and \r: whitespace in every dialect's tokenizer.
-  const uint64_t kSpaceMask = (1ull << ' ') | (1ull << '\t') | (1ull << '\n') |
-                              (1ull << '\f') | (1ull << '\r');
   while (pos < p->source_len && z[pos] != '\0') {
     // Skip whitespace here instead of calling the tokenizer just to get
     // TK_SPACE back.
-    if (z[pos] <= ' ' && ((kSpaceMask >> z[pos]) & 1)) {
-      pos++;
+    uint32_t after_space = synq_skip_whitespace(z, pos, p->source_len);
+    if (after_space != pos) {
+      pos = after_space;
       continue;
     }
     uint32_t type = 0;
