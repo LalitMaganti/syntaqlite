@@ -991,6 +991,17 @@ impl<'a> AnyParsedStatement<'a> {
         })
     }
 
+    /// Authored-source range of each token, in the order of
+    /// [`tokens`](Self::tokens), without building the tokens.
+    ///
+    /// Returns an empty iterator if `collect_tokens` was not enabled.
+    pub fn token_stmt_ranges(&self) -> impl Iterator<Item = StmtRange> + use<'_> {
+        let parser = self.raw;
+        // SAFETY: self.raw is valid for 'a; the returned slice lives for 'a.
+        let raw: &[ffi::CParserToken] = unsafe { self.raw.as_ref().result_tokens() };
+        raw.iter().map(move |t| token_stmt_range(parser, t))
+    }
+
     /// The inclusive `[first, last]` token indices the parser fed to
     /// Lemon while reducing AST node `id`.  Returns `None` when
     /// [`ParserConfig::with_collect_node_extents`] was not enabled,
@@ -1667,6 +1678,34 @@ fn ffi_comment<'a>(raw: NonNull<CParser>, source: &'a StmtText, c: &ffi::CCommen
     )
 }
 
+/// A token's authored-source range: its own position for layer 0, or the
+/// enclosing macro call site for expansion-layer tokens (same rule
+/// `span_text` uses for AST spans).
+#[expect(clippy::used_underscore_binding)]
+fn token_stmt_range(raw: NonNull<CParser>, t: &ffi::CParserToken) -> StmtRange {
+    if t._layer_id == 0 {
+        return StmtRange::from_offset_len(
+            StmtOffset::from_raw(t.offset),
+            StmtLen::from_raw(t.length),
+        );
+    }
+    let span = crate::ast::TextSpan {
+        offset: t.offset,
+        length: t.length,
+        flags: 0,
+        _layer_id: t._layer_id,
+    };
+    let mut out_len: u32 = 0;
+    let mut out_offset: u32 = 0;
+    // SAFETY: raw is valid; span mirrors the token's layer position; the
+    // out pointers are live stack slots.
+    unsafe {
+        raw.as_ref()
+            .span_text(span, &raw mut out_len, &raw mut out_offset);
+    }
+    StmtRange::from_offset_len(StmtOffset::from_raw(out_offset), StmtLen::from_raw(out_len))
+}
+
 /// Build a [`TypedParserToken`] from a raw FFI token entry, resolving
 /// its byte text against the owning layer's buffer and drilling up to
 /// the authored-source range via `span_text`.  Shared between the
@@ -1688,27 +1727,7 @@ fn build_parser_token<'a, G: TypedDialect>(
     let text = buffer.get(start..end).unwrap_or("");
     let layer_id = u8::try_from(t._layer_id).unwrap_or(u8::MAX);
 
-    let stmt_range = if t._layer_id == 0 {
-        StmtRange::from_offset_len(StmtOffset::from_raw(t.offset), StmtLen::from_raw(t.length))
-    } else {
-        // Drill up through the expansion-layer chain to the authored
-        // source range (same rule `span_text` uses for AST spans).
-        let span = crate::ast::TextSpan {
-            offset: t.offset,
-            length: t.length,
-            flags: 0,
-            _layer_id: t._layer_id,
-        };
-        let mut out_len: u32 = 0;
-        let mut out_offset: u32 = 0;
-        // SAFETY: raw is valid; span mirrors the token's layer
-        // position; the out pointers are live stack slots.
-        unsafe {
-            raw.as_ref()
-                .span_text(span, &raw mut out_len, &raw mut out_offset);
-        }
-        StmtRange::from_offset_len(StmtOffset::from_raw(out_offset), StmtLen::from_raw(out_len))
-    };
+    let stmt_range = token_stmt_range(raw, t);
 
     TypedParserToken::new(
         text,
