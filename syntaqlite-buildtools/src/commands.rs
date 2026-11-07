@@ -216,12 +216,7 @@ impl SqliteExtract {
             eprintln!("  {filename}");
         }
 
-        eprintln!("Transforming mkkeywordhash.c...");
         let mkkeywordhash_c = read_source(&tool_dir, "mkkeywordhash.c")?;
-        crate::extract::mkkeywordhash::write_modified_mkkeywordhash(
-            &mkkeywordhash_c,
-            &sources_dir.join("mkkeywordhash_modified.c"),
-        )?;
 
         eprintln!("Extracting tokenizer fragments...");
         let tokenize_c = read_source(&src, "tokenize.c")?;

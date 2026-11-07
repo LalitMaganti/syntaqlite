@@ -22,7 +22,6 @@
 #define SYNQ_PREFIXED(name) SYNQ_PREFIXED_CAT(SYNTAQLITE_SYMBOL_PREFIX, name)
 
 // clang-format off
-#define sqlite3UpperToLower SYNQ_PREFIXED(sqlite3UpperToLower)
 #define synq_body_call_range SYNQ_PREFIXED(synq_body_call_range)
 #define synq_extent_fold_below_into_top SYNQ_PREFIXED(synq_extent_fold_below_into_top)
 #define synq_extent_on_reduce SYNQ_PREFIXED(synq_extent_on_reduce)

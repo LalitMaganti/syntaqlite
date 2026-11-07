@@ -46,8 +46,3 @@ pub mod codegen_api;
 pub fn run_lemon(args: &[String]) -> ! {
     parser_tools::lemon::run_lemon(args)
 }
-
-/// Mkkeyword hash generator subprocess entry point.
-pub fn run_mkkeyword(args: &[String]) -> ! {
-    parser_tools::mkkeyword::run_mkkeyword(args)
-}

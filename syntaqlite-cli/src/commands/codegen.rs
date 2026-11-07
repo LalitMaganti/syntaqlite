@@ -80,18 +80,13 @@ pub(crate) enum CliMacroStyle {
     Rust,
 }
 
-// Hidden subcommands forwarded to the lemon/mkkeyword subprocess invocations.
+// Hidden subcommand forwarded to the lemon subprocess invocation.
 // These must be present in any binary that calls the codegen pipeline;
 // `generate_codegen_artifacts()` spawns the current executable with these.
 #[derive(clap::Subcommand)]
 pub(crate) enum ToolCommand {
     #[command(hide = true)]
     Lemon {
-        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
-        args: Vec<String>,
-    },
-    #[command(hide = true)]
-    Mkkeyword {
         #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
         args: Vec<String>,
     },
@@ -153,7 +148,6 @@ pub(crate) fn generate(args: &DialectArgs) -> Result<(), String> {
 pub(crate) fn dispatch_tool(cmd: ToolCommand) -> Result<(), String> {
     match cmd {
         ToolCommand::Lemon { args } => syntaqlite_buildtools::run_lemon(&args),
-        ToolCommand::Mkkeyword { args } => syntaqlite_buildtools::run_mkkeyword(&args),
     }
 }
 

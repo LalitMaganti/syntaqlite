@@ -10,7 +10,7 @@ pub(crate) mod grammar_codegen;
 pub(crate) mod keyword_hash;
 pub(crate) mod lemon;
 pub(crate) mod literal_tokens;
-pub(crate) mod mkkeyword;
 pub(crate) mod parser_pipeline;
 pub(crate) mod sqlite_fragments;
+pub(crate) mod sqlite_keywords;
 pub(crate) mod tokenizer_assembly;

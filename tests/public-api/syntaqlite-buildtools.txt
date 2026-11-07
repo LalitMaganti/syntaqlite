@@ -51,7 +51,6 @@ pub fn syntaqlite_buildtools::output_resolver::OutputLayout::for_amalg_temp(&std
 pub fn syntaqlite_buildtools::output_resolver::OutputLayout::for_external(&std::path::Path, &str, &str) -> Self
 pub fn syntaqlite_buildtools::output_resolver::OutputLayout::for_sqlite(&std::path::Path, &str, &str, &str, &str) -> Self
 pub fn syntaqlite_buildtools::run_lemon(&[alloc::string::String]) -> never
-pub fn syntaqlite_buildtools::run_mkkeyword(&[alloc::string::String]) -> never
 pub fn syntaqlite_buildtools::version_analysis::SqliteVersion::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn syntaqlite_buildtools::version_analysis::analyze_versions(&std::path::Path, &std::path::Path) -> core::result::Result<syntaqlite_buildtools::version_analysis::VersionAnalysis, alloc::string::String>
 pub fn syntaqlite_buildtools::version_analysis::grammar::format_grammar_report(&syntaqlite_buildtools::version_analysis::grammar::GrammarAnalysis) -> alloc::string::String

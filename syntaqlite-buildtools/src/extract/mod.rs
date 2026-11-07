@@ -25,7 +25,6 @@ pub(crate) mod amalgamation_probe;
 pub(crate) mod base_files;
 pub(crate) mod builtins;
 pub(crate) mod keywords_and_parser;
-pub(crate) mod mkkeywordhash;
 pub(crate) mod tokenizer;
 pub(crate) mod virtual_tables;
 

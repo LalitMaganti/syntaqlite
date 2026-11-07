@@ -504,4 +504,82 @@ mod tests {
         let second_count = tokenizer.tokenize("SELECT 2;").count();
         assert!(second_count > 0);
     }
+
+    /// The type of `text` if it tokenizes as a single identifier-shaped token.
+    fn word_type(tokenizer: &Tokenizer, text: &str) -> Option<crate::any::AnyTokenType> {
+        if !text.starts_with(|c: char| c.is_ascii_alphabetic() || c == '_') {
+            return None;
+        }
+        let tokens: Vec<_> = tokenizer.tokenize(text).collect();
+        match tokens.as_slice() {
+            [t] if t.text() == text => Some(t.token_type().into()),
+            _ => None,
+        }
+    }
+
+    /// Checks the keyword lookup against `SQLite`'s `keywordCode` rule: a word
+    /// is the keyword with the same length whose bytes all agree under
+    /// `&~0x20`. Every keyword is tried with each byte replaced by, and with
+    /// each position given, every printable ASCII character, and with each
+    /// byte deleted.
+    #[test]
+    fn keyword_lookup_matches_sqlite_rule() {
+        let tokenizer = Tokenizer::new();
+        let id = word_type(&tokenizer, "not_a_keyword").expect("identifier");
+        let dialect = crate::any::AnyDialect::from(crate::sqlite::dialect::dialect());
+        let mut keywords = Vec::new();
+        let mut unrecognized = Vec::new();
+        for kw in dialect.keywords() {
+            let name = kw.keyword().as_bytes().to_vec();
+            if name.is_empty() {
+                continue;
+            }
+            let ty = word_type(&tokenizer, kw.keyword()).expect("keyword is one token");
+            // WITHIN needs the ordered-set aggregates cflag, which is off by
+            // default.
+            if ty != kw.token_type() && kw.keyword() != "WITHIN" {
+                unrecognized.push(kw.keyword().to_string());
+            }
+            keywords.push((name, ty));
+        }
+        assert!(unrecognized.is_empty(), "not recognized: {unrecognized:?}");
+
+        let sqlite_rule = |word: &[u8]| {
+            keywords
+                .iter()
+                .find(|(kw, _)| {
+                    kw.len() == word.len() && kw.iter().zip(word).all(|(k, w)| w & !0x20 == *k)
+                })
+                .map_or(id, |(_, ty)| *ty)
+        };
+        let mut checked = 0usize;
+        let mut check = |word: Vec<u8>| {
+            let text = String::from_utf8(word).expect("ASCII");
+            if let Some(ty) = word_type(&tokenizer, &text) {
+                assert_eq!(ty, sqlite_rule(text.as_bytes()), "{text:?}");
+                checked += 1;
+            }
+        };
+        for (kw, _) in &keywords {
+            check(kw.to_ascii_lowercase());
+            for i in 0..=kw.len() {
+                for b in 0x21..0x7f {
+                    if i < kw.len() {
+                        let mut w = kw.clone();
+                        w[i] = b;
+                        check(w);
+                    }
+                    let mut w = kw.clone();
+                    w.insert(i, b);
+                    check(w);
+                }
+                if i < kw.len() {
+                    let mut w = kw.clone();
+                    w.remove(i);
+                    check(w);
+                }
+            }
+        }
+        assert!(checked > 100_000, "only {checked} words were identifiers");
+    }
 }
