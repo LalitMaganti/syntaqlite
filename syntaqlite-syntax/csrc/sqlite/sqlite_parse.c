@@ -5166,14 +5166,14 @@ struct yyParser {
 typedef struct yyParser yyParser;
 
 #include <assert.h>
-#ifndef NDEBUG
-#include <stdio.h>
 
 #include "syntaqlite_sqlite/sqlite_tokens.h"
 
 #include "syntaqlite_dialect/dialect_macros.h"
 
 #include "syntaqlite_dialect/extent_hooks.h"
+#ifndef NDEBUG
+#include <stdio.h>
 static FILE* yyTraceFILE = 0;
 static char* yyTracePrompt = 0;
 #endif /* NDEBUG */

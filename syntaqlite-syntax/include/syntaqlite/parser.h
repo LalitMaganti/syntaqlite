@@ -132,7 +132,8 @@ SYNTAQLITE_API void syntaqlite_parser_destroy(SyntaqliteParser* p);
 SYNTAQLITE_API int32_t syntaqlite_parser_set_collect_tokens(SyntaqliteParser* p,
                                                             uint32_t enable);
 
-// Enable parser trace output (debug builds only). Default: off (0).
+// Enable parser trace output (unavailable when compiled with NDEBUG).
+// Default: off (0).
 // Returns SYNTAQLITE_OK on success, SYNTAQLITE_ERR_ALREADY_USED if the
 // parser has already been used.
 SYNTAQLITE_API int32_t syntaqlite_parser_set_trace(SyntaqliteParser* p,
