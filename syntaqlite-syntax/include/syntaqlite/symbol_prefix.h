@@ -59,6 +59,7 @@
 #define SynqSqliteParseFinalize SYNQ_PREFIXED(SynqSqliteParseFinalize)
 #define SynqSqliteParseFree SYNQ_PREFIXED(SynqSqliteParseFree)
 #define SynqSqliteParseInit SYNQ_PREFIXED(SynqSqliteParseInit)
+#define SynqSqliteParseStackDepth SYNQ_PREFIXED(SynqSqliteParseStackDepth)
 #define SynqSqliteParseTrace SYNQ_PREFIXED(SynqSqliteParseTrace)
 #define syntaqlite_dialect_load SYNQ_PREFIXED(syntaqlite_dialect_load)
 #define syntaqlite_dump_node SYNQ_PREFIXED(syntaqlite_dump_node)
