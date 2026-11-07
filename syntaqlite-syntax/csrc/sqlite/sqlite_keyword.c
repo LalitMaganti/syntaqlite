@@ -14,122 +14,6 @@
 #include "syntaqlite_dialect/sqlite_compat.h"
 #include "syntaqlite_sqlite/sqlite_tokens.h"
 
-/*
-** The author disclaims copyright to this source code.  In place of
-** a legal notice, here is a blessing:
-**
-**    May you do good and not evil.
-**    May you find forgiveness for yourself and forgive others.
-**    May you share freely, never taking more than you give.
-*/
-const unsigned char sqlite3UpperToLower[] = {
-#ifdef SQLITE_ASCII
-    0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
-    21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39,
-    40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58,
-    59, 60, 61, 62, 63, 64, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107,
-    108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122,
-    91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107,
-    108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122,
-    123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136, 137,
-    138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152,
-    153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167,
-    168, 169, 170, 171, 172, 173, 174, 175, 176, 177, 178, 179, 180, 181, 182,
-    183, 184, 185, 186, 187, 188, 189, 190, 191, 192, 193, 194, 195, 196, 197,
-    198, 199, 200, 201, 202, 203, 204, 205, 206, 207, 208, 209, 210, 211, 212,
-    213, 214, 215, 216, 217, 218, 219, 220, 221, 222, 223, 224, 225, 226, 227,
-    228, 229, 230, 231, 232, 233, 234, 235, 236, 237, 238, 239, 240, 241, 242,
-    243, 244, 245, 246, 247, 248, 249, 250, 251, 252, 253, 254, 255,
-#endif
-#ifdef SQLITE_EBCDIC
-    0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,           /* 0x */
-    16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, /* 1x */
-    32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, /* 2x */
-    48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, /* 3x */
-    64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, /* 4x */
-    80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, /* 5x */
-    96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110,
-    111, /* 6x */
-    112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126,
-    127, /* 7x */
-    128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142,
-    143, /* 8x */
-    144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158,
-    159, /* 9x */
-    160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 170, 171, 140, 141, 142,
-    175, /* Ax */
-    176, 177, 178, 179, 180, 181, 182, 183, 184, 185, 186, 187, 188, 189, 190,
-    191, /* Bx */
-    192, 129, 130, 131, 132, 133, 134, 135, 136, 137, 202, 203, 204, 205, 206,
-    207, /* Cx */
-    208, 145, 146, 147, 148, 149, 150, 151, 152, 153, 218, 219, 220, 221, 222,
-    223, /* Dx */
-    224, 225, 162, 163, 164, 165, 166, 167, 168, 169, 234, 235, 236, 237, 238,
-    239, /* Ex */
-    240, 241, 242, 243, 244, 245, 246, 247, 248, 249, 250, 251, 252, 253, 254,
-    255, /* Fx */
-#endif
-    /* All of the upper-to-lower conversion data is above.  The following
-    ** 18 integers are completely unrelated.  They are appended to the
-    ** sqlite3UpperToLower[] array to avoid UBSAN warnings.  Here's what is
-    ** going on:
-    **
-    ** The SQL comparison operators (<>, =, >, <=, <, and >=) are implemented
-    ** by invoking sqlite3MemCompare(A,B) which compares values A and B and
-    ** returns negative, zero, or positive if A is less then, equal to, or
-    ** greater than B, respectively.  Then the true false results is found by
-    ** consulting sqlite3aLTb[opcode], sqlite3aEQb[opcode], or
-    ** sqlite3aGTb[opcode] depending on whether the result of compare(A,B)
-    ** is negative, zero, or positive, where opcode is the specific opcode.
-    ** The only works because the comparison opcodes are consecutive and in
-    ** this order: NE EQ GT LE LT GE.  Various assert()s throughout the code
-    ** ensure that is the case.
-    **
-    ** These elements must be appended to another array.  Otherwise the
-    ** index (here shown as [256-OP_Ne]) would be out-of-bounds and thus
-    ** be undefined behavior.  That's goofy, but the C-standards people thought
-    ** it was a good idea, so here we are.
-    */
-    /* NE  EQ  GT  LE  LT  GE  */
-    1, 0, 0, 1, 1, 0, /* aLTb[]: Use when compare(A,B) less than zero */
-    0, 1, 0, 1, 0, 1, /* aEQb[]: Use when compare(A,B) equals zero */
-    1, 0, 1, 0, 0, 1  /* aGTb[]: Use when compare(A,B) greater than zero*/
-};
-
-/*
-** The author disclaims copyright to this source code.  In place of
-** a legal notice, here is a blessing:
-**
-**    May you do good and not evil.
-**    May you find forgiveness for yourself and forgive others.
-**    May you share freely, never taking more than you give.
-*/
-#ifdef SQLITE_ASCII
-#define charMap(X) sqlite3UpperToLower[(unsigned char)X]
-#endif
-#ifdef SQLITE_EBCDIC
-#define charMap(X) ebcdicToAscii[(unsigned char)X]
-const unsigned char ebcdicToAscii[] = {
-    /* 0   1   2   3   4   5   6   7   8   9   A   B   C   D   E   F */
-    0, 0,   0,   0,   0,   0,   0,   0,   0,   0,   0, 0, 0, 0,  0, 0, /* 0x */
-    0, 0,   0,   0,   0,   0,   0,   0,   0,   0,   0, 0, 0, 0,  0, 0, /* 1x */
-    0, 0,   0,   0,   0,   0,   0,   0,   0,   0,   0, 0, 0, 0,  0, 0, /* 2x */
-    0, 0,   0,   0,   0,   0,   0,   0,   0,   0,   0, 0, 0, 0,  0, 0, /* 3x */
-    0, 0,   0,   0,   0,   0,   0,   0,   0,   0,   0, 0, 0, 0,  0, 0, /* 4x */
-    0, 0,   0,   0,   0,   0,   0,   0,   0,   0,   0, 0, 0, 0,  0, 0, /* 5x */
-    0, 0,   0,   0,   0,   0,   0,   0,   0,   0,   0, 0, 0, 95, 0, 0, /* 6x */
-    0, 0,   0,   0,   0,   0,   0,   0,   0,   0,   0, 0, 0, 0,  0, 0, /* 7x */
-    0, 97,  98,  99,  100, 101, 102, 103, 104, 105, 0, 0, 0, 0,  0, 0, /* 8x */
-    0, 106, 107, 108, 109, 110, 111, 112, 113, 114, 0, 0, 0, 0,  0, 0, /* 9x */
-    0, 0,   115, 116, 117, 118, 119, 120, 121, 122, 0, 0, 0, 0,  0, 0, /* Ax */
-    0, 0,   0,   0,   0,   0,   0,   0,   0,   0,   0, 0, 0, 0,  0, 0, /* Bx */
-    0, 97,  98,  99,  100, 101, 102, 103, 104, 105, 0, 0, 0, 0,  0, 0, /* Cx */
-    0, 106, 107, 108, 109, 110, 111, 112, 113, 114, 0, 0, 0, 0,  0, 0, /* Dx */
-    0, 0,   115, 116, 117, 118, 119, 120, 121, 122, 0, 0, 0, 0,  0, 0, /* Ex */
-    0, 0,   0,   0,   0,   0,   0,   0,   0,   0,   0, 0, 0, 0,  0, 0, /* Fx */
-};
-#endif
-
 /***** This file contains automatically generated code ******
 **
 ** The code in this file has been automatically generated by
@@ -203,33 +87,6 @@ const char synq_sqlite_zKWText[670] = {
     'O', 'U', 'N', 'D', 'E', 'D', 'U', 'N', 'I', 'O', 'N', 'U', 'S', 'I', 'N',
     'G', 'V', 'A', 'C', 'U', 'U', 'M', 'V', 'I', 'E', 'W', 'I', 'N', 'D', 'O',
     'W', 'B', 'Y', 'P', 'R', 'I', 'M', 'A', 'R', 'Y',
-};
-/* aKWHash[i] is the hash value for the i-th keyword */
-static const unsigned char aKWHash[127] = {
-    84,  92,  137, 82,  108, 29,  0,   0,   94,  0,  85,  72,  0,   53,  35,
-    86,  15,  100, 42,  97,  54,  89,  138, 19,  0,  0,   143, 0,   40,  132,
-    0,   22,  110, 0,   9,   0,   0,   126, 80,  0,  78,  6,   0,   65,  106,
-    148, 0,   139, 118, 0,   0,   48,  0,   90,  24, 0,   17,  0,   27,  70,
-    23,  26,  5,   60,  145, 113, 125, 0,   73,  91, 71,  101, 61,  123, 74,
-    0,   49,  0,   11,  41,  0,   116, 0,   0,   0,  112, 10,  114, 119, 128,
-    14,  50,  127, 0,   103, 0,   18,  124, 147, 56, 133, 142, 88,  83,  37,
-    30,  129, 0,   0,   111, 51,  134, 131, 0,   34, 0,   0,   135, 0,   98,
-    38,  39,  0,   20,  45,  120, 93,
-};
-/* aKWNext[] forms the hash collision chain.  If aKWHash[i]==0
-** then the i-th keyword has no more hash collisions.  Otherwise,
-** the next keyword with the same hash is aKWHash[i]-1. */
-static const unsigned char aKWNext[149] = {
-    0,   0,   0,  0,   0,   4,  0,  43, 0,   0,  109, 117, 0,   0,   0,
-    2,   0,   0,  146, 0,   0,  0,  13, 0,   0,  0,   0,   144, 0,   0,
-    122, 52,  0,  0,   140, 12, 0,  0,  62,  0,  141, 0,   136, 0,   0,
-    36,  0,   0,  28,  77,  0,  0,  0,  0,   59, 0,   47,  0,   0,   0,
-    0,   0,   0,  0,   0,   0,  0,  69, 0,   0,  0,   0,   0,   102, 3,
-    0,   58,  0,  1,   75,  0,  0,  0,  31,  0,  0,   0,   0,   0,   130,
-    0,   107, 0,  64,  66,  63, 0,  0,  0,   0,  0,   0,   0,   0,   46,
-    0,   16,  8,  0,   0,   0,  0,  0,  0,   0,  0,   0,   0,   81,  104,
-    0,   115, 21, 7,   67,  0,  79, 96, 121, 0,  0,   68,  0,   0,   99,
-    44,  0,   55, 0,   76,  0,  95, 32, 33,  57, 25,  0,   105, 87,
 };
 /* synq_sqlite_aKWLen[i] is the length (in bytes) of the i-th keyword */
 const unsigned char synq_sqlite_aKWLen[149] = {
@@ -408,138 +265,7 @@ const unsigned char synq_sqlite_aKWCode[149] = {
     SYNTAQLITE_TK_BY,
     SYNTAQLITE_TK_PRIMARY,
 };
-/* Hash table decoded:
-**   0: INSERT
-**   1: IS
-**   2: ROLLBACK TRIGGER
-**   3: IMMEDIATE
-**   4: PARTITION
-**   5: TEMP
-**   6:
-**   7:
-**   8: VALUES WITHOUT
-**   9:
-**  10: MATCH
-**  11: NOTHING
-**  12:
-**  13: OF
-**  14: TIES IGNORE
-**  15: PLAN
-**  16: INSTEAD INDEXED
-**  17: WITHIN
-**  18: TRANSACTION RIGHT
-**  19: WHEN
-**  20: SET HAVING
-**  21: MATERIALIZED IF
-**  22: ROWS
-**  23: SELECT
-**  24:
-**  25:
-**  26: VACUUM SAVEPOINT
-**  27:
-**  28: LIKE UNION VIRTUAL REFERENCES
-**  29: RESTRICT
-**  30:
-**  31: THEN REGEXP
-**  32: TO
-**  33:
-**  34: BEFORE
-**  35:
-**  36:
-**  37: FOLLOWING COLLATE CASCADE
-**  38: CREATE
-**  39:
-**  40: CASE REINDEX
-**  41: EACH
-**  42:
-**  43: QUERY
-**  44: AND ADD
-**  45: PRIMARY ANALYZE
-**  46:
-**  47: ROW ASC DETACH
-**  48: CURRENT_TIME CURRENT_DATE
-**  49:
-**  50:
-**  51: EXCLUSIVE TEMPORARY
-**  52:
-**  53: DEFERRED
-**  54: DEFERRABLE
-**  55:
-**  56: DATABASE
-**  57:
-**  58: DELETE VIEW GENERATED
-**  59: ATTACH
-**  60: END
-**  61: EXCLUDE
-**  62: ESCAPE DESC
-**  63: GLOB
-**  64: WINDOW ELSE
-**  65: COLUMN
-**  66: FIRST
-**  67:
-**  68: GROUPS ALL
-**  69: DISTINCT DROP KEY
-**  70: BETWEEN
-**  71: INITIALLY
-**  72: BEGIN
-**  73: FILTER CHECK ACTION
-**  74: GROUP INDEX
-**  75:
-**  76: EXISTS DEFAULT
-**  77:
-**  78: FOR CURRENT_TIMESTAMP
-**  79: EXCEPT
-**  80:
-**  81: CROSS
-**  82:
-**  83:
-**  84:
-**  85: CAST
-**  86: FOREIGN AUTOINCREMENT
-**  87: COMMIT
-**  88: CURRENT AFTER ALTER
-**  89: FULL FAIL CONFLICT
-**  90: EXPLAIN
-**  91: CONSTRAINT
-**  92: FROM ALWAYS
-**  93:
-**  94: ABORT
-**  95:
-**  96: AS DO
-**  97: REPLACE WITH RELEASE
-**  98: BY RENAME
-**  99: RANGE RAISE
-** 100: OTHERS
-** 101: USING NULLS
-** 102: PRAGMA
-** 103: JOIN ISNULL OFFSET
-** 104: NOT
-** 105: OR LAST LEFT
-** 106: LIMIT
-** 107:
-** 108:
-** 109: IN
-** 110: INTO
-** 111: OVER RECURSIVE
-** 112: ORDER OUTER
-** 113:
-** 114: INTERSECT UNBOUNDED
-** 115:
-** 116:
-** 117: RETURNING ON
-** 118:
-** 119: WHERE
-** 120: NO INNER
-** 121: NULL
-** 122:
-** 123: TABLE
-** 124: NATURAL NOTNULL
-** 125: PRECEDING
-** 126: UPDATE UNIQUE
-*/
-/* Check to see if z[0..n-1] is a keyword. If it is, write the
-** parser symbol code for that keyword into *pType.  Always
-** return the integer n (the length of the token). */
+
 static const int32_t synq_sqlite_aKWSince[149] = {
     0,       0,       0,       0,       0, 0,       0,       0,       0,
     0,       0,       0,       0,       0, 0,       0,       0,       0,
@@ -575,204 +301,160 @@ static const uint8_t synq_sqlite_aKWCFlagPolarity[149] = {
     1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
+/* synq_sqlite_aKWSlot[h] is the 1-based index of the keyword whose
+** key hashes to h, or 0. */
+static const uint8_t synq_sqlite_aKWSlot[1024] = {
+    0,  0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   16,  0,
+    0,  102, 0,   0,   0,   63,  92,  0,   0,   0,   113, 0,   0,   45,  0,
+    0,  0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
+    0,  0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   147, 0,   0,   0,
+    0,  0,   142, 0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
+    0,  23,  0,   98,  0,   0,   0,   0,   0,   112, 0,   0,   51,  0,   0,
+    0,  0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   10,  0,   43,
+    11, 0,   0,   0,   0,   59,  9,   0,   0,   0,   0,   0,   0,   0,   0,
+    0,  0,   0,   0,   130, 58,  0,   0,   0,   0,   0,   0,   0,   0,   0,
+    0,  0,   70,  0,   0,   0,   0,   0,   0,   0,   0,   0,   48,  0,   0,
+    0,  0,   0,   0,   0,   68,  101, 0,   0,   145, 0,   0,   0,   0,   0,
+    0,  0,   0,   0,   0,   40,  133, 0,   0,   0,   0,   0,   0,   0,   0,
+    0,  0,   0,   0,   0,   0,   0,   0,   0,   0,   131, 97,  0,   0,   0,
+    0,  0,   0,   0,   0,   73,  0,   0,   0,   0,   0,   0,   0,   0,   0,
+    47, 0,   53,  0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   49,  0,
+    0,  0,   0,   0,   127, 0,   38,  0,   41,  0,   0,   0,   99,  0,   0,
+    0,  91,  0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   77,
+    0,  135, 0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
+    0,  0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
+    0,  0,   0,   0,   0,   0,   0,   0,   0,   0,   116, 0,   0,   72,  0,
+    0,  0,   0,   0,   0,   0,   0,   56,  0,   0,   0,   0,   0,   0,   0,
+    0,  0,   96,  110, 0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
+    0,  12,  0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
+    0,  0,   0,   108, 0,   0,   0,   0,   0,   0,   0,   0,   4,   6,   140,
+    0,  0,   0,   0,   0,   0,   0,   0,   0,   0,   15,  26,  0,   0,   0,
+    0,  28,  0,   0,   22,  0,   144, 141, 148, 124, 0,   0,   0,   0,   0,
+    0,  0,   0,   0,   66,  32,  0,   0,   0,   0,   0,   0,   0,   0,   0,
+    0,  129, 0,   0,   0,   0,   0,   0,   0,   117, 0,   0,   0,   0,   0,
+    0,  0,   78,  0,   0,   75,  0,   146, 105, 0,   0,   0,   118, 0,   0,
+    0,  0,   0,   0,   134, 0,   0,   0,   0,   0,   0,   0,   0,   0,   67,
+    0,  0,   1,   0,   0,   0,   0,   0,   0,   0,   0,   90,  0,   0,   0,
+    0,  0,   0,   0,   0,   0,   0,   0,   79,  0,   0,   0,   0,   0,   3,
+    0,  27,  0,   60,  0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
+    0,  0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   39,  103, 25,
+    0,  0,   0,   0,   0,   0,   0,   21,  0,   0,   0,   0,   0,   0,   0,
+    0,  0,   0,   0,   0,   0,   125, 0,   61,  111, 65,  0,   0,   0,   0,
+    0,  0,   0,   0,   122, 0,   0,   0,   0,   0,   0,   83,  0,   82,  0,
+    14, 0,   0,   0,   0,   0,   0,   0,   0,   0,   123, 0,   0,   0,   0,
+    0,  0,   0,   0,   0,   115, 0,   0,   0,   0,   0,   0,   0,   37,  0,
+    0,  0,   0,   18,  0,   0,   0,   0,   0,   0,   0,   69,  0,   0,   0,
+    0,  0,   0,   0,   0,   114, 0,   0,   0,   0,   0,   0,   0,   62,  0,
+    0,  86,  0,   0,   0,   0,   44,  0,   0,   0,   0,   119, 0,   5,   0,
+    0,  0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
+    0,  29,  0,   0,   0,   0,   55,  93,  0,   0,   0,   94,  71,  0,   0,
+    0,  0,   0,   0,   0,   0,   0,   128, 106, 121, 0,   0,   0,   52,  0,
+    0,  0,   76,  0,   2,   0,   0,   0,   0,   0,   109, 8,   0,   0,   13,
+    0,  0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
+    0,  0,   0,   0,   0,   0,   0,   0,   0,   36,  0,   0,   0,   0,   0,
+    0,  0,   7,   0,   0,   0,   0,   0,   0,   24,  0,   0,   87,  80,  0,
+    0,  0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
+    0,  0,   64,  0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
+    0,  0,   0,   0,   0,   0,   0,   0,   0,   0,   132, 0,   0,   0,   0,
+    0,  0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
+    0,  0,   46,  95,  0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   89,
+    0,  0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
+    30, 0,   0,   0,   0,   0,   0,   88,  50,  0,   0,   0,   0,   0,   0,
+    0,  0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
+    0,  0,   0,   0,   0,   137, 0,   0,   0,   0,   0,   0,   104, 0,   0,
+    0,  0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   17,
+    0,  0,   0,   0,   0,   0,   0,   126, 0,   0,   0,   0,   0,   0,   0,
+    0,  0,   0,   0,   0,   0,   0,   0,   0,   20,  0,   0,   120, 0,   0,
+    0,  0,   0,   0,   0,   0,   100, 0,   0,   0,   0,   85,  0,   0,   0,
+    0,  0,   0,   0,   0,   31,  84,  0,   35,  34,  0,   0,   0,   0,   0,
+    0,  0,   139, 0,   74,  0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
+    0,  0,   19,  0,   0,   0,   0,   0,   0,   107, 0,   0,   33,  81,  0,
+    0,  0,   136, 0,   54,  0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
+    0,  0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   57,  0,   143, 0,
+    0,  0,   0,   0,   0,   0,   0,   0,   0,   42,  0,   0,   0,   138, 0,
+    0,  0,   0,   0,
+};
+
+/* synq_sqlite_aKWKey[i] is the lookup key of keyword i: its first
+** two and last two bytes, uppercased, and its length. */
+static const uint64_t synq_sqlite_aKWKey[149] = {
+    0x0ull,         0x758454552ull,  0x744454e49ull, 0x558454e49ull,
+    0x443534544ull, 0x645505345ull,  0x448434145ull, 0x54b434843ull,
+    0x35945454bull, 0x645524542ull,  0x74e474f46ull, 0x3524f4f46ull,
+    0x645524749ull, 0x650584552ull,  0x74e495845ull, 0x744414e49ull,
+    0x344444441ull, 0x845534144ull,  0x253415341ull, 0x654434553ull,
+    0x5454c4154ull, 0x45446454cull,  0x44e454854ull, 0x3444e4e45ull,
+    0xa454c4544ull, 0x445534c45ull,  0x745445845ull, 0x645544544ull,
+    0x959524554ull, 0x4504d4554ull,  0x2524f524full, 0x64c4c5349ull,
+    0x5534c554eull, 0x9544e4153ull,  0x954434e49ull, 0x453454954ull,
+    0x74c4c4f4eull, 0x3544f4f4eull,  0x24f4e4f4eull, 0x44c4c554eull,
+    0x4454b494cull, 0x654505845ull,  0xb4e4f5254ull, 0x64e4f4341ull,
+    0x24e4f4e4full, 0x74c41414eull,  0x552454c41ull, 0x545534152ull,
+    0x945565845ull, 0x653545845ull,  0xa544e4f43ull, 0x44f544e49ull,
+    0x65445464full, 0x2464f464full,  0x354454553ull, 0x752455254ull,
+    0x545474152ull, 0x944454547ull,  0x648434544ull, 0x6474e4148ull,
+    0x4424f4c47ull, 0x54e494542ull,  0x552454e49ull, 0xa53454552ull,
+    0x645554e55ull, 0x559525551ull,  0x754554957ull, 0x448544957ull,
+    0x55245554full, 0x745534552ull,  0x648435441ull, 0x74e454542ull,
+    0x7474e4f4eull, 0x653505247ull,  0x550555247ull, 0x745444143ull,
+    0x343535341ull, 0x7544c4544ull,  0x445534143ull, 0x745544f43ull,
+    0x645545243ull, 0xc45545543ull,  0x945544d49ull, 0x44e494f4aull,
+    0x654524e49ull, 0x54843414dull,  0x44e414c50ull, 0x7455a4e41ull,
+    0x6414d5250ull, 0xc4445414dull,  0x844454544ull, 0x854434944ull,
+    0x253495349ull, 0x645545055ull,  0x653454156ull, 0x74c414956ull,
+    0x653594c41ull, 0x44e454857ull,  0x545524857ull, 0x945564552ull,
+    0x64e494957ull, 0x9594c4e49ull,  0x34c4c4c41ull, 0x554524241ull,
+    0x552454641ull, 0x6454d4552ull,  0x3444e4e41ull, 0x4504f5244ull,
+    0x94e4f4150ull, 0xd544e5541ull,  0x24f544f54ull, 0x24e494e49ull,
+    0x454534143ull, 0x64e4d4f43ull,  0x654494f43ull, 0x854434f43ull,
+    0x553535243ull, 0x11504d5543ull, 0xc454d5543ull, 0x7544e5543ull,
+    0x9474e5250ull, 0x44c494146ull,  0x45453414cull, 0x652454946ull,
+    0x745434552ull, 0x554534946ull,  0x9474e4f46ull, 0x44d4f5246ull,
+    0x44c4c5546ull, 0x55449494cull,  0x246494649ull, 0x55245524full,
+    0x854434552ull, 0x65352544full,  0x45245564full, 0x9474e4552ull,
+    0x554484952ull, 0x84b434f52ull,  0x453574f52ull, 0x3574f4f52ull,
+    0x944454e55ull, 0x54e4f4e55ull,  0x5474e5355ull, 0x64d554156ull,
+    0x457454956ull, 0x6574f4957ull,  0x24f444f44ull, 0x259425942ull,
+    0x759525250ull,
+};
+
 int synq_sqlite3_keywordCode(const SyntaqliteDialect* env,
                              const char* z,
                              int n,
                              int* pType) {
-  int i, j;
+  const unsigned char* u = (const unsigned char*)z;
+  uint64_t key;
   const char* zKW;
+  int i, j;
   assert(n >= 2);
-  i = ((charMap(z[0]) * 4) ^ (charMap(z[n - 1]) * 3) ^ n * 1) % 127;
-  for (i = (int)aKWHash[i]; i > 0; i = aKWNext[i]) {
-    if (synq_sqlite_aKWLen[i] != n)
-      continue;
-    zKW = &synq_sqlite_zKWText[synq_sqlite_aKWOffset[i]];
-#ifdef SQLITE_ASCII
-    if ((z[0] & ~0x20) != zKW[0])
-      continue;
-    if ((z[1] & ~0x20) != zKW[1])
-      continue;
-    j = 2;
-    while (j < n && (z[j] & ~0x20) == zKW[j]) {
-      j++;
-    }
-#endif
-#ifdef SQLITE_EBCDIC
-    if (toupper(z[0]) != zKW[0])
-      continue;
-    if (toupper(z[1]) != zKW[1])
-      continue;
-    j = 2;
-    while (j < n && toupper(z[j]) == zKW[j]) {
-      j++;
-    }
-#endif
-    if (j < n)
-      continue;
-    testcase(i == 1);   /* REINDEX */
-    testcase(i == 2);   /* INDEXED */
-    testcase(i == 3);   /* INDEX */
-    testcase(i == 4);   /* DESC */
-    testcase(i == 5);   /* ESCAPE */
-    testcase(i == 6);   /* EACH */
-    testcase(i == 7);   /* CHECK */
-    testcase(i == 8);   /* KEY */
-    testcase(i == 9);   /* BEFORE */
-    testcase(i == 10);  /* FOREIGN */
-    testcase(i == 11);  /* FOR */
-    testcase(i == 12);  /* IGNORE */
-    testcase(i == 13);  /* REGEXP */
-    testcase(i == 14);  /* EXPLAIN */
-    testcase(i == 15);  /* INSTEAD */
-    testcase(i == 16);  /* ADD */
-    testcase(i == 17);  /* DATABASE */
-    testcase(i == 18);  /* AS */
-    testcase(i == 19);  /* SELECT */
-    testcase(i == 20);  /* TABLE */
-    testcase(i == 21);  /* LEFT */
-    testcase(i == 22);  /* THEN */
-    testcase(i == 23);  /* END */
-    testcase(i == 24);  /* DEFERRABLE */
-    testcase(i == 25);  /* ELSE */
-    testcase(i == 26);  /* EXCLUDE */
-    testcase(i == 27);  /* DELETE */
-    testcase(i == 28);  /* TEMPORARY */
-    testcase(i == 29);  /* TEMP */
-    testcase(i == 30);  /* OR */
-    testcase(i == 31);  /* ISNULL */
-    testcase(i == 32);  /* NULLS */
-    testcase(i == 33);  /* SAVEPOINT */
-    testcase(i == 34);  /* INTERSECT */
-    testcase(i == 35);  /* TIES */
-    testcase(i == 36);  /* NOTNULL */
-    testcase(i == 37);  /* NOT */
-    testcase(i == 38);  /* NO */
-    testcase(i == 39);  /* NULL */
-    testcase(i == 40);  /* LIKE */
-    testcase(i == 41);  /* EXCEPT */
-    testcase(i == 42);  /* TRANSACTION */
-    testcase(i == 43);  /* ACTION */
-    testcase(i == 44);  /* ON */
-    testcase(i == 45);  /* NATURAL */
-    testcase(i == 46);  /* ALTER */
-    testcase(i == 47);  /* RAISE */
-    testcase(i == 48);  /* EXCLUSIVE */
-    testcase(i == 49);  /* EXISTS */
-    testcase(i == 50);  /* CONSTRAINT */
-    testcase(i == 51);  /* INTO */
-    testcase(i == 52);  /* OFFSET */
-    testcase(i == 53);  /* OF */
-    testcase(i == 54);  /* SET */
-    testcase(i == 55);  /* TRIGGER */
-    testcase(i == 56);  /* RANGE */
-    testcase(i == 57);  /* GENERATED */
-    testcase(i == 58);  /* DETACH */
-    testcase(i == 59);  /* HAVING */
-    testcase(i == 60);  /* GLOB */
-    testcase(i == 61);  /* BEGIN */
-    testcase(i == 62);  /* INNER */
-    testcase(i == 63);  /* REFERENCES */
-    testcase(i == 64);  /* UNIQUE */
-    testcase(i == 65);  /* QUERY */
-    testcase(i == 66);  /* WITHOUT */
-    testcase(i == 67);  /* WITH */
-    testcase(i == 68);  /* OUTER */
-    testcase(i == 69);  /* RELEASE */
-    testcase(i == 70);  /* ATTACH */
-    testcase(i == 71);  /* BETWEEN */
-    testcase(i == 72);  /* NOTHING */
-    testcase(i == 73);  /* GROUPS */
-    testcase(i == 74);  /* GROUP */
-    testcase(i == 75);  /* CASCADE */
-    testcase(i == 76);  /* ASC */
-    testcase(i == 77);  /* DEFAULT */
-    testcase(i == 78);  /* CASE */
-    testcase(i == 79);  /* COLLATE */
-    testcase(i == 80);  /* CREATE */
-    testcase(i == 81);  /* CURRENT_DATE */
-    testcase(i == 82);  /* IMMEDIATE */
-    testcase(i == 83);  /* JOIN */
-    testcase(i == 84);  /* INSERT */
-    testcase(i == 85);  /* MATCH */
-    testcase(i == 86);  /* PLAN */
-    testcase(i == 87);  /* ANALYZE */
-    testcase(i == 88);  /* PRAGMA */
-    testcase(i == 89);  /* MATERIALIZED */
-    testcase(i == 90);  /* DEFERRED */
-    testcase(i == 91);  /* DISTINCT */
-    testcase(i == 92);  /* IS */
-    testcase(i == 93);  /* UPDATE */
-    testcase(i == 94);  /* VALUES */
-    testcase(i == 95);  /* VIRTUAL */
-    testcase(i == 96);  /* ALWAYS */
-    testcase(i == 97);  /* WHEN */
-    testcase(i == 98);  /* WHERE */
-    testcase(i == 99);  /* RECURSIVE */
-    testcase(i == 100); /* WITHIN */
-    testcase(i == 101); /* INITIALLY */
-    testcase(i == 102); /* ALL */
-    testcase(i == 103); /* ABORT */
-    testcase(i == 104); /* AFTER */
-    testcase(i == 105); /* RENAME */
-    testcase(i == 106); /* AND */
-    testcase(i == 107); /* DROP */
-    testcase(i == 108); /* PARTITION */
-    testcase(i == 109); /* AUTOINCREMENT */
-    testcase(i == 110); /* TO */
-    testcase(i == 111); /* IN */
-    testcase(i == 112); /* CAST */
-    testcase(i == 113); /* COLUMN */
-    testcase(i == 114); /* COMMIT */
-    testcase(i == 115); /* CONFLICT */
-    testcase(i == 116); /* CROSS */
-    testcase(i == 117); /* CURRENT_TIMESTAMP */
-    testcase(i == 118); /* CURRENT_TIME */
-    testcase(i == 119); /* CURRENT */
-    testcase(i == 120); /* PRECEDING */
-    testcase(i == 121); /* FAIL */
-    testcase(i == 122); /* LAST */
-    testcase(i == 123); /* FILTER */
-    testcase(i == 124); /* REPLACE */
-    testcase(i == 125); /* FIRST */
-    testcase(i == 126); /* FOLLOWING */
-    testcase(i == 127); /* FROM */
-    testcase(i == 128); /* FULL */
-    testcase(i == 129); /* LIMIT */
-    testcase(i == 130); /* IF */
-    testcase(i == 131); /* ORDER */
-    testcase(i == 132); /* RESTRICT */
-    testcase(i == 133); /* OTHERS */
-    testcase(i == 134); /* OVER */
-    testcase(i == 135); /* RETURNING */
-    testcase(i == 136); /* RIGHT */
-    testcase(i == 137); /* ROLLBACK */
-    testcase(i == 138); /* ROWS */
-    testcase(i == 139); /* ROW */
-    testcase(i == 140); /* UNBOUNDED */
-    testcase(i == 141); /* UNION */
-    testcase(i == 142); /* USING */
-    testcase(i == 143); /* VACUUM */
-    testcase(i == 144); /* VIEW */
-    testcase(i == 145); /* WINDOW */
-    testcase(i == 146); /* DO */
-    testcase(i == 147); /* BY */
-    testcase(i == 148); /* PRIMARY */
-    /* Version check: skip keywords newer than target version. */
-    if (synq_sqlite_aKWSince[i] != 0 &&
-        SYNQ_VER_LT(env, synq_sqlite_aKWSince[i])) {
-      break;
-    }
-    /* CFlag check with polarity. */
-    if (synq_sqlite_aKWCFlag[i] >= 0) {
-      int flag_set = SYNQ_HAS_CFLAG(env, synq_sqlite_aKWCFlag[i]);
-      int is_enable = synq_sqlite_aKWCFlagPolarity[i];
-      if (flag_set != is_enable) {
-        break;
-      }
-    }
-    *pType = synq_sqlite_aKWCode[i];
-    break;
+  key = ((uint64_t)u[0] | (uint64_t)u[1] << 8 | (uint64_t)u[n - 2] << 16 |
+         (uint64_t)u[n - 1] << 24) &
+        0xDFDFDFDFu;
+  key |= (uint64_t)n << 32;
+  i = synq_sqlite_aKWSlot[(key * 0x9afd134fb61fcebbull) >> 54];
+  /* The key covers the length and the outer two bytes at each end, so only
+  ** the middle is left to compare. Empty slot 0 has key 0, which never
+  ** matches. */
+  if (synq_sqlite_aKWKey[i] != key)
+    return n;
+  zKW = &synq_sqlite_zKWText[synq_sqlite_aKWOffset[i]];
+  for (j = 2; j < n - 2; j++) {
+    if ((z[j] & ~0x20) != zKW[j])
+      return n;
   }
+  /* Version check: skip keywords newer than target version. */
+  if (synq_sqlite_aKWSince[i] != 0 &&
+      SYNQ_VER_LT(env, synq_sqlite_aKWSince[i])) {
+    return n;
+  }
+  /* CFlag check with polarity. */
+  if (synq_sqlite_aKWCFlag[i] >= 0) {
+    int flag_set = SYNQ_HAS_CFLAG(env, synq_sqlite_aKWCFlag[i]);
+    int is_enable = synq_sqlite_aKWCFlagPolarity[i];
+    if (flag_set != is_enable)
+      return n;
+  }
+  *pType = synq_sqlite_aKWCode[i];
   return n;
 }
 

@@ -14,10 +14,8 @@ pub(crate) struct TokenizerFragments {
     pub(crate) cc_defines: String,
     pub(crate) ai_class: String,
     pub(crate) ctype_map: String,
-    pub(crate) upper_to_lower: String,
     pub(crate) is_macros: String,
     pub(crate) id_char: String,
-    pub(crate) char_map: String,
     pub(crate) get_token_fn: String,
     pub(crate) window_keyword_analysis: String,
 }
@@ -71,14 +69,12 @@ pub(crate) fn extract_fragments(
     ])?;
     let ai_class = tokenize_extractor.extract_static_array("aiClass")?;
     let ctype_map = global_extractor.extract_static_array("sqlite3CtypeMap")?;
-    let upper_to_lower = global_extractor.extract_static_array("sqlite3UpperToLower")?;
     let is_macros = sqliteint_extractor.extract_specific_defines(&[
         "sqlite3Isspace",
         "sqlite3Isdigit",
         "sqlite3Isxdigit",
     ])?;
     let id_char = tokenize_extractor.extract_defines_with_ifdef_context(&["IdChar"])?;
-    let char_map = tokenize_extractor.extract_defines_with_ifdef_context(&["charMap"])?;
     let get_token_fn = tokenize_extractor.extract_function("sqlite3GetToken")?;
 
     // Window keyword analysis: getToken helper + analyze{Window,Over,Filter}Keyword.
@@ -101,10 +97,8 @@ pub(crate) fn extract_fragments(
         cc_defines: cc_defines.text,
         ai_class: ai_class.text,
         ctype_map: ctype_map.text,
-        upper_to_lower: upper_to_lower.text,
         is_macros: is_macros.text,
         id_char: id_char.text,
-        char_map: char_map.text,
         get_token_fn: get_token_fn.text,
         window_keyword_analysis,
     })
@@ -126,10 +120,8 @@ pub(crate) fn write_fragments(
         ("cc_defines.c", &fragments.cc_defines),
         ("ai_class.c", &fragments.ai_class),
         ("ctype_map.c", &fragments.ctype_map),
-        ("upper_to_lower.c", &fragments.upper_to_lower),
         ("is_macros.c", &fragments.is_macros),
         ("id_char.c", &fragments.id_char),
-        ("char_map.c", &fragments.char_map),
         ("get_token_fn.c", &fragments.get_token_fn),
         (
             "window_keyword_analysis.c",

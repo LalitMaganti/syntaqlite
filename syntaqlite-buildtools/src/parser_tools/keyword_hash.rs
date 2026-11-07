@@ -5,10 +5,10 @@
 //! the mkkeyword subprocess to produce the final `keyword.c`.
 
 use std::collections::HashMap;
+use std::fmt::Write as _;
 use std::fs;
 
 use super::sqlite_fragments::SqliteFragments;
-use crate::codegen_api::TokenizerExtractResult;
 use crate::util::c_transformer::CTransformer;
 use crate::util::c_writer::CWriter;
 
@@ -131,24 +131,168 @@ fn generate_keyword_arrays(
     out
 }
 
-/// The version+cflag check code that replaces `*pType = aKWCode[i]; break;`
-/// in `synq_sqlite3_keywordCode`. Uses `__SYNQ_DIALECT__` placeholder which
-/// the caller replaces with the actual dialect prefix (e.g. `synq_perfetto`).
-const fn keyword_check_code() -> &'static str {
-    r"/* Version check: skip keywords newer than target version. */
-    if( __SYNQ_DIALECT___aKWSince[i] != 0 && SYNQ_VER_LT(env, __SYNQ_DIALECT___aKWSince[i]) ){
-      break;
+/// Uppercased bytes of a keyword or identifier, as the lookup compares them.
+fn kw_upper(b: u8) -> u64 {
+    u64::from(b & !0x20)
+}
+
+/// The lookup key: first two bytes, last two bytes and the length. Keywords
+/// sharing all of these (e.g. `CURRENT_DATE` and `CURRENT_TIME`) are told
+/// apart by the second-to-last byte.
+fn kw_key(name: &[u8]) -> u64 {
+    let n = name.len();
+    kw_upper(name[0])
+        | kw_upper(name[1]) << 8
+        | kw_upper(name[n - 2]) << 16
+        | kw_upper(name[n - 1]) << 24
+        | (n as u64) << 32
+}
+
+/// A collision-free multiplicative hash of [`kw_key`] into a power-of-two
+/// slot table, found by a deterministic search.
+struct KeywordPerfectHash {
+    bits: u32,
+    mult: u64,
+    /// `slots[h]` is the 1-based keyword index hashing to `h`, or 0.
+    slots: Vec<usize>,
+    /// `keys[i]` is the [`kw_key`] of keyword `i`; 0 for the unused index 0.
+    keys: Vec<u64>,
+}
+
+fn find_keyword_perfect_hash(
+    keyword_indices: &[(usize, String)],
+) -> Result<KeywordPerfectHash, String> {
+    let mut by_key: HashMap<u64, &str> = HashMap::new();
+    for (_, name) in keyword_indices {
+        if let Some(other) = by_key.insert(kw_key(name.as_bytes()), name) {
+            return Err(format!(
+                "keywords `{other}` and `{name}` share a lookup key (length and first and \
+                 last two bytes), so no hash can tell them apart; widen `kw_key`"
+            ));
+        }
     }
-    /* CFlag check with polarity. */
-    if( __SYNQ_DIALECT___aKWCFlag[i] >= 0 ){
-      int flag_set = SYNQ_HAS_CFLAG(env, __SYNQ_DIALECT___aKWCFlag[i]);
-      int is_enable = __SYNQ_DIALECT___aKWCFlagPolarity[i];
-      if( flag_set != is_enable ){
-        break;
-      }
+    let keys: Vec<(usize, u64)> = keyword_indices
+        .iter()
+        .map(|(i, name)| (*i, kw_key(name.as_bytes())))
+        .collect();
+    // Start with at least four slots per key, so a collision-free multiplier
+    // turns up within a few hundred thousand tries.
+    let min_bits = (keys.len() * 4).next_power_of_two().trailing_zeros().max(8);
+    for bits in min_bits..min_bits + 3 {
+        // `taken[h] == attempt` marks slot `h` as used in the current attempt,
+        // so the table is not cleared between attempts.
+        let mut taken = vec![0u32; 1 << bits];
+        let mut x: u64 = 0x9E37_79B9;
+        for attempt in 1..=2_000_000u32 {
+            x = x
+                .wrapping_mul(6_364_136_223_846_793_005)
+                .wrapping_add(1_442_695_040_888_963_407);
+            let mult = x | 1;
+            let slot =
+                |key: u64| usize::try_from(key.wrapping_mul(mult) >> (64 - bits)).unwrap_or(0);
+            let collision_free = keys.iter().all(|&(_, key)| {
+                let h = slot(key);
+                let free = taken[h] != attempt;
+                taken[h] = attempt;
+                free
+            });
+            if collision_free {
+                let mut slots = vec![0usize; 1 << bits];
+                let max_idx = keys.iter().map(|&(i, _)| i).max().unwrap_or(0);
+                let mut by_idx = vec![0u64; max_idx + 1];
+                for &(i, key) in &keys {
+                    slots[slot(key)] = i;
+                    by_idx[i] = key;
+                }
+                return Ok(KeywordPerfectHash {
+                    bits,
+                    mult,
+                    slots,
+                    keys: by_idx,
+                });
+            }
+        }
     }
-    *pType = aKWCode[i];
-    break;"
+    Err("no collision-free keyword hash found".to_string())
+}
+
+/// The slot table and `synq_sqlite3_keywordCode`, which looks a keyword up
+/// with one probe of the perfect hash and then applies the version and cflag
+/// checks. New arrays use the `__SYNQ_DIALECT__` placeholder for the dialect
+/// prefix; mkkeywordhash's arrays keep their bare names and are renamed later.
+fn keyword_lookup_code(hash: &KeywordPerfectHash) -> String {
+    let slot_type = if hash.slots.iter().all(|&i| i <= 255) {
+        "uint8_t"
+    } else {
+        "uint16_t"
+    };
+    let mut out = format!(
+        "/* __SYNQ_DIALECT___aKWSlot[h] is the 1-based index of the keyword whose\n\
+         ** key hashes to h, or 0. */\n\
+         static const {slot_type} __SYNQ_DIALECT___aKWSlot[{}] = {{",
+        hash.slots.len()
+    );
+    for (i, v) in hash.slots.iter().enumerate() {
+        if i % 16 == 0 {
+            out.push_str("\n  ");
+        }
+        let _ = write!(out, "{v},");
+    }
+    out.push_str("\n};\n\n");
+    out.push_str(
+        "/* __SYNQ_DIALECT___aKWKey[i] is the lookup key of keyword i: its first\n\
+         ** two and last two bytes, uppercased, and its length. */\n",
+    );
+    let _ = write!(
+        out,
+        "static const uint64_t __SYNQ_DIALECT___aKWKey[{}] = {{",
+        hash.keys.len()
+    );
+    for (i, k) in hash.keys.iter().enumerate() {
+        if i % 4 == 0 {
+            out.push_str("\n  ");
+        }
+        let _ = write!(out, "0x{k:x}ull,");
+    }
+    out.push_str("\n};\n\n");
+    let _ = write!(
+        out,
+        r"int synq_sqlite3_keywordCode(const SyntaqliteDialect *env, const char *z, int n, int *pType){{
+  const unsigned char *u = (const unsigned char *)z;
+  uint64_t key;
+  const char *zKW;
+  int i, j;
+  assert( n>=2 );
+  key = ((uint64_t)u[0] | (uint64_t)u[1]<<8 | (uint64_t)u[n-2]<<16
+         | (uint64_t)u[n-1]<<24) & 0xDFDFDFDFu;
+  key |= (uint64_t)n<<32;
+  i = __SYNQ_DIALECT___aKWSlot[(key*0x{mult:016x}ull) >> {shift}];
+  /* The key covers the length and the outer two bytes at each end, so only
+  ** the middle is left to compare. Empty slot 0 has key 0, which never
+  ** matches. */
+  if( __SYNQ_DIALECT___aKWKey[i]!=key ) return n;
+  zKW = &zKWText[aKWOffset[i]];
+  for(j=2; j<n-2; j++){{
+    if( (z[j]&~0x20)!=zKW[j] ) return n;
+  }}
+  /* Version check: skip keywords newer than target version. */
+  if( __SYNQ_DIALECT___aKWSince[i] != 0 && SYNQ_VER_LT(env, __SYNQ_DIALECT___aKWSince[i]) ){{
+    return n;
+  }}
+  /* CFlag check with polarity. */
+  if( __SYNQ_DIALECT___aKWCFlag[i] >= 0 ){{
+    int flag_set = SYNQ_HAS_CFLAG(env, __SYNQ_DIALECT___aKWCFlag[i]);
+    int is_enable = __SYNQ_DIALECT___aKWCFlagPolarity[i];
+    if( flag_set != is_enable ) return n;
+  }}
+  *pType = aKWCode[i];
+  return n;
+}}
+",
+        mult = hash.mult,
+        shift = 64 - hash.bits,
+    );
+    out
 }
 
 /// Generate keyword hash lookup as a single `.c` file.
@@ -156,7 +300,6 @@ const fn keyword_check_code() -> &'static str {
 /// Uses pre-extracted cflag data from `fragments.keyword_cflags` instead of
 /// parsing `mkkeywordhash.c` at codegen time.
 pub(crate) fn generate(
-    extract_result: &TokenizerExtractResult,
     fragments: &SqliteFragments,
     dialect: &str,
     extra_keywords: &[String],
@@ -202,30 +345,28 @@ pub(crate) fn generate(
     let kw_code_sym = format!("synq_{dialect}_aKWCode");
     let kw_count_sym = format!("synq_{dialect}_nKeyword");
 
+    let perfect_hash = find_keyword_perfect_hash(&keyword_indices)
+        .map_err(|e| format!("Failed to hash keywords for dialect `{dialect}`: {e}"))?;
+
     let processed_code = CTransformer::new(&generated_code)
+        // The perfect hash replaces mkkeywordhash's chained hash table.
+        .remove_array_definition("aKWHash")
+        .remove_array_definition("aKWNext")
+        .remove_block_comment_containing("Hash table decoded")
+        .remove_block_comment_containing("Check to see if z[0..n-1] is a keyword")
         .remove_function("sqlite3KeywordCode")
         .remove_function("sqlite3_keyword_name")
         .remove_function("sqlite3_keyword_count")
         .remove_function("sqlite3_keyword_check")
+        .remove_function("keywordCode")
         .remove_lines_matching("#define SQLITE_N_KEYWORD")
-        .rename_function("keywordCode", "synq_sqlite3_keywordCode")
-        .remove_static_first("synq_sqlite3_keywordCode")
-        // Add config parameter to keywordCode signature.
-        .replace_in_function(
-            "synq_sqlite3_keywordCode",
-            "synq_sqlite3_keywordCode(const char *z",
-            "synq_sqlite3_keywordCode(const SyntaqliteDialect *env, const char *z",
-        )
-        // Replace the simple assignment with version/cflag checks.
-        .replace_in_function(
-            "synq_sqlite3_keywordCode",
-            "*pType = aKWCode[i];\n    break;",
-            keyword_check_code(),
-        )
         .remove_static_first("zKWText")
         .remove_static_first("aKWOffset")
         .remove_static_first("aKWLen")
         .remove_static_first("aKWCode")
+        .append(&keyword_arrays)
+        .append("\n")
+        .append(&keyword_lookup_code(&perfect_hash))
         .replace_all("zKWText", &kw_text_sym)
         .replace_all("aKWOffset", &kw_offset_sym)
         .replace_all("aKWLen", &kw_len_sym)
@@ -235,32 +376,12 @@ pub(crate) fn generate(
         .finish()
         .map_err(|e| format!("Failed to process keyword hash for dialect `{dialect}`: {e}"))?;
 
-    // Insert keyword arrays before the keywordCode function.
-    let processed_code = {
-        let fn_marker = "int synq_sqlite3_keywordCode(";
-        match processed_code.find(fn_marker) {
-            Some(pos) => {
-                let mut result = processed_code[..pos].to_string();
-                result.push_str(&keyword_arrays);
-                result.push('\n');
-                result.push_str(&processed_code[pos..]);
-                result
-            }
-            None => processed_code,
-        }
-    };
-
     let mut w = CWriter::new();
     w.sqlite_file_header();
     w.include_local("syntaqlite_dialect/sqlite_compat.h");
     w.include_local(includes.tokens_header);
     w.include_local("syntaqlite/dialect.h");
     w.include_local("syntaqlite_dialect/dialect_macros.h");
-    w.newline();
-
-    w.fragment(&extract_result.upper_to_lower);
-    w.newline();
-    w.fragment(&extract_result.char_map);
     w.newline();
 
     w.fragment(&processed_code);

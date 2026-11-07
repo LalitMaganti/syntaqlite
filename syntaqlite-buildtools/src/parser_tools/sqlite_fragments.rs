@@ -11,10 +11,8 @@ pub(crate) struct SqliteFragments {
     pub cc_defines: &'static str,
     pub ai_class: &'static str,
     pub ctype_map: &'static str,
-    pub upper_to_lower: &'static str,
     pub is_macros: &'static str,
     pub id_char: &'static str,
-    pub char_map: &'static str,
     pub get_token_fn: &'static str,
     pub parser_cflags: &'static str,
 }
@@ -33,10 +31,6 @@ pub(crate) const fn load() -> SqliteFragments {
             env!("CARGO_MANIFEST_DIR"),
             "/sqlite-vendored/sources/fragments/ctype_map.c"
         )),
-        upper_to_lower: include_str!(concat!(
-            env!("CARGO_MANIFEST_DIR"),
-            "/sqlite-vendored/sources/fragments/upper_to_lower.c"
-        )),
         is_macros: include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
             "/sqlite-vendored/sources/fragments/is_macros.c"
@@ -44,10 +38,6 @@ pub(crate) const fn load() -> SqliteFragments {
         id_char: include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
             "/sqlite-vendored/sources/fragments/id_char.c"
-        )),
-        char_map: include_str!(concat!(
-            env!("CARGO_MANIFEST_DIR"),
-            "/sqlite-vendored/sources/fragments/char_map.c"
         )),
         get_token_fn: include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
