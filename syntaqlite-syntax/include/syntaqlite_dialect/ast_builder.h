@@ -311,10 +311,8 @@ static inline void synq_parse_ctx_clear(SynqParseCtx* ctx) {
 // final stored value is the full list's extent.  Node ids are
 // monotonically allocated, so `node_id` is either equal to
 // `node_extents.count` (new) or less (existing).
-static inline void synq_extent_record(SynqParseCtx* ctx, uint32_t node_id) {
-  if (!ctx->collect_node_extents) {
-    return;
-  }
+SYNQ_HEADER_NOINLINE void synq_extent_record_impl(SynqParseCtx* ctx,
+                                                  uint32_t node_id) {
   uint32_t stack_len = syntaqlite_vec_len(&ctx->extent_stack);
   if (stack_len == 0) {
     return;
@@ -333,6 +331,15 @@ static inline void synq_extent_record(SynqParseCtx* ctx, uint32_t node_id) {
     syntaqlite_vec_push(&ctx->node_extents, top, ctx->mem);
     syntaqlite_vec_push(&ctx->node_expanded_extents, exp_top, ctx->mem);
     syntaqlite_vec_push(&ctx->node_bounds, bounds_top, ctx->mem);
+  }
+}
+
+// The body is out of line, but not cold: the formatter and analyzer record
+// extents for every node. Keeping it out of the node builders keeps them
+// small enough to inline, so each node copy uses its constant size.
+static inline void synq_extent_record(SynqParseCtx* ctx, uint32_t node_id) {
+  if (ctx->collect_node_extents) {
+    synq_extent_record_impl(ctx, node_id);
   }
 }
 
