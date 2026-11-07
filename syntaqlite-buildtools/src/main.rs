@@ -70,13 +70,6 @@ enum Command {
         #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
         args: Vec<String>,
     },
-
-    /// Hidden subprocess entry point for the mkkeyword hash generator.
-    #[command(hide = true)]
-    Mkkeyword {
-        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
-        args: Vec<String>,
-    },
 }
 
 // ── codegen-sqlite ────────────────────────────────────────────────────────────
@@ -277,7 +270,6 @@ fn main() {
             Ok(())
         })(),
         Command::Lemon { args } => syntaqlite_buildtools::run_lemon(args),
-        Command::Mkkeyword { args } => syntaqlite_buildtools::run_mkkeyword(args),
     };
 
     if let Err(e) = result {

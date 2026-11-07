@@ -19,17 +19,5 @@ fn main() {
         .flag_if_supported("-Wno-type-limits")
         .compile("lemon");
 
-    // Compile pre-transformed mkkeywordhash.c (keyword hash tool).
-    // The transformation is done by `sqlite-extract` and committed to sqlite-vendored/sources/.
-    cc::Build::new()
-        .file(sources_dir.join("mkkeywordhash_modified.c"))
-        .define("SQLITE_ENABLE_ORDERED_SET_AGGREGATES", None)
-        .flag_if_supported("-Wno-missing-field-initializers")
-        .flag_if_supported("-Wno-unused-parameter")
-        .flag_if_supported("-Wno-unused-variable")
-        .flag_if_supported("-Wno-sign-compare")
-        .compile("mkkeywordhash");
-
     println!("cargo:rerun-if-changed=sqlite-vendored/sources/lemon.c");
-    println!("cargo:rerun-if-changed=sqlite-vendored/sources/mkkeywordhash_modified.c");
 }

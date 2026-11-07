@@ -19,9 +19,7 @@ use crate::dialect_codegen::rust_dialect::{
 };
 use crate::dialect_codegen::semantic_roles_codegen::generate_c_roles_h;
 use crate::parser_tools::literal_tokens::LiteralTokens;
-use crate::parser_tools::{
-    keyword_hash, mkkeyword, parser_pipeline, sqlite_fragments, tokenizer_assembly,
-};
+use crate::parser_tools::{keyword_hash, parser_pipeline, sqlite_fragments, tokenizer_assembly};
 use crate::{base_files, dialect_codegen, output_resolver, util};
 
 /// Macro invocation style for the batch parsing loop.
@@ -456,7 +454,7 @@ impl<'a> DialectCodegenJob<'a> {
 
 /// Return the set of token names that are keywords in the base `SQLite` table.
 pub(crate) fn base_keyword_token_names() -> std::collections::HashSet<String> {
-    mkkeyword::base_keyword_token_names()
+    keyword_hash::base_keyword_token_names()
 }
 
 /// Extract terminal symbols (potential keywords) from extension `.y` grammar files.
@@ -685,7 +683,7 @@ pub(crate) fn generate_codegen_artifacts(
     let dialect_fmt_h = ast_model
         .generate_c_fmt_tables(request.dialect.name())
         .map_err(|e: CFmtCodegenError| e.to_string())?;
-    // Build keyword set from the base mkkeywordhash table + dialect extra keywords.
+    // Build keyword set from the base SQLite keywords + dialect extra keywords.
     let mut keyword_names = base_keyword_token_names();
     for kw in request.extra_keywords {
         keyword_names.insert(kw.to_uppercase());

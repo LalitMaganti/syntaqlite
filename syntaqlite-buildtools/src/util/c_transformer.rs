@@ -36,42 +36,6 @@ impl CTransformer {
         self.errors.push(msg);
     }
 
-    /// Remove `static` keyword from a declaration (array, variable, or function)
-    ///
-    /// This works for array declarations like `static int foo[]`,
-    /// variable declarations like `static int bar = 42`,
-    /// and function declarations like `static int baz(...)`
-    pub(crate) fn remove_static_first(mut self, name: &str) -> Self {
-        let lines: Vec<String> = self.content.lines().map(ToString::to_string).collect();
-
-        // Try to find the declaration line
-        for line in &lines {
-            let trimmed = line.trim_start();
-
-            // Check if this line contains the declaration
-            if trimmed.starts_with("static ") && line.contains(name) {
-                // Additional checks to ensure this is the actual declaration:
-                // - Array: contains "name["
-                // - Variable: contains "name " or " name "
-                // - Function: contains "name("
-                let is_array = line.contains(&format!("{name}["));
-                let is_variable =
-                    line.contains(&format!("{name} ")) || line.contains(&format!(" {name} "));
-                let is_function = line.contains(&format!("{name}("));
-
-                if is_array || is_variable || is_function {
-                    let transformed = line.replacen("static ", "", 1);
-                    self.content = self.content.replace(line, &transformed);
-                    return self;
-                }
-            }
-        }
-        self.record_error(format!(
-            "remove_static_first: no `static` declaration found for `{name}`"
-        ));
-        self
-    }
-
     /// Add `static` keyword to an array declaration
     pub(crate) fn add_array_static(mut self, name: &str) -> Self {
         let extractor = CExtractor::new(&self.content);
@@ -142,40 +106,6 @@ impl CTransformer {
         self
     }
 
-    /// Remove a function completely
-    pub(crate) fn remove_function(mut self, name: &str) -> Self {
-        let extractor = CExtractor::new(&self.content);
-        match extractor.extract_function(name) {
-            Ok(function) => {
-                self.content = self.content.replace(&function.text, "");
-            }
-            Err(e) => {
-                self.record_error(format!("remove_function(`{name}`): {e}"));
-            }
-        }
-        self
-    }
-
-    /// Remove lines matching a pattern.
-    ///
-    /// Fails if no line contains the pattern.
-    pub(crate) fn remove_lines_matching(mut self, pattern: &str) -> Self {
-        let lines: Vec<String> = self.content.lines().map(ToString::to_string).collect();
-        let any_matched = lines.iter().any(|line| line.contains(pattern));
-        if !any_matched {
-            self.record_error(format!(
-                "remove_lines_matching: no line contained `{pattern}`"
-            ));
-            return self;
-        }
-        let filtered: Vec<String> = lines
-            .into_iter()
-            .filter(|line| !line.contains(pattern))
-            .collect();
-        self.content = filtered.join("\n") + "\n";
-        self
-    }
-
     /// Replace text within a specific function's body.
     ///
     /// Fails if the function doesn't exist or `from` is not present inside
@@ -223,44 +153,6 @@ impl CTransformer {
     }
 
     /// Remove the first `/* ... */` block comment containing `needle`.
-    /// Remove the definition of array `name`, from its declaration line through
-    /// the closing `};`, together with the block comment directly above it.
-    pub(crate) fn remove_array_definition(mut self, name: &str) -> Self {
-        let decl = format!("{name}[");
-        let mut offset = 0;
-        let mut start = None;
-        for line in self.content.split_inclusive('\n') {
-            let code = line.trim_start();
-            let is_comment = code.starts_with("/*") || code.starts_with('*');
-            if !is_comment && code.contains(&decl) && code.contains('=') && code.contains('{') {
-                start = Some(offset);
-                break;
-            }
-            offset += line.len();
-        }
-        let Some(mut start) = start else {
-            self.record_error(format!(
-                "remove_array_definition: no definition of `{name}` found"
-            ));
-            return self;
-        };
-        let Some(end_rel) = self.content[start..].find("};\n") else {
-            self.record_error(format!(
-                "remove_array_definition: `{name}` has no closing `}};`"
-            ));
-            return self;
-        };
-        let end = start + end_rel + 3;
-        let before = self.content[..start].trim_end();
-        if before.ends_with("*/")
-            && let Some(comment) = before.rfind("/*")
-        {
-            start = comment;
-        }
-        self.content.replace_range(start..end, "");
-        self
-    }
-
     pub(crate) fn remove_block_comment_containing(mut self, needle: &str) -> Self {
         let Some(idx) = self.content.find(needle) else {
             self.record_error(format!(
@@ -444,43 +336,6 @@ mod tests {
     }
 
     #[test]
-    fn remove_function_fails_when_missing() {
-        let err = CTransformer::new(SAMPLE)
-            .remove_function("nonexistent_fn")
-            .finish()
-            .expect_err("should fail");
-        assert!(err.contains("remove_function"));
-        assert!(err.contains("nonexistent_fn"));
-    }
-
-    #[test]
-    fn remove_function_succeeds() {
-        let out = CTransformer::new(SAMPLE)
-            .remove_function("foo")
-            .finish()
-            .expect("should succeed");
-        assert!(!out.contains("int foo(int x)"));
-    }
-
-    #[test]
-    fn remove_lines_matching_fails_when_no_match() {
-        let err = CTransformer::new(SAMPLE)
-            .remove_lines_matching("NOT_PRESENT_ANYWHERE")
-            .finish()
-            .expect_err("should fail");
-        assert!(err.contains("remove_lines_matching"));
-    }
-
-    #[test]
-    fn remove_lines_matching_succeeds() {
-        let out = CTransformer::new(SAMPLE)
-            .remove_lines_matching("gCounter")
-            .finish()
-            .expect("should succeed");
-        assert!(!out.contains("gCounter"));
-    }
-
-    #[test]
     fn remove_block_comment_containing_fails_when_needle_missing() {
         let err = CTransformer::new(SAMPLE)
             .remove_block_comment_containing("absent needle")
@@ -496,36 +351,6 @@ mod tests {
             .finish()
             .expect("should succeed");
         assert!(!out.contains("automatically generated"));
-    }
-
-    #[test]
-    fn remove_static_first_fails_when_declaration_missing() {
-        let err = CTransformer::new(SAMPLE)
-            .remove_static_first("notDeclared")
-            .finish()
-            .expect_err("should fail");
-        assert!(err.contains("remove_static_first"));
-        assert!(err.contains("notDeclared"));
-    }
-
-    #[test]
-    fn remove_static_first_succeeds_for_array() {
-        let out = CTransformer::new(SAMPLE)
-            .remove_static_first("aArray")
-            .finish()
-            .expect("should succeed");
-        assert!(out.contains("int aArray[]"));
-        assert!(!out.contains("static int aArray"));
-    }
-
-    #[test]
-    fn remove_static_first_succeeds_for_variable() {
-        let out = CTransformer::new(SAMPLE)
-            .remove_static_first("gCounter")
-            .finish()
-            .expect("should succeed");
-        assert!(out.contains("int gCounter = 0;"));
-        assert!(!out.contains("static int gCounter"));
     }
 
     #[test]
@@ -553,7 +378,7 @@ mod tests {
         let err = CTransformer::new(SAMPLE)
             .replace_all("NOT_PRESENT_1", "x")
             .replace_all("NOT_PRESENT_2", "y")
-            .remove_function("nonexistent_fn")
+            .rename_function("nonexistent_fn", "x")
             .finish()
             .expect_err("should fail");
         assert!(err.contains("NOT_PRESENT_1"));
