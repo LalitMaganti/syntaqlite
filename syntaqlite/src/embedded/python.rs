@@ -32,7 +32,7 @@ use super::{
 /// assert!(fragments[0].sql_text().starts_with("SELECT"));
 /// assert_eq!(fragments[0].holes().len(), 1);
 /// ```
-pub fn extract_python(source: &str) -> Vec<EmbeddedFragment> {
+pub fn extract_python(source: &str) -> Vec<EmbeddedFragment<'_>> {
     let bytes = source.as_bytes();
     let len = bytes.len();
     let mut fragments = Vec::new();
@@ -142,7 +142,7 @@ fn extract_fstring_fragment(
     source: &str,
     content_start: usize,
     content_end: usize,
-) -> Option<EmbeddedFragment> {
+) -> Option<EmbeddedFragment<'static>> {
     let bytes = source.as_bytes();
     let mut sql_text = String::new();
     let mut holes = Vec::new();
@@ -179,7 +179,7 @@ fn extract_fstring_fragment(
 
     Some(EmbeddedFragment {
         sql_range: doc_range_from_usize(content_start, content_end),
-        sql_text,
+        sql_text: sql_text.into(),
         holes,
     })
 }

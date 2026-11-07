@@ -42,7 +42,7 @@ impl syntaqlite::analysis::TableDef
 impl syntaqlite::analysis::ViewDef
 impl syntaqlite::any::AnyDialect
 impl syntaqlite::embedded::EmbeddedAnalyzer
-impl syntaqlite::embedded::EmbeddedFragment
+impl syntaqlite::embedded::EmbeddedFragment<'_>
 impl syntaqlite::embedded::Hole
 impl syntaqlite::fmt::FormatConfig
 impl syntaqlite::fmt::FormatError
@@ -227,27 +227,27 @@ pub fn syntaqlite::any::AnyDialect::syntax_dialect(&self) -> &syntaqlite_syntax:
 pub fn syntaqlite::any::AnyDialect::version(&self) -> syntaqlite_syntax::util::SqliteVersion
 pub fn syntaqlite::any::AnyDialect::with_cflags(self, syntaqlite::util::SqliteFlags) -> Self
 pub fn syntaqlite::any::AnyDialect::with_version(self, syntaqlite_syntax::util::SqliteVersion) -> Self
-pub fn syntaqlite::embedded::EmbeddedAnalyzer::analyze(&mut self, &[syntaqlite::embedded::EmbeddedFragment]) -> alloc::vec::Vec<syntaqlite::Diagnostic>
+pub fn syntaqlite::embedded::EmbeddedAnalyzer::analyze(&mut self, &[syntaqlite::embedded::EmbeddedFragment<'_>]) -> alloc::vec::Vec<syntaqlite::Diagnostic>
 pub fn syntaqlite::embedded::EmbeddedAnalyzer::new(impl core::convert::Into<syntaqlite::any::AnyDialect>) -> Self
-pub fn syntaqlite::embedded::EmbeddedAnalyzer::semantic_tokens_encoded(&mut self, &[syntaqlite::embedded::EmbeddedFragment], &str) -> alloc::vec::Vec<u32>
+pub fn syntaqlite::embedded::EmbeddedAnalyzer::semantic_tokens_encoded(&mut self, &[syntaqlite::embedded::EmbeddedFragment<'_>], &str) -> alloc::vec::Vec<u32>
 pub fn syntaqlite::embedded::EmbeddedAnalyzer::with_catalog(self, syntaqlite::Catalog) -> Self
 pub fn syntaqlite::embedded::EmbeddedAnalyzer::with_config(self, syntaqlite::AnalysisConfig) -> Self
-pub fn syntaqlite::embedded::EmbeddedFragment::holes(&self) -> &[syntaqlite::embedded::Hole]
-pub fn syntaqlite::embedded::EmbeddedFragment::needs_macro_fallback(&self) -> bool
-pub fn syntaqlite::embedded::EmbeddedFragment::sql_range(&self) -> syntaqlite_syntax::source::DocRange
-pub fn syntaqlite::embedded::EmbeddedFragment::sql_text(&self) -> &str
+pub fn syntaqlite::embedded::EmbeddedFragment<'_>::holes(&self) -> &[syntaqlite::embedded::Hole]
+pub fn syntaqlite::embedded::EmbeddedFragment<'_>::needs_macro_fallback(&self) -> bool
+pub fn syntaqlite::embedded::EmbeddedFragment<'_>::sql_range(&self) -> syntaqlite_syntax::source::DocRange
+pub fn syntaqlite::embedded::EmbeddedFragment<'_>::sql_text(&self) -> &str
 pub fn syntaqlite::embedded::Hole::host_range(&self) -> syntaqlite_syntax::source::DocRange
 pub fn syntaqlite::embedded::Hole::sql_offset(&self) -> syntaqlite_syntax::source::DocOffset
 pub fn syntaqlite::embedded::detect(impl core::convert::Into<syntaqlite::any::AnyDialect>, &str, core::option::Option<&str>) -> core::option::Option<syntaqlite::embedded::HostLanguage>
-pub fn syntaqlite::embedded::extract(impl core::convert::Into<syntaqlite::any::AnyDialect>, syntaqlite::embedded::HostLanguage, &str) -> alloc::vec::Vec<syntaqlite::embedded::EmbeddedFragment>
-pub fn syntaqlite::embedded::extract_python(&str) -> alloc::vec::Vec<syntaqlite::embedded::EmbeddedFragment>
-pub fn syntaqlite::embedded::extract_shell(impl core::convert::Into<syntaqlite::any::AnyDialect>, &str) -> alloc::vec::Vec<syntaqlite::embedded::EmbeddedFragment>
-pub fn syntaqlite::embedded::extract_typescript(&str) -> alloc::vec::Vec<syntaqlite::embedded::EmbeddedFragment>
-pub fn syntaqlite::embedded::fragments(impl core::convert::Into<syntaqlite::any::AnyDialect>, &str, core::option::Option<syntaqlite::embedded::HostLanguage>) -> alloc::vec::Vec<syntaqlite::embedded::EmbeddedFragment>
+pub fn syntaqlite::embedded::extract(impl core::convert::Into<syntaqlite::any::AnyDialect>, syntaqlite::embedded::HostLanguage, &str) -> alloc::vec::Vec<syntaqlite::embedded::EmbeddedFragment<'_>>
+pub fn syntaqlite::embedded::extract_python(&str) -> alloc::vec::Vec<syntaqlite::embedded::EmbeddedFragment<'_>>
+pub fn syntaqlite::embedded::extract_shell(impl core::convert::Into<syntaqlite::any::AnyDialect>, &str) -> alloc::vec::Vec<syntaqlite::embedded::EmbeddedFragment<'_>>
+pub fn syntaqlite::embedded::extract_typescript(&str) -> alloc::vec::Vec<syntaqlite::embedded::EmbeddedFragment<'_>>
+pub fn syntaqlite::embedded::fragments(impl core::convert::Into<syntaqlite::any::AnyDialect>, &str, core::option::Option<syntaqlite::embedded::HostLanguage>) -> alloc::vec::Vec<syntaqlite::embedded::EmbeddedFragment<'_>>
 pub fn syntaqlite::embedded::is_shell_script(impl core::convert::Into<syntaqlite::any::AnyDialect>, &str) -> bool
-pub fn syntaqlite::embedded::mask(&str, &[syntaqlite::embedded::EmbeddedFragment]) -> alloc::string::String
+pub fn syntaqlite::embedded::mask(&str, &[syntaqlite::embedded::EmbeddedFragment<'_>]) -> alloc::string::String
 pub fn syntaqlite::embedded::mask_for_analysis(impl core::convert::Into<syntaqlite::any::AnyDialect>, &str, core::option::Option<&str>) -> core::option::Option<alloc::string::String>
-pub fn syntaqlite::embedded::splice<E>(&str, &[syntaqlite::embedded::EmbeddedFragment], impl core::ops::function::FnMut(&str) -> core::result::Result<alloc::string::String, E>) -> core::result::Result<alloc::string::String, E>
+pub fn syntaqlite::embedded::splice<E>(&str, &[syntaqlite::embedded::EmbeddedFragment<'_>], impl core::ops::function::FnMut(&str) -> core::result::Result<alloc::string::String, E>) -> core::result::Result<alloc::string::String, E>
 pub fn syntaqlite::fmt::FormatConfig::default() -> Self
 pub fn syntaqlite::fmt::FormatConfig::indent_width(&self) -> usize
 pub fn syntaqlite::fmt::FormatConfig::keyword_case(&self) -> syntaqlite::fmt::KeywordCase
@@ -343,7 +343,7 @@ pub struct syntaqlite::analysis::TableDef
 pub struct syntaqlite::analysis::ViewDef
 pub struct syntaqlite::any::AnyDialect
 pub struct syntaqlite::embedded::EmbeddedAnalyzer
-pub struct syntaqlite::embedded::EmbeddedFragment
+pub struct syntaqlite::embedded::EmbeddedFragment<'a>
 pub struct syntaqlite::embedded::Hole
 pub struct syntaqlite::fmt::FormatConfig
 pub struct syntaqlite::fmt::FormatError

@@ -31,6 +31,7 @@ pub use shell::{extract_shell, is_shell_script};
 #[doc(inline)]
 pub use typescript::extract_typescript;
 
+use std::borrow::Cow;
 use syntaqlite_syntax::ParserTokenFlags;
 use syntaqlite_syntax::any::{AnyTokenType, TokenCategory};
 use syntaqlite_syntax::source::{DocLen, DocOffset, DocRange};
@@ -72,7 +73,7 @@ pub fn extract(
     dialect: impl Into<AnyDialect>,
     lang: HostLanguage,
     source: &str,
-) -> Vec<EmbeddedFragment> {
+) -> Vec<EmbeddedFragment<'_>> {
     match lang {
         HostLanguage::Shell => extract_shell(dialect, source),
         HostLanguage::Python => extract_python(source),
@@ -113,12 +114,12 @@ pub fn fragments(
     dialect: impl Into<AnyDialect>,
     source: &str,
     lang: Option<HostLanguage>,
-) -> Vec<EmbeddedFragment> {
+) -> Vec<EmbeddedFragment<'_>> {
     match lang {
         Some(lang) => extract(dialect, lang, source),
         None => vec![EmbeddedFragment {
             sql_range: doc_range_from_usize(0, source.len()),
-            sql_text: source.to_string(),
+            sql_text: Cow::Borrowed(source),
             holes: Vec::new(),
         }],
     }
@@ -139,7 +140,7 @@ pub fn fragments(
 /// Propagates the first error returned by `format_sql`.
 pub fn splice<E>(
     source: &str,
-    fragments: &[EmbeddedFragment],
+    fragments: &[EmbeddedFragment<'_>],
     mut format_sql: impl FnMut(&str) -> Result<String, E>,
 ) -> Result<String, E> {
     let mut out = String::with_capacity(source.len());
@@ -183,7 +184,7 @@ pub fn splice<E>(
 /// hole placeholders are resolved unconditionally by the analyzer (a real schema
 /// never names anything with only underscores), so interpolations never produce
 /// spurious diagnostics.
-pub fn mask(source: &str, fragments: &[EmbeddedFragment]) -> String {
+pub fn mask(source: &str, fragments: &[EmbeddedFragment<'_>]) -> String {
     let bytes = source.as_bytes();
     // Blank everything to spaces but keep newlines, so line comments inside the
     // SQL still end where they did in the host file.
@@ -257,16 +258,17 @@ pub fn mask_for_analysis(
 /// to [`EmbeddedAnalyzer::analyze`] or
 /// [`EmbeddedAnalyzer::semantic_tokens_encoded`].
 #[derive(Debug)]
-pub struct EmbeddedFragment {
+pub struct EmbeddedFragment<'a> {
     /// Byte range of the SQL content in the host file (excluding quotes).
     pub(crate) sql_range: DocRange,
-    /// SQL text with holes replaced by placeholder identifiers.
-    pub(crate) sql_text: String,
+    /// SQL text with holes replaced by placeholder identifiers. Borrowed
+    /// from the source when the fragment is a verbatim slice of it.
+    pub(crate) sql_text: Cow<'a, str>,
     /// Information about each interpolation hole.
     pub(crate) holes: Vec<Hole>,
 }
 
-impl EmbeddedFragment {
+impl EmbeddedFragment<'_> {
     /// Byte range of the SQL content in the host file (excluding quotes).
     pub fn sql_range(&self) -> DocRange {
         self.sql_range
@@ -473,7 +475,7 @@ impl EmbeddedAnalyzer {
     ///
     /// Diagnostics whose spans fall inside a hole placeholder are automatically
     /// filtered out by the internal offset map returning `None`.
-    pub fn analyze(&mut self, fragments: &[EmbeddedFragment]) -> Vec<Diagnostic> {
+    pub fn analyze(&mut self, fragments: &[EmbeddedFragment<'_>]) -> Vec<Diagnostic> {
         let mut all_diags = Vec::new();
 
         for fragment in fragments {
@@ -500,7 +502,7 @@ impl EmbeddedAnalyzer {
     /// an [`OffsetMap`] to host-file positions.
     pub(crate) fn fragment_semantic_tokens(
         &mut self,
-        fragment: &EmbeddedFragment,
+        fragment: &EmbeddedFragment<'_>,
     ) -> Vec<(DocOffset, DocLen, TokenCategory)> {
         let mut analyzer = self.make_analyzer(fragment);
         let mut capture = TokenCapture::default();
@@ -532,7 +534,7 @@ impl EmbeddedAnalyzer {
     /// Panics if a host token length does not fit in `u32` (practically impossible).
     pub fn semantic_tokens_encoded(
         &mut self,
-        fragments: &[EmbeddedFragment],
+        fragments: &[EmbeddedFragment<'_>],
         source: &str,
     ) -> Vec<u32> {
         let source_bytes = source.as_bytes();
@@ -607,7 +609,7 @@ impl EmbeddedAnalyzer {
     /// when the fragment has interpolation holes so that [`HOLE_PLACEHOLDER`]
     /// calls are treated as single identifier tokens. Hole-free fragments
     /// (shell, standalone SQL) parse exactly as plain SQL.
-    fn make_analyzer(&self, fragment: &EmbeddedFragment) -> Analyzer {
+    fn make_analyzer(&self, fragment: &EmbeddedFragment<'_>) -> Analyzer {
         Analyzer::with_dialect(self.dialect.clone())
             .with_macro_fallback(fragment.needs_macro_fallback())
     }
@@ -615,7 +617,7 @@ impl EmbeddedAnalyzer {
     /// Parse and validate a single fragment.
     ///
     /// Returns diagnostics with SQL-text byte offsets (not yet mapped to host).
-    fn analyze_fragment(&mut self, fragment: &EmbeddedFragment) -> Vec<Diagnostic> {
+    fn analyze_fragment(&mut self, fragment: &EmbeddedFragment<'_>) -> Vec<Diagnostic> {
         let mut analyzer = self.make_analyzer(fragment);
         let mut ctx = AnalysisContext::new(&mut self.catalog).with_config(self.config);
         let model = analyzer.analyze(fragment.sql_text(), &mut ctx);
